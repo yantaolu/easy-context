@@ -1,5 +1,3 @@
-import Foundation
-
 public struct UniqueNameResolver {
     private let exists: (String) -> Bool
 

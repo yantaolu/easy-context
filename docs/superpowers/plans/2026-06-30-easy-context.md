@@ -1102,7 +1102,7 @@ final class SettingsStore: ObservableObject {
 
     /// 首次运行：默认勾选所有已检测到的 App。
     private func seedEnabledIfFirstRun() {
-        if defaults.data(forKey: "settings") == nil {
+        if !Settings.hasStored(in: defaults) {
             settings.enabledTerminalBundleIds = detectedTerminals.map(\.bundleId)
             settings.enabledEditorBundleIds = detectedEditors.map(\.bundleId)
             persist()

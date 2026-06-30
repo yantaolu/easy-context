@@ -46,8 +46,8 @@ public struct RelativePathResolver {
     }
 
     static func relative(from base: URL, to target: URL) -> String {
-        let baseComponents = base.standardizedFileURL.pathComponents
-        let targetComponents = target.standardizedFileURL.pathComponents
+        let baseComponents = base.pathComponents
+        let targetComponents = target.pathComponents
         var i = 0
         while i < baseComponents.count && i < targetComponents.count
             && baseComponents[i] == targetComponents[i] {

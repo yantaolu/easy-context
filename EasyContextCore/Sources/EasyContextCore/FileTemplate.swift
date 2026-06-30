@@ -1,5 +1,3 @@
-import Foundation
-
 public enum FileTemplate: String, CaseIterable, Codable, Sendable {
     case blank
     case markdown
