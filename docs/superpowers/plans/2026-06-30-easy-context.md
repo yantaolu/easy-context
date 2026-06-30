@@ -1143,7 +1143,7 @@ Run:
 ```bash
 cd /Volumes/Samsung/codes/easy-context
 xcodegen generate
-xcodebuild -project EasyContext.xcodeproj -scheme EasyContext -configuration Debug -derivedDataPath build CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build
+xcodebuild -project EasyContext.xcodeproj -scheme EasyContext -configuration Debug -derivedDataPath build CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=YES CODE_SIGNING_ALLOWED=YES build
 ```
 Expected: `** BUILD SUCCEEDED **`，并在 `build/Build/Products/Debug/EasyContext.app/Contents/PlugIns/` 下生成 `EasyContextFinder.appex`。
 
@@ -1322,7 +1322,7 @@ Run:
 ```bash
 cd /Volumes/Samsung/codes/easy-context
 xcodegen generate
-xcodebuild -project EasyContext.xcodeproj -scheme EasyContext -configuration Debug -derivedDataPath build CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build
+xcodebuild -project EasyContext.xcodeproj -scheme EasyContext -configuration Debug -derivedDataPath build CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=YES CODE_SIGNING_ALLOWED=YES build
 ```
 Expected: `** BUILD SUCCEEDED **`
 
@@ -1491,7 +1491,7 @@ Run:
 ```bash
 cd /Volumes/Samsung/codes/easy-context
 xcodegen generate
-xcodebuild -project EasyContext.xcodeproj -scheme EasyContext -configuration Debug -derivedDataPath build CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build
+xcodebuild -project EasyContext.xcodeproj -scheme EasyContext -configuration Debug -derivedDataPath build CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=YES CODE_SIGNING_ALLOWED=YES build
 ```
 Expected: `** BUILD SUCCEEDED **`
 
@@ -1593,7 +1593,7 @@ Run:
 ```bash
 cd /Volumes/Samsung/codes/easy-context
 xcodegen generate
-xcodebuild -project EasyContext.xcodeproj -scheme EasyContext -configuration Debug -derivedDataPath build CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build
+xcodebuild -project EasyContext.xcodeproj -scheme EasyContext -configuration Debug -derivedDataPath build CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=YES CODE_SIGNING_ALLOWED=YES build
 ```
 Expected: `** BUILD SUCCEEDED **`
 
@@ -1630,7 +1630,7 @@ Run:
 ```bash
 cd /Volumes/Samsung/codes/easy-context
 xcodegen generate
-xcodebuild -project EasyContext.xcodeproj -scheme EasyContext -configuration Debug -derivedDataPath build CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build
+xcodebuild -project EasyContext.xcodeproj -scheme EasyContext -configuration Debug -derivedDataPath build CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=YES CODE_SIGNING_ALLOWED=YES build
 ```
 Expected: `** BUILD SUCCEEDED **`
 
