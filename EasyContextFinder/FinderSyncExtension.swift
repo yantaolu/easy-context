@@ -62,15 +62,16 @@ class FinderSyncExtension: FIFinderSync {
 
         let config = ConfigStore().load()
         let iconStyle = config.appearance.appIconStyle
+        let dark = Self.isDarkMode()
         let menu = NSMenu(title: "")
 
         if config.items.copyFullPath {
             addItem(to: menu, title: "复制完整路径", action: #selector(copyFullPath(_:)),
-                    image: symbolImage("doc.on.doc"))
+                    image: symbolImage("doc.on.doc", dark: dark))
         }
         if config.items.copyRelativePath {
             addItem(to: menu, title: "复制相对路径", action: #selector(copyRelativePath(_:)),
-                    image: symbolImage("doc.on.clipboard"))
+                    image: symbolImage("doc.on.clipboard", dark: dark))
         }
 
         let detector = AppDetector(isInstalled: Self.isInstalled)
@@ -83,28 +84,28 @@ class FinderSyncExtension: FIFinderSync {
         for (idx, app) in terminals.enumerated() {
             let item = addItem(to: menu, title: "用 \(app.displayName) 打开终端",
                                action: #selector(openWithApp(_:)),
-                               image: appIcon(app.bundleId, style: iconStyle) ?? symbolImage("terminal"))
+                               image: appIcon(app.bundleId, style: iconStyle) ?? symbolImage("terminal", dark: dark))
             item.tag = idx
         }
         for (offset, app) in editors.enumerated() {
             let item = addItem(to: menu, title: "用 \(app.displayName) 打开",
                                action: #selector(openWithApp(_:)),
                                image: appIcon(app.bundleId, style: iconStyle)
-                                   ?? symbolImage("chevron.left.forwardslash.chevron.right"))
+                                   ?? symbolImage("chevron.left.forwardslash.chevron.right", dark: dark))
             item.tag = terminals.count + offset
         }
 
         guard config.items.newFile else { return menu }
         // 沙盒扩展不能弹模态窗，新建文件用子菜单选模板、直接创建。
         let newFileItem = NSMenuItem(title: "新建文件", action: nil, keyEquivalent: "")
-        newFileItem.image = symbolImage("doc.badge.plus")
+        newFileItem.image = symbolImage("doc.badge.plus", dark: dark)
         let submenu = NSMenu(title: "新建文件")
         for (idx, template) in FileTemplate.allCases.enumerated() {
             let it = NSMenuItem(title: template.displayName,
                                 action: #selector(newFileFromTemplate(_:)), keyEquivalent: "")
             it.target = self
             it.tag = idx
-            it.image = symbolImage(Self.templateSymbol(template))
+            it.image = symbolImage(Self.templateSymbol(template), dark: dark)
             submenu.addItem(it)
         }
         newFileItem.submenu = submenu
@@ -124,11 +125,34 @@ class FinderSyncExtension: FIFinderSync {
 
     // MARK: - 图标
 
-    private func symbolImage(_ name: String) -> NSImage? {
-        NSImage(systemSymbolName: name, accessibilityDescription: nil)
+    // FinderSync 会把 template 符号栅格化成固定黑色、不随深浅色变化，
+    // 故手动按当前外观给符号着色。
+    private func symbolImage(_ name: String, dark: Bool) -> NSImage? {
+        guard let base = NSImage(systemSymbolName: name, accessibilityDescription: nil)
+        else { return nil }
+        let color: NSColor = dark ? NSColor(white: 0.90, alpha: 1) : NSColor(white: 0.15, alpha: 1)
+        return Self.tinted(base, color: color)
+    }
+
+    private static func tinted(_ image: NSImage, color: NSColor) -> NSImage {
+        let size = image.size
+        let out = NSImage(size: size)
+        out.lockFocus()
+        image.draw(at: .zero, from: NSRect(origin: .zero, size: size),
+                   operation: .sourceOver, fraction: 1.0)
+        color.set()
+        NSRect(origin: .zero, size: size).fill(using: .sourceAtop)
+        out.unlockFocus()
+        out.isTemplate = false
+        return out
     }
 
     private static let iconSize = NSSize(width: 16, height: 16)
+
+    // SF Symbols（复制/新建/模板）本就是 template 图像，自动适配深浅色，无需处理。
+    private static func isDarkMode() -> Bool {
+        NSApp.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+    }
 
     private func appIcon(_ bundleId: String, style: Settings.AppIconStyle) -> NSImage? {
         guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId)
@@ -141,7 +165,7 @@ class FinderSyncExtension: FIFinderSync {
         }
     }
 
-    // 去饱和成灰度，保留形状细节、贴合菜单单色调。
+    // 纯灰度：保留轮廓细节，浅色/深色下都能看清（中间调在两种背景上都可辨）。
     private static func desaturated(_ image: NSImage) -> NSImage? {
         guard let tiff = image.tiffRepresentation,
               let source = CIImage(data: tiff) else { return nil }
