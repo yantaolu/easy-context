@@ -4,18 +4,19 @@
 
 **Goal:** 自研一款 macOS 应用，扩展访达右键菜单：复制完整/相对路径、自动识别并打开终端与编辑器、外置磁盘支持、新建文件（模板）。
 
-**Architecture:** 单个 Xcode 工程含三部分——SwiftUI 宿主 App（设置界面）、FinderSync 扩展（注入并响应右键菜单）、一个本地 Swift 包 `EasyContextCore`（纯逻辑，宿主与扩展共享）。配置通过 App Group 共享 `UserDefaults` 传递。所有可测逻辑下沉到 `EasyContextCore`，用命令行 `swift test` 做 TDD；访达集成与 UI 用手动验证。
+**Architecture:** 单个 Xcode 工程含三部分——SwiftUI 宿主 App（设置界面）、FinderSync 扩展（注入并响应右键菜单）、一个本地 Swift 包 `EasyContextCore`（纯逻辑，宿主与扩展共享）。配置通过共享 JSON 文件 `~/Library/Application Support/EasyContext/settings.json` 传递（沙盒已关，两进程直接读写，无需 App Group）。所有可测逻辑下沉到 `EasyContextCore`，用命令行 `swift test` 做 TDD；访达集成与 UI 用手动验证；Xcode 工程由 XcodeGen 从 `project.yml` 生成。
 
-**Tech Stack:** Swift 6.3 / SwiftUI / AppKit / FinderSync framework / Swift Package Manager / XCTest。
+**Tech Stack:** Swift 6.3 / SwiftUI / AppKit / FinderSync framework / Swift Package Manager / XcodeGen / XCTest。
 
 ## Global Constraints
 
 - 目标系统：macOS 13+（Package 的 `platforms: [.macOS(.v13)]`，Xcode target Deployment 设为 13.0）。
 - Swift 工具链 6.3 已装，命令行 `swift build` / `swift test` 可用（阶段 A 全程用它）。
-- **完整版 Xcode 是阶段 B 的硬前提**。当前机器只装了 Command Line Tools，`xcodebuild` 不可用。开始 Task 8 前必须：从 App Store 安装 Xcode，然后运行 `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`。
-- bundle id：宿主 App = `com.luyantao.easycontext`；扩展 = `com.luyantao.easycontext.finder`；App Group = `group.com.luyantao.easycontext`。
+- 完整版 Xcode 已安装（Xcode 26.6，`xcodebuild` 可用，active developer dir 指向 `/Applications/Xcode.app`）。Task 8 仍只用 `swift test`；Task 9 起需要 Xcode 与 XcodeGen（`brew install xcodegen`）。
+- bundle id：宿主 App = `com.luyantao.easycontext`；扩展 = `com.luyantao.easycontext.finder`。
 - App Sandbox：**关闭**（本地自用）。
-- 配置存储：App Group 共享 `UserDefaults(suiteName: "group.com.luyantao.easycontext")`，key = `settings`，JSON 编码。
+- 签名：ad-hoc（`CODE_SIGN_IDENTITY = "-"`），本机无签名身份/无开发者团队，本地自用足够。
+- 配置存储：共享 JSON 文件 `~/Library/Application Support/EasyContext/settings.json`，由 `ConfigStore` 读写（沙盒关闭，两进程直接访问，无需 App Group entitlement）。
 - 菜单形态：平铺列表，不用二级子菜单。
 - 打开命令统一为 `/usr/bin/open -b <bundleId> <目标目录>`（v1 所有终端/编辑器一致；个别需特殊参数的留作后续）。
 - 新建文件重名：自动追加 ` 2`、` 3` …（如 `未命名 2.md`）。
@@ -815,93 +816,379 @@ git commit -m "feat(core): 添加 Settings 共享配置读写"
 
 ---
 
-## 阶段 B — Xcode 宿主 App + FinderSync 扩展（需完整 Xcode，手动验证）
+## 阶段 B — 文件存储 + Xcode 宿主 App + FinderSync 扩展
 
-> 开始前确认：已安装 Xcode 且 `xcodebuild -version` 正常输出（见 Global Constraints）。
-> 本阶段无法用 `swift test` 自动化（访达 UI / 系统扩展），各任务以「明确操作步骤 + 预期结果」做手动验证。
+> 架构调整（基于本机实测：0 签名身份、无开发者团队）：
+> - 共享配置 **不用 App Group**，改用普通 JSON 文件 `~/Library/Application Support/EasyContext/settings.json`。沙盒已关，两进程直接读写，零 entitlement。
+> - 工程用 **XcodeGen** 从版本化的 `project.yml` 生成（`brew install xcodegen`），便于脚本化与复现。
+> - 签名用 **ad-hoc（`CODE_SIGN_IDENTITY = "-"`）**，本地自用即可，无需账号。
+> - Task 8 仍可用 `swift test` 自动化（纯文件 IO）；Task 9 起涉及访达 UI / 系统扩展，以「明确操作步骤 + 预期结果」手动验证。
 
-### Task 8: 创建 Xcode 工程（宿主 App + 扩展 + 接入 Core 包）
+### Task 8: ConfigStore（文件存储共享配置）+ 精简 Settings
+
+把配置持久化从 UserDefaults/App Group 迁到文件。`Settings` 退化为纯 Codable 模型；新增 `ConfigStore` 负责文件读写。可命令行 TDD。
 
 **Files:**
-- Create: `EasyContext.xcodeproj`（Xcode 生成）
-- Create: `EasyContext/`（宿主 App target 源目录）
-- Create: `EasyContextFinder/`（扩展 target 源目录）
-- Modify: 两个 target 的 entitlements 与 Info.plist
+- Modify: `EasyContextCore/Sources/EasyContextCore/Settings.swift`（移除 UserDefaults 持久化）
+- Create: `EasyContextCore/Sources/EasyContextCore/ConfigStore.swift`
+- Modify: `EasyContextCore/Tests/EasyContextCoreTests/SettingsTests.swift`（精简为模型默认值测试）
+- Test: `EasyContextCore/Tests/EasyContextCoreTests/ConfigStoreTests.swift`
 
 **Interfaces:**
-- Consumes: 本地包 `EasyContextCore`
-- Produces: 可编译运行的空壳宿主 App + 已注册的 FinderSync 扩展
+- Consumes: `Settings`、`FileTemplate`
+- Produces:
+  - `Settings` 仍为 `Codable, Equatable, Sendable` 的纯模型，保留全部字段与默认值；**移除** `appGroupId`、`storageKey`、`load(from:)`、`save(to:)`。
+  - `struct ConfigStore`，`init(fileURL: URL)` 与便捷 `init(fileManager: FileManager = .default)`（默认指向 `~/Library/Application Support/EasyContext/settings.json`）；`func hasStored() -> Bool`；`func load() -> Settings`（缺失/损坏返回默认）；`func save(_ settings: Settings) throws`（自动建目录、原子写）。
 
-- [ ] **Step 1: 新建 App 工程**
+- [ ] **Step 1: 改写 SettingsTests（先让其失败/不编译以驱动重构）**
 
-Xcode → File → New → Project → macOS → App。
-- Product Name: `EasyContext`
-- Organization Identifier: `com.luyantao`（使 bundle id = `com.luyantao.easycontext`）
-- Interface: SwiftUI，Language: Swift。
-- 保存到仓库根 `/Volumes/Samsung/codes/easy-context/`（与 `EasyContextCore/`、`docs/` 同级）。
+把 `SettingsTests.swift` 整文件替换为仅测模型默认值：
+```swift
+import XCTest
+@testable import EasyContextCore
 
-- [ ] **Step 2: 添加 FinderSync 扩展 target**
+final class SettingsTests: XCTestCase {
+    func test_defaultInit_hasExpectedDefaults() {
+        let s = Settings()
+        XCTAssertTrue(s.copyFullPathEnabled)
+        XCTAssertTrue(s.copyRelativePathEnabled)
+        XCTAssertTrue(s.newFileEnabled)
+        XCTAssertEqual(s.defaultTemplate, .blank)
+        XCTAssertEqual(s.enabledTerminalBundleIds, [])
+        XCTAssertEqual(s.enabledEditorBundleIds, [])
+    }
+}
+```
 
-File → New → Target → macOS → Finder Sync Extension。
-- Product Name: `EasyContextFinder`（bundle id 自动成为 `com.luyantao.easycontext.finder`）。
-- 弹窗询问是否 activate scheme：Activate。
+- [ ] **Step 2: 写 ConfigStore 失败测试**
 
-- [ ] **Step 3: 关闭沙盒、配置 App Group（两个 target 都做）**
+`ConfigStoreTests.swift`：
+```swift
+import XCTest
+@testable import EasyContextCore
 
-对 `EasyContext` 与 `EasyContextFinder` 两个 target：
-- Signing & Capabilities → 若存在 `App Sandbox` 能力则删除（本地自用关闭沙盒）。
-- 添加 Capability → App Groups → 勾选/新增 `group.com.luyantao.easycontext`。
-- Signing：Team 选你的个人账号或 “Sign to Run Locally”。
+final class ConfigStoreTests: XCTestCase {
+    private func tempFileURL() -> URL {
+        FileManager.default.temporaryDirectory
+            .appendingPathComponent("easycontext-test-\(ProcessInfo.processInfo.globallyUniqueString)")
+            .appendingPathComponent("settings.json")
+    }
 
-- [ ] **Step 4: 接入本地 Core 包**
+    func test_load_returnsDefaults_whenFileMissing() {
+        let sut = ConfigStore(fileURL: tempFileURL())
+        XCTAssertFalse(sut.hasStored())
+        XCTAssertEqual(sut.load(), Settings())
+    }
 
-File → Add Package Dependencies → Add Local → 选择仓库内 `EasyContextCore` 目录。
-- 在 `EasyContext` 与 `EasyContextFinder` 两个 target 的 “Frameworks, Libraries” 里都加上 `EasyContextCore` 库产物。
+    func test_saveThenLoad_roundTrips() throws {
+        let sut = ConfigStore(fileURL: tempFileURL())
+        var s = Settings()
+        s.enabledEditorBundleIds = ["com.microsoft.VSCode"]
+        s.enabledTerminalBundleIds = ["com.googlecode.iterm2"]
+        s.defaultTemplate = .markdown
+        s.copyFullPathEnabled = false
+        try sut.save(s)
+        XCTAssertTrue(sut.hasStored())
+        XCTAssertEqual(sut.load(), s)
+    }
 
-- [ ] **Step 5: 编译验证**
+    func test_load_returnsDefaults_whenCorrupt() throws {
+        let url = tempFileURL()
+        try FileManager.default.createDirectory(
+            at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data("not json".utf8).write(to: url)
+        let sut = ConfigStore(fileURL: url)
+        XCTAssertEqual(sut.load(), Settings())
+    }
+}
+```
 
-Run: `xcodebuild -scheme EasyContext -destination 'platform=macOS' build`
-Expected: `** BUILD SUCCEEDED **`
+- [ ] **Step 3: 运行确认失败**
 
-- [ ] **Step 6: 手动验证扩展能注册**
+Run: `cd EasyContextCore && swift test --filter ConfigStoreTests`
+Expected: FAIL，`cannot find 'ConfigStore'`
 
-运行 App（Cmd+R）→ 打开「系统设置 → 通用 → 登录项与扩展 → 访达扩展」→ 勾选 `EasyContextFinder`。
-Expected: 列表中能看到并启用该扩展，无报错。
+- [ ] **Step 4: 精简 Settings.swift**
+
+把 `Settings.swift` 中的 `appGroupId`、`storageKey`、`load(from:)`、`save(to:)` 全部删除，仅保留结构体、字段、`init`、协议遵循。结果应为：
+```swift
+import Foundation
+
+public struct Settings: Codable, Equatable, Sendable {
+    public var copyFullPathEnabled: Bool
+    public var copyRelativePathEnabled: Bool
+    public var newFileEnabled: Bool
+    public var enabledTerminalBundleIds: [String]
+    public var enabledEditorBundleIds: [String]
+    public var defaultTemplate: FileTemplate
+
+    public init(
+        copyFullPathEnabled: Bool = true,
+        copyRelativePathEnabled: Bool = true,
+        newFileEnabled: Bool = true,
+        enabledTerminalBundleIds: [String] = [],
+        enabledEditorBundleIds: [String] = [],
+        defaultTemplate: FileTemplate = .blank
+    ) {
+        self.copyFullPathEnabled = copyFullPathEnabled
+        self.copyRelativePathEnabled = copyRelativePathEnabled
+        self.newFileEnabled = newFileEnabled
+        self.enabledTerminalBundleIds = enabledTerminalBundleIds
+        self.enabledEditorBundleIds = enabledEditorBundleIds
+        self.defaultTemplate = defaultTemplate
+    }
+}
+```
+
+- [ ] **Step 5: 实现 ConfigStore.swift**
+
+```swift
+import Foundation
+
+public struct ConfigStore {
+    private let fileURL: URL
+
+    public init(fileURL: URL) {
+        self.fileURL = fileURL
+    }
+
+    /// 默认指向 ~/Library/Application Support/EasyContext/settings.json
+    public init(fileManager: FileManager = .default) {
+        let base = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        self.fileURL = base.appendingPathComponent("EasyContext/settings.json")
+    }
+
+    public func hasStored() -> Bool {
+        FileManager.default.fileExists(atPath: fileURL.path)
+    }
+
+    public func load() -> Settings {
+        guard let data = try? Data(contentsOf: fileURL),
+              let decoded = try? JSONDecoder().decode(Settings.self, from: data)
+        else { return Settings() }
+        return decoded
+    }
+
+    public func save(_ settings: Settings) throws {
+        let dir = fileURL.deletingLastPathComponent()
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let data = try JSONEncoder().encode(settings)
+        try data.write(to: fileURL, options: .atomic)
+    }
+}
+```
+
+- [ ] **Step 6: 运行确认通过 + 全量回归**
+
+Run: `cd EasyContextCore && swift test`
+Expected: 全部 PASS（ConfigStore 3 + 其余无回归）。
 
 - [ ] **Step 7: 提交**
 
 ```bash
-git add -A
-git commit -m "feat(app): 创建宿主 App 与 FinderSync 扩展工程并接入 Core"
+git add EasyContextCore
+git commit -m "feat(core): 用 ConfigStore 文件存储替代 UserDefaults/App Group 共享配置"
 ```
 
 ---
 
-### Task 9: FinderSync 扩展——菜单注入与动作（复制路径 / 打开终端 / 打开编辑器）
+### Task 9: 用 XcodeGen 生成工程（宿主 App + FinderSync 扩展，ad-hoc 签名）
 
 **Files:**
-- Modify: `EasyContextFinder/FinderSync.swift`（替换 Xcode 模板生成的主类）
+- Create: `project.yml`（XcodeGen 工程定义，仓库根）
+- Create: `EasyContext/EasyContextApp.swift`、`EasyContext/ContentView.swift`、`EasyContext/Info.plist`（宿主 App 占位）
+- Create: `EasyContextFinder/FinderSyncExtension.swift`、`EasyContextFinder/Info.plist`（扩展占位）
+- Generate: `EasyContext.xcodeproj`（由 `xcodegen` 生成，不手写）
 
 **Interfaces:**
-- Consumes: `EasyContextCore`（`Settings`、`KnownApps`、`AppDetector`、`OpenCommand`、`TargetDirectoryResolver`、`RelativePathResolver`、`ProcessSpec`）
-- Produces: 右键菜单注入 + 动作执行；私有 selector `copyFullPath:`、`copyRelativePath:`、`openWithApp:`（后者经 `representedObject` 带 bundleId）
+- Consumes: 本地包 `EasyContextCore`
+- Produces: 可编译运行的空壳宿主 App + 注册到访达的 FinderSync 扩展；扩展主类 `EasyContextFinder.FinderSyncExtension`
+
+- [ ] **Step 1: 安装 XcodeGen**
+
+Run: `brew install xcodegen && xcodegen --version`
+Expected: 输出版本号（如 `Version: 2.x`）。
+
+- [ ] **Step 2: 写 project.yml**
+
+仓库根 `project.yml`：
+```yaml
+name: EasyContext
+options:
+  bundleIdPrefix: com.luyantao.easycontext
+  deploymentTarget:
+    macOS: "13.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: "-"
+    DEVELOPMENT_TEAM: ""
+    ENABLE_HARDENED_RUNTIME: "NO"
+    PRODUCT_NAME: "$(TARGET_NAME)"
+    SWIFT_VERSION: "5.0"
+packages:
+  EasyContextCore:
+    path: EasyContextCore
+targets:
+  EasyContext:
+    type: application
+    platform: macOS
+    sources:
+      - EasyContext
+    dependencies:
+      - package: EasyContextCore
+        product: EasyContextCore
+      - target: EasyContextFinder
+        embed: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.luyantao.easycontext
+    info:
+      path: EasyContext/Info.plist
+      properties:
+        CFBundleDisplayName: Easy Context
+        LSMinimumSystemVersion: "13.0"
+        LSUIElement: false
+  EasyContextFinder:
+    type: app-extension
+    platform: macOS
+    sources:
+      - EasyContextFinder
+    dependencies:
+      - package: EasyContextCore
+        product: EasyContextCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.luyantao.easycontext.finder
+    info:
+      path: EasyContextFinder/Info.plist
+      properties:
+        CFBundleDisplayName: EasyContextFinder
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.FinderSync
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).FinderSyncExtension
+```
+
+> 不写 entitlements 文件：无沙盒、无 App Group，ad-hoc 签名不需要 entitlements。
+
+- [ ] **Step 3: 写宿主 App 占位源码**
+
+`EasyContext/EasyContextApp.swift`：
+```swift
+import SwiftUI
+
+@main
+struct EasyContextApp: App {
+    var body: some Scene {
+        Window("Easy Context", id: "main") {
+            ContentView()
+        }
+        .windowResizability(.contentSize)
+    }
+}
+```
+
+`EasyContext/ContentView.swift`（占位，Task 11 替换为设置界面）：
+```swift
+import SwiftUI
+
+struct ContentView: View {
+    var body: some View {
+        Text("Easy Context")
+            .frame(width: 460, height: 560)
+    }
+}
+```
+
+`EasyContext/Info.plist`：
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+</dict>
+</plist>
+```
+
+- [ ] **Step 4: 写扩展占位源码**
+
+`EasyContextFinder/FinderSyncExtension.swift`（占位，Task 10 实现菜单逻辑）：
+```swift
+import Cocoa
+import FinderSync
+
+class FinderSyncExtension: FIFinderSync {
+    override init() {
+        super.init()
+        FIFinderSyncController.default().directoryURLs = [URL(fileURLWithPath: "/")]
+    }
+}
+```
+
+`EasyContextFinder/Info.plist`：
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+</dict>
+</plist>
+```
+> NSExtension 字典由 project.yml 注入到生成的 Info.plist，无需在此重复。
+
+- [ ] **Step 5: 生成工程并编译**
+
+Run:
+```bash
+cd /Volumes/Samsung/codes/easy-context
+xcodegen generate
+xcodebuild -project EasyContext.xcodeproj -scheme EasyContext -configuration Debug -derivedDataPath build CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build
+```
+Expected: `** BUILD SUCCEEDED **`，并在 `build/Build/Products/Debug/EasyContext.app/Contents/PlugIns/` 下生成 `EasyContextFinder.appex`。
+
+> 把生成的 `EasyContext.xcodeproj` 加入 `.gitignore`（由 project.yml 生成，不入库）；`project.yml` 入库。
+
+- [ ] **Step 6: 手动验证扩展注册（人工）**
+
+1. 把构建出的 `build/Build/Products/Debug/EasyContext.app` 拷到 `/Applications/`。
+2. 双击运行一次（注册扩展），或 `pluginkit -a /Applications/EasyContext.app/Contents/PlugIns/EasyContextFinder.appex`。
+3. 打开「系统设置 → 通用 → 登录项与扩展 → 访达扩展」，勾选 `EasyContextFinder`。
+Expected: 列表能看到并启用扩展。若 ad-hoc 扩展无法加载，记录现象（回退见下）。
+
+> **ad-hoc 加载回退**：若系统拒绝加载未受信扩展，尝试 `codesign --force --deep -s - /Applications/EasyContext.app` 重新 ad-hoc 签名后再注册；仍不行则需在 Xcode 用免费 Apple ID 个人团队签名（仅签名，不需 App Group）。把实际可行方式记入报告。
+
+- [ ] **Step 7: 提交**
+
+```bash
+git add project.yml EasyContext EasyContextFinder .gitignore
+git commit -m "feat(app): XcodeGen 生成宿主 App 与 FinderSync 扩展（ad-hoc 签名，无 App Group）"
+```
+
+---
+
+### Task 10: FinderSync 扩展——菜单注入与动作（复制路径 / 打开终端 / 打开编辑器）
+
+**Files:**
+- Modify: `EasyContextFinder/FinderSyncExtension.swift`（替换占位为完整实现）
+
+**Interfaces:**
+- Consumes: `EasyContextCore`（`ConfigStore`、`Settings`、`KnownApps`、`AppDetector`、`OpenCommand`、`TargetDirectoryResolver`、`RelativePathResolver`、`ProcessSpec`）
+- Produces: 右键菜单注入 + 动作；私有 selector `copyFullPath:`、`copyRelativePath:`、`openWithApp:`（经 `representedObject` 带 bundleId）、`newFile:`
 
 - [ ] **Step 1: 实现扩展主类**
 
-`EasyContextFinder/FinderSync.swift`（整文件替换）：
+`EasyContextFinder/FinderSyncExtension.swift`（整文件替换）：
 ```swift
 import Cocoa
 import FinderSync
 import EasyContextCore
 
-class FinderSync: FIFinderSync {
-    private var sharedDefaults: UserDefaults {
-        UserDefaults(suiteName: Settings.appGroupId) ?? .standard
-    }
+class FinderSyncExtension: FIFinderSync {
+    private let configStore = ConfigStore()
 
     override init() {
         super.init()
-        // 监控根目录，使内置盘与所有外置磁盘（/Volumes/*）均生效。
         FIFinderSyncController.default().directoryURLs = [URL(fileURLWithPath: "/")]
     }
 
@@ -932,16 +1219,14 @@ class FinderSync: FIFinderSync {
                 || menuKind == .contextualMenuForContainer else { return nil }
         guard primaryURL() != nil else { return nil }
 
-        let settings = Settings.load(from: sharedDefaults)
+        let settings = configStore.load()
         let menu = NSMenu(title: "")
 
         if settings.copyFullPathEnabled {
-            addItem(to: menu, title: "复制完整路径",
-                    action: #selector(copyFullPath(_:)))
+            addItem(to: menu, title: "复制完整路径", action: #selector(copyFullPath(_:)))
         }
         if settings.copyRelativePathEnabled {
-            addItem(to: menu, title: "复制相对路径",
-                    action: #selector(copyRelativePath(_:)))
+            addItem(to: menu, title: "复制相对路径", action: #selector(copyRelativePath(_:)))
         }
 
         let detector = AppDetector(isInstalled: Self.isInstalled)
@@ -964,8 +1249,7 @@ class FinderSync: FIFinderSync {
 
         if settings.newFileEnabled {
             menu.addItem(.separator())
-            addItem(to: menu, title: "新建文件…",
-                    action: #selector(newFile(_:)))
+            addItem(to: menu, title: "新建文件…", action: #selector(newFile(_:)))
         }
         return menu
     }
@@ -991,8 +1275,7 @@ class FinderSync: FIFinderSync {
 
     @objc private func copyRelativePath(_ sender: AnyObject?) {
         guard let url = primaryURL() else { return }
-        let rel = RelativePathResolver().relativePath(for: url)
-        writeToPasteboard(rel)
+        writeToPasteboard(RelativePathResolver().relativePath(for: url))
     }
 
     @objc private func openWithApp(_ sender: NSMenuItem) {
@@ -1004,8 +1287,7 @@ class FinderSync: FIFinderSync {
     }
 
     @objc private func newFile(_ sender: AnyObject?) {
-        // 在 Task 11 实现
-        NewFileController(defaults: sharedDefaults).run(in: targetDirectory())
+        NewFileController(configStore: configStore).run(in: targetDirectory())
     }
 
     private func writeToPasteboard(_ string: String) {
@@ -1024,62 +1306,54 @@ class FinderSync: FIFinderSync {
 }
 ```
 
-> 注：`newFile(_:)` 依赖 Task 11 的 `NewFileController`。在 Task 11 完成前，先把 `newFile` 方法体临时改成 `NSLog("newFile pending")`，使本任务可独立编译验证。
+> 依赖 Task 12 的 `NewFileController`。本任务先把 `newFile(_:)` 体临时替换为 `NSLog("newFile pending")` 以独立编译；Task 12 恢复真实调用。
 
 - [ ] **Step 2: 临时桩使本任务可编译**
 
-把 `newFile(_:)` 方法体临时替换为：
 ```swift
     @objc private func newFile(_ sender: AnyObject?) {
         NSLog("newFile pending")
     }
 ```
 
-- [ ] **Step 3: 编译验证**
+- [ ] **Step 3: 重新生成并编译**
 
-Run: `xcodebuild -scheme EasyContext -destination 'platform=macOS' build`
+Run:
+```bash
+cd /Volumes/Samsung/codes/easy-context
+xcodegen generate
+xcodebuild -project EasyContext.xcodeproj -scheme EasyContext -configuration Debug -derivedDataPath build CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build
+```
 Expected: `** BUILD SUCCEEDED **`
 
-- [ ] **Step 4: 手动核对 bundle id**
+- [ ] **Step 4: 真机核对 bundle id（人工）**
 
-对你机器上实际安装的终端/编辑器，逐个运行核对，修正 `KnownApp.swift` 中不符的值：
-Run: `osascript -e 'id of app "Cursor"'`（对 Trae、Warp、Ghostty 等同理）
-Expected: 输出的 bundle id 与清单一致；不一致则更新清单并重新提交 Core。
+对你机器实际安装的终端/编辑器逐个核对，修正 `KnownApp.swift` 中不符的值（尤其 Cursor/Trae）：
+Run: `osascript -e 'id of app "Cursor"'`
+Expected: 输出与清单一致；不一致则更新 `KnownApp.swift` 并 `cd EasyContextCore && swift test` 回归后单独提交。
 
-- [ ] **Step 5: 手动验证菜单与动作**
+- [ ] **Step 5: 手动验证菜单与动作（人工）**
 
-先临时在共享配置写入启用项（可在 Task 10 设置界面完成；此处为提前验证，可在宿主 App 里加一行测试代码或用 `defaults` 命令写入），然后在访达里右键一个目录：
-- 出现「复制完整路径」「复制相对路径」→ 点击后到别处 Cmd+V，核对粘贴内容正确。
-- 出现「用 VSCode 打开」等 → 点击后对应编辑器/终端在该目录打开。
-- 右键 git 仓库内的文件，「复制相对路径」粘贴出的是相对仓库根的路径。
-- 右键非 git 目录下家目录内文件，粘贴出的是 `~/...`。
+先用设置界面（Task 11）或临时命令写入启用项，再到访达右键目录验证：复制完整/相对路径粘贴正确；「用 VSCode 打开」等能在该目录打开；git 内/外相对路径符合预期。
 
 - [ ] **Step 6: 提交**
 
 ```bash
-git add -A
+git add EasyContextFinder
 git commit -m "feat(finder): 注入复制路径与打开终端/编辑器菜单及动作"
 ```
 
 ---
 
-### Task 10: 宿主 App 设置界面（SwiftUI）
+### Task 11: 宿主 App 设置界面（SwiftUI，基于 ConfigStore）
 
 **Files:**
 - Modify: `EasyContext/ContentView.swift`（替换为设置界面）
 - Create: `EasyContext/SettingsStore.swift`
 
 **Interfaces:**
-- Consumes: `EasyContextCore`（`Settings`、`KnownApps`、`AppDetector`、`FileTemplate`）
-- Produces: 读写共享配置的设置界面；`final class SettingsStore: ObservableObject`，发布 `@Published var settings: Settings`，方法 `load()`、`persist()`、`detectedTerminals/detectedEditors: [KnownApp]`
-
-> **阶段 A 终审遗留项**：`Settings.storageKey` 是 `private static`，下面 `SettingsStore.seedEnabledIfFirstRun()` 用 `Settings.hasStored(in:)` 判断是否首次运行，**不要硬编码字面量 `"settings"`**（否则未来改 key 会静默漂移）。因此本任务先在 `EasyContextCore` 的 `Settings.swift` 补一个公开 API（TDD：先在 `SettingsTests.swift` 加一个「无数据时 `hasStored` 为 false、save 后为 true」的测试，确认失败，再实现）：
-> ```swift
-> public static func hasStored(in defaults: UserDefaults) -> Bool {
->     defaults.data(forKey: storageKey) != nil
-> }
-> ```
-> 补完后 `cd EasyContextCore && swift test` 应全绿，再单独提交，然后继续下面的 SettingsStore。
+- Consumes: `EasyContextCore`（`ConfigStore`、`Settings`、`KnownApps`、`AppDetector`、`FileTemplate`）
+- Produces: `@MainActor final class SettingsStore: ObservableObject`，`@Published var settings: Settings`，`persist()`、`detectedTerminals/detectedEditors`、`isEnabled(_:)`、`toggle(_:on:)`
 
 - [ ] **Step 1: 实现 SettingsStore**
 
@@ -1093,11 +1367,10 @@ import EasyContextCore
 final class SettingsStore: ObservableObject {
     @Published var settings: Settings
 
-    private let defaults: UserDefaults
+    private let store = ConfigStore()
 
     init() {
-        self.defaults = UserDefaults(suiteName: Settings.appGroupId) ?? .standard
-        self.settings = Settings.load(from: defaults)
+        self.settings = store.load()
         seedEnabledIfFirstRun()
     }
 
@@ -1110,7 +1383,7 @@ final class SettingsStore: ObservableObject {
 
     /// 首次运行：默认勾选所有已检测到的 App。
     private func seedEnabledIfFirstRun() {
-        if !Settings.hasStored(in: defaults) {
+        if !store.hasStored() {
             settings.enabledTerminalBundleIds = detectedTerminals.map(\.bundleId)
             settings.enabledEditorBundleIds = detectedEditors.map(\.bundleId)
             persist()
@@ -1118,7 +1391,7 @@ final class SettingsStore: ObservableObject {
     }
 
     func persist() {
-        settings.save(to: defaults)
+        try? store.save(settings)
     }
 
     func isEnabled(_ app: KnownApp) -> Bool {
@@ -1167,17 +1440,17 @@ struct ContentView: View {
             }
 
             Section("终端") {
-                ForEach(store.detectedTerminals) { app in
-                    appToggle(app)
+                ForEach(store.detectedTerminals) { app in appToggle(app) }
+                if store.detectedTerminals.isEmpty {
+                    Text("未检测到终端").foregroundStyle(.secondary)
                 }
-                if store.detectedTerminals.isEmpty { Text("未检测到终端").foregroundStyle(.secondary) }
             }
 
             Section("编辑器") {
-                ForEach(store.detectedEditors) { app in
-                    appToggle(app)
+                ForEach(store.detectedEditors) { app in appToggle(app) }
+                if store.detectedEditors.isEmpty {
+                    Text("未检测到编辑器").foregroundStyle(.secondary)
                 }
-                if store.detectedEditors.isEmpty { Text("未检测到编辑器").foregroundStyle(.secondary) }
             }
 
             Section("新建文件默认模板") {
@@ -1212,36 +1485,38 @@ struct ContentView: View {
 }
 ```
 
-- [ ] **Step 3: 编译验证**
+- [ ] **Step 3: 重新生成并编译**
 
-Run: `xcodebuild -scheme EasyContext -destination 'platform=macOS' build`
+Run:
+```bash
+cd /Volumes/Samsung/codes/easy-context
+xcodegen generate
+xcodebuild -project EasyContext.xcodeproj -scheme EasyContext -configuration Debug -derivedDataPath build CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build
+```
 Expected: `** BUILD SUCCEEDED **`
 
-- [ ] **Step 4: 手动验证设置联动**
+- [ ] **Step 4: 手动验证设置联动（人工）**
 
-运行 App：
-- 终端/编辑器列表只显示真实安装的。
-- 勾选/取消某项后，去访达右键 → 该项在菜单中相应出现/消失（扩展读的是同一份共享配置）。
-- 关闭「复制相对路径」→ 菜单中该项消失。
+运行 App：终端/编辑器列表只显示真实安装的；勾选/取消后，访达右键菜单对应项相应出现/消失（扩展与宿主读同一份 `settings.json`）；关闭「复制相对路径」后该项从菜单消失。
 
 - [ ] **Step 5: 提交**
 
 ```bash
-git add -A
-git commit -m "feat(app): 设置界面读写共享配置、检测已装 App"
+git add EasyContext
+git commit -m "feat(app): 设置界面读写共享 settings.json、检测已装 App"
 ```
 
 ---
 
-### Task 11: 新建文件动作（输入文件名 + 模板，重名加序号）
+### Task 12: 新建文件动作（输入文件名 + 模板，重名加序号）
 
 **Files:**
 - Create: `EasyContextFinder/NewFileController.swift`
-- Modify: `EasyContextFinder/FinderSync.swift`（移除 Task 9 的临时桩，恢复调用 `NewFileController`）
+- Modify: `EasyContextFinder/FinderSyncExtension.swift`（移除 Task 10 临时桩，恢复真实调用）
 
 **Interfaces:**
-- Consumes: `EasyContextCore`（`Settings`、`FileTemplate`、`UniqueNameResolver`）
-- Produces: `struct NewFileController(defaults: UserDefaults)`，`func run(in directory: URL?)`
+- Consumes: `EasyContextCore`（`ConfigStore`、`Settings`、`FileTemplate`、`UniqueNameResolver`）
+- Produces: `struct NewFileController(configStore: ConfigStore)`，`func run(in directory: URL?)`
 
 - [ ] **Step 1: 实现 NewFileController**
 
@@ -1251,11 +1526,11 @@ import AppKit
 import EasyContextCore
 
 struct NewFileController {
-    let defaults: UserDefaults
+    let configStore: ConfigStore
 
     func run(in directory: URL?) {
         guard let directory else { return }
-        let settings = Settings.load(from: defaults)
+        let settings = configStore.load()
 
         let alert = NSAlert()
         alert.messageText = "新建文件"
@@ -1303,41 +1578,42 @@ struct NewFileController {
 }
 ```
 
-- [ ] **Step 2: 恢复 FinderSync 中的真实调用**
+- [ ] **Step 2: 恢复扩展中的真实调用**
 
-把 Task 9 里临时的 `newFile(_:)` 桩改回：
+把 Task 10 的临时桩改回：
 ```swift
     @objc private func newFile(_ sender: AnyObject?) {
-        NewFileController(defaults: sharedDefaults).run(in: targetDirectory())
+        NewFileController(configStore: configStore).run(in: targetDirectory())
     }
 ```
 
-- [ ] **Step 3: 编译验证**
+- [ ] **Step 3: 重新生成并编译**
 
-Run: `xcodebuild -scheme EasyContext -destination 'platform=macOS' build`
+Run:
+```bash
+cd /Volumes/Samsung/codes/easy-context
+xcodegen generate
+xcodebuild -project EasyContext.xcodeproj -scheme EasyContext -configuration Debug -derivedDataPath build CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build
+```
 Expected: `** BUILD SUCCEEDED **`
 
-- [ ] **Step 4: 手动验证新建文件**
+- [ ] **Step 4: 手动验证新建文件（人工）**
 
-访达右键一个目录 → 「新建文件…」：
-- 弹出输入框（文件名默认「未命名」+ 模板下拉）。
-- 选 Shell (.sh) 创建 → 目录出现 `未命名.sh`，内容含 `#!/bin/bash`，且 `ls -l` 显示可执行位 `-rwxr-xr-x`。
-- 再次同名创建 → 得到 `未命名 2.sh`，原文件不被覆盖。
-- 若弹框在扩展上下文中无法显示（系统限制），记录现象，回退方案：直接用「默认模板 + 未命名」创建并跳过弹框（在 `run` 中加 `#if` 开关），保证功能可用。
+访达右键目录 → 「新建文件…」：弹输入框（默认「未命名」+ 模板下拉）；选 Shell (.sh) 创建 → 出现 `未命名.sh`，含 `#!/bin/bash`，`ls -l` 显示 `-rwxr-xr-x`；再次同名 → `未命名 2.sh`，原文件不被覆盖。
+若弹框在扩展上下文无法显示（系统限制），回退：直接用「默认模板 + 未命名」创建并跳过弹框（在 `run` 中加开关），保证功能可用，并记录现象。
 
 - [ ] **Step 5: 提交**
 
 ```bash
-git add -A
+git add EasyContextFinder
 git commit -m "feat(finder): 新建文件（模板 + 重名加序号）"
 ```
 
 ---
 
-### Task 12: 端到端与外置磁盘验证
+### Task 13: 端到端与外置磁盘验证
 
-**Files:**
-- 无新增；整体回归。
+**Files:** 无新增；整体回归。
 
 **Interfaces:**
 - Consumes: 全部已实现功能
@@ -1350,20 +1626,21 @@ Expected: 全部 PASS。
 
 - [ ] **Step 2: 整工程编译**
 
-Run: `xcodebuild -scheme EasyContext -destination 'platform=macOS' build`
+Run:
+```bash
+cd /Volumes/Samsung/codes/easy-context
+xcodegen generate
+xcodebuild -project EasyContext.xcodeproj -scheme EasyContext -configuration Debug -derivedDataPath build CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build
+```
 Expected: `** BUILD SUCCEEDED **`
 
-- [ ] **Step 3: 外置磁盘验证**
+- [ ] **Step 3: 外置磁盘验证（人工）**
 
-插入 U 盘/移动硬盘（挂载于 `/Volumes/<名称>`）：
-- 在该盘内右键目录 → Easy Context 菜单项正常出现。
-- 「复制完整路径」粘贴出 `/Volumes/...` 完整路径。
-- 「用 VSCode 打开」能在该外置目录打开编辑器。
-- 「新建文件…」能在外置盘创建成功。
+插入 U 盘/移动硬盘（挂载 `/Volumes/<名称>`）：在该盘内右键目录 → 菜单正常出现；「复制完整路径」粘贴出 `/Volumes/...`；「用 VSCode 打开」能在外置目录打开；「新建文件…」能在外置盘创建成功。
 
-- [ ] **Step 4: 核心场景清单逐项过**
+- [ ] **Step 4: 核心场景清单逐项过（人工）**
 
-逐项确认并记录结果：复制完整路径、复制相对路径（git 内/外）、各终端打开、各编辑器打开、新建文件（各模板、重名）、文件 vs 目录两种右键起点、设置开关联动。
+逐项确认并记录：复制完整路径、复制相对路径（git 内/外）、各终端打开、各编辑器打开、新建文件（各模板、重名）、文件 vs 目录两种右键起点、设置开关联动、配置写入 `~/Library/Application Support/EasyContext/settings.json`。
 
 - [ ] **Step 5: 提交验收记录（可选）**
 
@@ -1376,7 +1653,8 @@ git commit -m "test: 端到端与外置磁盘手动验收通过"
 
 ## Self-Review 记录
 
-- **Spec 覆盖**：复制完整路径(T9)、复制相对路径/git根回退(T3+T9)、打开终端自动识别(T4+T9+T10)、打开编辑器(T4+T9+T10)、外置磁盘(T9 监控根 `/` + T12 验证)、新建文件模板+重名加序号(T6+T11)、自动检测(T4+T10)、共享配置(T7+T10)、bundle id/沙盒关闭/macOS13(Global Constraints + T8) — 均有对应任务。
-- **占位符**：阶段 A 全部含完整代码与可运行命令；阶段 B 含完整源文件，验证为手动步骤（访达 UI 无法自动化，属合理）。无 TBD/TODO 残留（T9→T11 的临时桩有明确恢复步骤）。
-- **类型一致性**：`ProcessSpec`、`KnownApp`、`Settings`、`FileTemplate`、`AppDetector.installed(from:)`、`OpenCommand.open(app:directory:)`、`RelativePathResolver.relativePath(for:)`、`UniqueNameResolver.uniqueName(base:ext:)` 在定义任务与消费任务（T9/T10/T11）间签名一致。
-- **已知风险**：(1) 部分 bundle id 为猜测值 → T9 Step 4 真机核对；(2) 扩展内 `NSAlert` 能否弹出存在系统限制 → T11 Step 4 给出回退方案。
+- **Spec 覆盖**：复制完整路径(T10)、复制相对路径/git根回退(T3+T10)、打开终端自动识别(T4+T10+T11)、打开编辑器(T4+T10+T11)、外置磁盘(T9 监控根 `/` + T13 验证)、新建文件模板+重名加序号(T6+T12)、自动检测(T4+T11)、共享配置(T8 文件存储 + T11)、bundle id/沙盒关闭/macOS13(全局约束 + T9) — 均有对应任务。
+- **架构调整**：原 App Group 方案因本机无签名身份/无开发者团队而改为 `~/Library/Application Support/EasyContext/settings.json` 文件存储（沙盒已关，两进程直接读写）；工程改用 XcodeGen + ad-hoc 签名。
+- **占位符**：阶段 A、Task 8 含完整代码与可运行命令；T9–T13 含完整源文件/配置，访达 UI 与扩展加载为手动验证（合理）。T10→T12 的临时桩有明确恢复步骤。
+- **类型一致性**：`ConfigStore.load/save/hasStored`、`Settings`（纯模型）、`KnownApp`、`AppDetector.installed(from:)`、`OpenCommand.open(app:directory:)`、`RelativePathResolver.relativePath(for:)`、`UniqueNameResolver.uniqueName(base:ext:)`、`FileTemplate`、扩展主类 `FinderSyncExtension` 在定义与消费任务间签名一致。
+- **已知风险**：(1) 部分 bundle id 为猜测值 → T10 Step 4 真机核对；(2) ad-hoc 签名的 FinderSync 扩展能否被系统加载存在不确定性 → T9 Step 6 给出 codesign 重签 / 免费个人团队签名回退；(3) 扩展内 `NSAlert` 能否弹出 → T12 Step 4 给出直接创建回退。
