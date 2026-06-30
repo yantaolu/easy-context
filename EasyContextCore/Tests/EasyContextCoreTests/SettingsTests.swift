@@ -2,33 +2,73 @@ import XCTest
 @testable import EasyContextCore
 
 final class SettingsTests: XCTestCase {
-    private func makeDefaults() -> UserDefaults {
-        let suite = "test.easycontext.settings"
-        let d = UserDefaults(suiteName: suite)!
-        d.removePersistentDomain(forName: suite)
-        return d
+    func test_defaultInit_hasExpectedDefaults() {
+        let s = Settings()
+        XCTAssertEqual(s.version, 2)
+        XCTAssertTrue(s.items.copyFullPath)
+        XCTAssertTrue(s.items.copyRelativePath)
+        XCTAssertTrue(s.items.newFile)
+        XCTAssertEqual(s.terminals, [])
+        XCTAssertEqual(s.editors, [])
+        XCTAssertEqual(s.appearance.appIconStyle, .monochrome)
     }
 
-    func test_load_returnsDefaults_whenEmpty() {
-        let d = makeDefaults()
-        let s = Settings.load(from: d)
-        XCTAssertTrue(s.copyFullPathEnabled)
-        XCTAssertTrue(s.copyRelativePathEnabled)
-        XCTAssertTrue(s.newFileEnabled)
-        XCTAssertEqual(s.defaultTemplate, .blank)
-        XCTAssertEqual(s.enabledTerminalBundleIds, [])
+    func test_decode_partialJSON_fillsDefaults() throws {
+        let json = """
+        { "terminals": [ { "bundleId": "com.apple.Terminal", "name": "Terminal", "enabled": false } ] }
+        """
+        let s = try JSONDecoder().decode(Settings.self, from: Data(json.utf8))
+        XCTAssertEqual(s.terminals.count, 1)
+        XCTAssertEqual(s.terminals[0].bundleId, "com.apple.Terminal")
+        XCTAssertFalse(s.terminals[0].enabled)
+        XCTAssertFalse(s.terminals[0].custom) // 缺省
+        XCTAssertTrue(s.items.copyFullPath)   // 未写→默认
+        XCTAssertEqual(s.appearance.appIconStyle, .monochrome)
     }
 
-    func test_saveThenLoad_roundTrips() {
-        let d = makeDefaults()
-        var s = Settings()
-        s.enabledTerminalBundleIds = ["com.googlecode.iterm2"]
-        s.enabledEditorBundleIds = ["com.microsoft.VSCode"]
-        s.defaultTemplate = .markdown
-        s.copyFullPathEnabled = false
-        s.save(to: d)
+    // reconcile：新增缺失内置、去重、内置在前按内置顺序、自定义在后、保留 enabled
+    func test_reconcile_addsSortsAndPreserves() {
+        let builtinTerminals = KnownApps.terminals
+        // 已有：一个内置（iTerm，被用户关掉）+ 一个自定义
+        let existing = [
+            AppEntry(bundleId: "com.googlecode.iterm2", name: "iTerm", custom: false, enabled: false),
+            AppEntry(bundleId: "com.example.MyTerm", name: "MyTerm", custom: true, enabled: true),
+        ]
+        // 已安装内置：Terminal + iTerm
+        let installed = [
+            builtinTerminals.first { $0.bundleId == "com.apple.Terminal" }!,
+            builtinTerminals.first { $0.bundleId == "com.googlecode.iterm2" }!,
+        ]
+        let result = Settings.reconcileList(existing, installed: installed, builtinOrder: builtinTerminals)
 
-        let loaded = Settings.load(from: d)
-        XCTAssertEqual(loaded, s)
+        // Terminal 在内置清单里排在 iTerm 前 → 顺序 Terminal, iTerm, 然后自定义
+        XCTAssertEqual(result.map(\.bundleId),
+                       ["com.apple.Terminal", "com.googlecode.iterm2", "com.example.MyTerm"])
+        // 新增的 Terminal 默认 enabled
+        XCTAssertTrue(result[0].enabled)
+        // iTerm 保留用户关闭状态
+        XCTAssertFalse(result[1].enabled)
+        // 自定义条目保留
+        XCTAssertTrue(result[2].custom)
+    }
+
+    func test_reconcile_keepsUninstalledBuiltin() {
+        let existing = [
+            AppEntry(bundleId: "com.apple.Terminal", name: "Terminal", custom: false, enabled: true),
+        ]
+        // 没有任何已安装内置传入（模拟卸载）
+        let result = Settings.reconcileList(existing, installed: [], builtinOrder: KnownApps.terminals)
+        XCTAssertEqual(result.map(\.bundleId), ["com.apple.Terminal"]) // 仍保留
+    }
+
+    func test_menuApps_filtersEnabledAndInstalled() {
+        let list = [
+            AppEntry(bundleId: "a", name: "A", enabled: true),
+            AppEntry(bundleId: "b", name: "B", enabled: false),
+            AppEntry(bundleId: "c", name: "C", enabled: true),
+        ]
+        let installed: Set<String> = ["a", "b"] // c 未安装
+        let result = Settings().menuApps(list, isInstalled: { installed.contains($0) })
+        XCTAssertEqual(result.map(\.bundleId), ["a"]) // 仅 a（启用且已安装）
     }
 }

@@ -4,3 +4,10 @@ EasyContextCore/.build/
 .superpowers/
 *.xcuserstate
 xcuserdata/
+EasyContext.xcodeproj/
+build/
+EasyContext/Info.plist
+EasyContextFinder/Info.plist
+dist/
+build-release/
+.venv-dmg/

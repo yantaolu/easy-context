@@ -1,5 +1,16 @@
 # Easy Context Implementation Plan
 
+> ⚠️ **实现纪要（2026-06-30 同步）——本计划正文为历史记录，已被实际实现部分推翻。**
+> 当前真实架构以 **设计文档 `docs/superpowers/specs/2026-06-30-easy-context-design.md`（as-built 版）** 为准。
+> 关键差异（FinderSync 真机约束导致）：
+> - 扩展**必须开 App Sandbox**（pkd 拒绝非沙盒插件）；本计划「关沙盒」方案作废。
+> - 共享配置改为 **`~/.easy-context/config.json`**（getpwuid 取真实家目录），**非** App Group、**非** App Support。
+> - 打开 App 用 **NSWorkspace**（非 `Process`/`open`，沙盒禁止 spawn）；`OpenCommand` 已移除。
+> - 新建文件改为**模板子菜单直接创建**（扩展不能弹模态窗）。
+> - 监控**所有挂载卷**（`/` 不覆盖外置盘）；菜单用 **tag**（XPC 丢弃 representedObject）。
+> - 配置升级到 **v2 AppEntry 列表 + reconcile**（移除 showAll）；菜单图标支持黑白/彩色 + 深色适配；签名 ad-hoc。
+> 完整变更对照见设计文档「附录 A」。阶段 A（EasyContextCore，Task 1-7）基本按计划落地；阶段 B（Task 8-13）实际实现与下文出入较大。
+>
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 自研一款 macOS 应用，扩展访达右键菜单：复制完整/相对路径、自动识别并打开终端与编辑器、外置磁盘支持、新建文件（模板）。
@@ -1143,7 +1154,7 @@ Run:
 ```bash
 cd /Volumes/Samsung/codes/easy-context
 xcodegen generate
-xcodebuild -project EasyContext.xcodeproj -scheme EasyContext -configuration Debug -derivedDataPath build CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build
+xcodebuild -project EasyContext.xcodeproj -scheme EasyContext -configuration Debug -derivedDataPath build CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=YES CODE_SIGNING_ALLOWED=YES build
 ```
 Expected: `** BUILD SUCCEEDED **`，并在 `build/Build/Products/Debug/EasyContext.app/Contents/PlugIns/` 下生成 `EasyContextFinder.appex`。
 
@@ -1322,7 +1333,7 @@ Run:
 ```bash
 cd /Volumes/Samsung/codes/easy-context
 xcodegen generate
-xcodebuild -project EasyContext.xcodeproj -scheme EasyContext -configuration Debug -derivedDataPath build CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build
+xcodebuild -project EasyContext.xcodeproj -scheme EasyContext -configuration Debug -derivedDataPath build CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=YES CODE_SIGNING_ALLOWED=YES build
 ```
 Expected: `** BUILD SUCCEEDED **`
 
@@ -1491,7 +1502,7 @@ Run:
 ```bash
 cd /Volumes/Samsung/codes/easy-context
 xcodegen generate
-xcodebuild -project EasyContext.xcodeproj -scheme EasyContext -configuration Debug -derivedDataPath build CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build
+xcodebuild -project EasyContext.xcodeproj -scheme EasyContext -configuration Debug -derivedDataPath build CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=YES CODE_SIGNING_ALLOWED=YES build
 ```
 Expected: `** BUILD SUCCEEDED **`
 
@@ -1593,7 +1604,7 @@ Run:
 ```bash
 cd /Volumes/Samsung/codes/easy-context
 xcodegen generate
-xcodebuild -project EasyContext.xcodeproj -scheme EasyContext -configuration Debug -derivedDataPath build CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build
+xcodebuild -project EasyContext.xcodeproj -scheme EasyContext -configuration Debug -derivedDataPath build CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=YES CODE_SIGNING_ALLOWED=YES build
 ```
 Expected: `** BUILD SUCCEEDED **`
 
@@ -1630,7 +1641,7 @@ Run:
 ```bash
 cd /Volumes/Samsung/codes/easy-context
 xcodegen generate
-xcodebuild -project EasyContext.xcodeproj -scheme EasyContext -configuration Debug -derivedDataPath build CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build
+xcodebuild -project EasyContext.xcodeproj -scheme EasyContext -configuration Debug -derivedDataPath build CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=YES CODE_SIGNING_ALLOWED=YES build
 ```
 Expected: `** BUILD SUCCEEDED **`
 

@@ -1,0 +1,65 @@
+# 架构约束（勿删）：宿主 App 与 FinderSync 扩展通过共享文件
+# ~/Library/Application Support/EasyContext/settings.json 交换配置，
+# 依赖【两个 target 都不开启 App Sandbox】——否则各自落到沙盒容器，
+# applicationSupportDirectory 路径分叉，配置共享会静默失效。
+# 若将来为公证/上架启用沙盒，必须改用 App Group（group.com.luyantao.easycontext）
+# 并相应改回 ConfigStore 的路径来源。
+name: EasyContext
+options:
+  bundleIdPrefix: com.luyantao.easycontext
+  deploymentTarget:
+    macOS: "13.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: "-"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGNING_REQUIRED: "YES"
+    CODE_SIGNING_ALLOWED: "YES"
+    ENABLE_HARDENED_RUNTIME: "NO"
+    PRODUCT_NAME: "$(TARGET_NAME)"
+    SWIFT_VERSION: "5.0"
+packages:
+  EasyContextCore:
+    path: EasyContextCore
+targets:
+  EasyContext:
+    type: application
+    platform: macOS
+    sources:
+      - EasyContext
+    dependencies:
+      - package: EasyContextCore
+        product: EasyContextCore
+      - target: EasyContextFinder
+        embed: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.luyantao.easycontext
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    info:
+      path: EasyContext/Info.plist
+      properties:
+        CFBundleDisplayName: Easy Context
+        LSMinimumSystemVersion: "13.0"
+        LSUIElement: false
+  EasyContextFinder:
+    type: app-extension
+    platform: macOS
+    sources:
+      - EasyContextFinder
+    dependencies:
+      - package: EasyContextCore
+        product: EasyContextCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.luyantao.easycontext.finder
+        CODE_SIGN_ENTITLEMENTS: EasyContextFinder/EasyContextFinder.entitlements
+    info:
+      path: EasyContextFinder/Info.plist
+      properties:
+        CFBundleDisplayName: EasyContextFinder
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.FinderSync
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).FinderSyncExtension
