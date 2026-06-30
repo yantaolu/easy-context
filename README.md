@@ -38,7 +38,24 @@
 两种方式，读写同一份配置：
 
 - **图形界面**：打开 EasyContext，勾选要显示的 App、调整菜单图标风格等。
-- **手改配置文件**：`~/.easy-context/config.json`（修改即时生效，扩展每次右键都重读）。
+- **手改配置文件**：`~/.easy-context/config.json`，修改即时生效（扩展按文件修改时间智能重读）。
+
+配置文件结构：
+
+```jsonc
+{
+  "version": 2,
+  "items": { "copyFullPath": true, "copyRelativePath": true, "newFile": true },
+  "terminals": [
+    { "bundleId": "com.apple.Terminal", "name": "Terminal", "custom": false, "enabled": true }
+  ],
+  "editors":  [ /* 同结构 */ ],
+  "appearance": { "appIconStyle": "monochrome" }   // monochrome | color
+}
+```
+
+- `enabled` 控制是否在右键菜单显示；`custom: true` 为用户自行添加的 App。
+- 启动时会自动并入新检测到的内置 App、去重并排序（内置在前、自定义在后），并保留你的开关与自定义项。
 
 ## 从源码构建
 

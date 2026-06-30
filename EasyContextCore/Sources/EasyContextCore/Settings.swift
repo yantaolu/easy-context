@@ -122,8 +122,9 @@ extension Settings {
                                           custom: false, enabled: true)
             order.append(app.bundleId)
         }
-        let builtinIndex = Dictionary(uniqueKeysWithValues:
-            builtinOrder.enumerated().map { ($1.bundleId, $0) })
+        let builtinIndex = Dictionary(
+            builtinOrder.enumerated().map { ($1.bundleId, $0) },
+            uniquingKeysWith: { first, _ in first }) // 防御：内置清单万一有重复 bundleId 不崩
         for id in order {
             if let idx = builtinIndex[id] {
                 byId[id]?.custom = false

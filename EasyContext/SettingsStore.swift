@@ -12,12 +12,14 @@ final class SettingsStore: ObservableObject {
     private static let extensionBundleId = "com.luyantao.easycontext.finder"
 
     init() {
-        var s = store.load()
+        let original = store.load()
+        var s = original
         // 启动即 reconcile：并入已安装的内置 App、去重、排序，保留用户选择与自定义项。
         s.reconcile(installedTerminals: Self.installed(KnownApps.terminals),
                     installedEditors: Self.installed(KnownApps.editors))
         self.settings = s
-        try? store.save(s)
+        // 内容没变就不重写，避免无谓 bump mtime（否则扩展端缓存会被迫重载一次）。
+        if s != original || !store.hasStored() { try? store.save(s) }
 
         refreshExtensionState()
         // App 重新激活时复查（用户去系统设置启用后切回来即更新横幅）。
@@ -30,19 +32,29 @@ final class SettingsStore: ObservableObject {
     var configPath: String { store.path }
 
     /// 用 pluginkit 检测扩展是否已启用（宿主非沙盒，可直接跑）。
+    /// 放到后台执行——避免在主线程同步等子进程退出造成启动/切前台卡顿。
     func refreshExtensionState() {
+        let bundleId = Self.extensionBundleId
+        Task.detached(priority: .utility) { [weak self] in
+            let enabled = SettingsStore.queryExtensionEnabled(bundleId)
+            await MainActor.run { self?.extensionEnabled = enabled }
+        }
+    }
+
+    nonisolated private static func queryExtensionEnabled(_ bundleId: String) -> Bool {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/pluginkit")
-        process.arguments = ["-m", "-i", Self.extensionBundleId]
+        process.arguments = ["-m", "-i", bundleId]
         let pipe = Pipe()
         process.standardOutput = pipe
-        do { try process.run() } catch { extensionEnabled = true; return }
-        process.waitUntilExit()
+        do { try process.run() } catch { return true }
+        // 先读完管道再等退出，避免输出超管道缓冲时的死锁形态。
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
         let out = (String(data: data, encoding: .utf8) ?? "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
         // 行首 '+' = 启用，'-' = 已注册未启用，空 = 未注册
-        extensionEnabled = out.hasPrefix("+")
+        return out.hasPrefix("+")
     }
 
     func openExtensionSettings() {

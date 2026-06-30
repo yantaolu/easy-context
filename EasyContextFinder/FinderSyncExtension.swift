@@ -8,6 +8,13 @@ class FinderSyncExtension: FIFinderSync {
     // 故用 tag 索引这份列表来定位被点的 App。
     private var openableApps: [AppEntry] = []
 
+    // 缓存（扩展进程常驻，跨多次右键存活，避免每次重读/重查/重渲染）。
+    private let configStore = ConfigStore()
+    private var settingsCache: Settings?
+    private var settingsMTime: Date?
+    private var urlCache: [String: URL] = [:]       // bundleId -> App URL（只缓存已安装）
+    private var imageCache: [String: NSImage] = [:] // "app:bid|style" / "sym:name|dark"
+
     override init() {
         super.init()
         updateMonitoredDirectories()
@@ -21,8 +28,16 @@ class FinderSyncExtension: FIFinderSync {
                        name: NSWorkspace.didRenameVolumeNotification, object: nil)
     }
 
+    deinit {
+        NSWorkspace.shared.notificationCenter.removeObserver(self)
+    }
+
     @objc private func volumesChanged(_ note: Notification) {
+        assert(Thread.isMainThread) // 缓存非线程安全：menu(for:) 与本回调均须在主线程
         updateMonitoredDirectories()
+        // 卷增减常伴随 App 增删，清空 App URL / 图标缓存以反映变化。
+        urlCache.removeAll()
+        imageCache.removeAll()
     }
 
     // 监控启动卷 + 所有已挂载卷（单个 "/" 不覆盖 /Volumes/* 外置盘）。
@@ -56,11 +71,12 @@ class FinderSyncExtension: FIFinderSync {
     // 扩展按共享配置 config.json 决定显示哪些项 / 哪些 App / 图标风格。
 
     override func menu(for menuKind: FIMenuKind) -> NSMenu? {
+        assert(Thread.isMainThread) // 读写缓存须在主线程（FinderSync 在主线程回调）
         guard menuKind == .contextualMenuForItems
                 || menuKind == .contextualMenuForContainer else { return nil }
         guard primaryURL() != nil else { return nil }
 
-        let config = ConfigStore().load()
+        let config = currentSettings()
         let iconStyle = config.appearance.appIconStyle
         let dark = Self.isDarkMode()
         let menu = NSMenu(title: "")
@@ -114,12 +130,34 @@ class FinderSyncExtension: FIFinderSync {
     // 时安全回退到检测到的内置 App。
     private func appsToShow(_ list: [AppEntry], builtins: [KnownApp]) -> [AppEntry] {
         if list.isEmpty {
-            let detector = AppDetector(isInstalled: Self.isInstalled)
+            let detector = AppDetector(isInstalled: isInstalled)
             return detector.installed(from: builtins)
                 .map { AppEntry(bundleId: $0.bundleId, name: $0.displayName) }
         }
-        return list.filter { $0.enabled && Self.isInstalled($0.bundleId) }
+        return list.filter { $0.enabled && isInstalled($0.bundleId) }
     }
+
+    // 配置按修改时间缓存：mtime 没变就用缓存，避免每次右键重读+解码；
+    // 改了 config.json（mtime 变化）即时重读，保留实时生效。
+    private func currentSettings() -> Settings {
+        let mtime = (try? FileManager.default.attributesOfItem(atPath: configStore.path)[.modificationDate]) as? Date
+        if let settingsCache, settingsMTime == mtime { return settingsCache }
+        let loaded = configStore.load()
+        settingsCache = loaded
+        settingsMTime = mtime
+        return loaded
+    }
+
+    // App URL 缓存：只缓存「已安装」的命中结果。未安装不缓存，避免之后装上了
+    // 却因缓存了 nil 而一直不显示（未安装查询本身也很快）。
+    private func appURL(_ bundleId: String) -> URL? {
+        if let cached = urlCache[bundleId] { return cached }
+        let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId)
+        if let url { urlCache[bundleId] = url }
+        return url
+    }
+
+    private func isInstalled(_ bundleId: String) -> Bool { appURL(bundleId) != nil }
 
     @discardableResult
     private func addItem(to menu: NSMenu, title: String, action: Selector,
@@ -136,10 +174,14 @@ class FinderSyncExtension: FIFinderSync {
     // FinderSync 会把 template 符号栅格化成固定黑色、不随深浅色变化，
     // 故手动按当前外观给符号着色。
     private func symbolImage(_ name: String, dark: Bool) -> NSImage? {
+        let key = "sym:\(name)|\(dark)"
+        if let cached = imageCache[key] { return cached }
         guard let base = NSImage(systemSymbolName: name, accessibilityDescription: nil)
         else { return nil }
         let color: NSColor = dark ? NSColor(white: 0.90, alpha: 1) : NSColor(white: 0.15, alpha: 1)
-        return Self.tinted(base, color: color)
+        let img = Self.tinted(base, color: color)
+        imageCache[key] = img
+        return img
     }
 
     private static func tinted(_ image: NSImage, color: NSColor) -> NSImage {
@@ -159,24 +201,35 @@ class FinderSyncExtension: FIFinderSync {
 
     // SF Symbols（复制/新建/模板）本就是 template 图像，自动适配深浅色，无需处理。
     private static func isDarkMode() -> Bool {
-        NSApp.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+        let appearance = NSApp?.effectiveAppearance ?? NSAppearance.currentDrawing()
+        return appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
     }
 
     private func appIcon(_ bundleId: String, style: Settings.AppIconStyle) -> NSImage? {
-        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId)
-        else { return nil }
+        let key = "app:\(bundleId)|\(style.rawValue)"
+        if let cached = imageCache[key] { return cached }
+        guard let url = appURL(bundleId) else { return nil }
         let icon = NSWorkspace.shared.icon(forFile: url.path)
         icon.size = Self.iconSize
+        let result: NSImage
         switch style {
-        case .color: return icon
-        case .monochrome: return Self.desaturated(icon) ?? icon
+        case .color: result = icon
+        case .monochrome: result = Self.desaturated(icon) ?? icon
         }
+        imageCache[key] = result
+        return result
     }
 
     // 纯灰度：保留轮廓细节，浅色/深色下都能看清（中间调在两种背景上都可辨）。
     private static func desaturated(_ image: NSImage) -> NSImage? {
-        guard let tiff = image.tiffRepresentation,
-              let source = CIImage(data: tiff) else { return nil }
+        // 先栅格化到 16×16，避免 CIImage 携带 App 图标的高分位图被长期缓存。
+        let small = NSImage(size: iconSize)
+        small.lockFocus()
+        image.draw(in: NSRect(origin: .zero, size: iconSize),
+                   from: .zero, operation: .sourceOver, fraction: 1)
+        small.unlockFocus()
+        guard let tiff = small.tiffRepresentation,
+              let source = CIImage(data: tiff) else { return small }
         let mono = source.applyingFilter("CIPhotoEffectMono")
         let rep = NSCIImageRep(ciImage: mono)
         let result = NSImage(size: iconSize)
@@ -195,10 +248,6 @@ class FinderSyncExtension: FIFinderSync {
         }
     }
 
-    private static func isInstalled(_ bundleId: String) -> Bool {
-        NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId) != nil
-    }
-
     // MARK: - 动作
 
     @objc private func copyFullPath(_ sender: AnyObject?) {
@@ -215,11 +264,10 @@ class FinderSyncExtension: FIFinderSync {
         guard let item = sender as? NSMenuItem,
               item.tag >= 0, item.tag < openableApps.count,
               let dir = targetDirectory(),
-              let appURL = NSWorkspace.shared.urlForApplication(
-                withBundleIdentifier: openableApps[item.tag].bundleId)
+              let url = appURL(openableApps[item.tag].bundleId)
         else { return }
         // 沙盒下不能 spawn /usr/bin/open，改用 LaunchServices。
-        NSWorkspace.shared.open([dir], withApplicationAt: appURL,
+        NSWorkspace.shared.open([dir], withApplicationAt: url,
                                 configuration: NSWorkspace.OpenConfiguration(),
                                 completionHandler: nil)
     }
