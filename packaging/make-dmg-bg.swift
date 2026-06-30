@@ -6,7 +6,7 @@ let outPath = CommandLine.arguments[2]
 
 // 逻辑窗口 660x540，输出 @2x = 1320x1080
 let scale: CGFloat = 2
-let W: CGFloat = 660, H: CGFloat = 470
+let W: CGFloat = 660, H: CGFloat = 545
 let pxW = Int(W*scale), pxH = Int(H*scale)
 
 let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: pxW, pixelsHigh: pxH,

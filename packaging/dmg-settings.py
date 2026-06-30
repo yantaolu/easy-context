@@ -23,7 +23,7 @@ if volicon:
 # 窗口与图标视图
 background = "packaging/dmg-bg.png"
 default_view = "icon-view"
-window_rect = ((200, 120), (660, 470))
+window_rect = ((200, 120), (660, 545))
 icon_size = 96
 text_size = 12
 icon_locations = {

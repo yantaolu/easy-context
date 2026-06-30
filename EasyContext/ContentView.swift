@@ -82,9 +82,11 @@ struct ContentView: View {
                     appRow(entry, category: category)
                         .tag(entry.bundleId)
                         .listRowSeparator(.hidden) // 应用之间不要横分隔线
+                        .listRowInsets(EdgeInsets(top: 5, leading: 0, bottom: 5, trailing: 0))
                 }
             }
-            .listStyle(.inset)
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
             listFooterBar(category: category)
         }
         .frame(maxWidth: .infinity)
@@ -114,7 +116,6 @@ struct ContentView: View {
                 .toggleStyle(.switch)
                 .controlSize(.small)
         }
-        .padding(.vertical, 5)
     }
 
     // 列表底部 +/- 控件；- 仅对选中的自定义项可用（内置项不可删）。
