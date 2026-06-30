@@ -1,0 +1,14 @@
+// swift-tools-version: 6.0
+import PackageDescription
+
+let package = Package(
+    name: "EasyContextCore",
+    platforms: [.macOS(.v13)],
+    products: [
+        .library(name: "EasyContextCore", targets: ["EasyContextCore"]),
+    ],
+    targets: [
+        .target(name: "EasyContextCore"),
+        .testTarget(name: "EasyContextCoreTests", dependencies: ["EasyContextCore"]),
+    ]
+)

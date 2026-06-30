@@ -1073,6 +1073,14 @@ git commit -m "feat(finder): 注入复制路径与打开终端/编辑器菜单�
 - Consumes: `EasyContextCore`（`Settings`、`KnownApps`、`AppDetector`、`FileTemplate`）
 - Produces: 读写共享配置的设置界面；`final class SettingsStore: ObservableObject`，发布 `@Published var settings: Settings`，方法 `load()`、`persist()`、`detectedTerminals/detectedEditors: [KnownApp]`
 
+> **阶段 A 终审遗留项**：`Settings.storageKey` 是 `private static`，下面 `SettingsStore.seedEnabledIfFirstRun()` 用 `Settings.hasStored(in:)` 判断是否首次运行，**不要硬编码字面量 `"settings"`**（否则未来改 key 会静默漂移）。因此本任务先在 `EasyContextCore` 的 `Settings.swift` 补一个公开 API（TDD：先在 `SettingsTests.swift` 加一个「无数据时 `hasStored` 为 false、save 后为 true」的测试，确认失败，再实现）：
+> ```swift
+> public static func hasStored(in defaults: UserDefaults) -> Bool {
+>     defaults.data(forKey: storageKey) != nil
+> }
+> ```
+> 补完后 `cd EasyContextCore && swift test` 应全绿，再单独提交，然后继续下面的 SettingsStore。
+
 - [ ] **Step 1: 实现 SettingsStore**
 
 `EasyContext/SettingsStore.swift`：
@@ -1102,7 +1110,7 @@ final class SettingsStore: ObservableObject {
 
     /// 首次运行：默认勾选所有已检测到的 App。
     private func seedEnabledIfFirstRun() {
-        if defaults.data(forKey: "settings") == nil {
+        if !Settings.hasStored(in: defaults) {
             settings.enabledTerminalBundleIds = detectedTerminals.map(\.bundleId)
             settings.enabledEditorBundleIds = detectedEditors.map(\.bundleId)
             persist()

@@ -1,0 +1,6 @@
+.DS_Store
+.build/
+EasyContextCore/.build/
+.superpowers/
+*.xcuserstate
+xcuserdata/
