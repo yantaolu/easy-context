@@ -4,3 +4,5 @@ EasyContextCore/.build/
 .superpowers/
 *.xcuserstate
 xcuserdata/
+EasyContext.xcodeproj/
+build/
