@@ -6,7 +6,7 @@ import EasyContextCore
 class FinderSyncExtension: FIFinderSync {
     // FinderSync 的 XPC 往返会丢弃 NSMenuItem.representedObject，
     // 故用 tag 索引这份列表来定位被点的 App。
-    private var openableApps: [KnownApp] = []
+    private var openableApps: [AppEntry] = []
 
     override init() {
         super.init()
@@ -74,21 +74,18 @@ class FinderSyncExtension: FIFinderSync {
                     image: symbolImage("doc.on.clipboard", dark: dark))
         }
 
-        let detector = AppDetector(isInstalled: Self.isInstalled)
-        let terminals = config.visibleApps(detector.installed(from: KnownApps.terminals),
-                                           selection: config.terminals)
-        let editors = config.visibleApps(detector.installed(from: KnownApps.editors),
-                                         selection: config.editors)
+        let terminals = appsToShow(config.terminals, builtins: KnownApps.terminals)
+        let editors = appsToShow(config.editors, builtins: KnownApps.editors)
         openableApps = terminals + editors
 
         for (idx, app) in terminals.enumerated() {
-            let item = addItem(to: menu, title: "用 \(app.displayName) 打开终端",
+            let item = addItem(to: menu, title: "用 \(app.name) 打开终端",
                                action: #selector(openWithApp(_:)),
                                image: appIcon(app.bundleId, style: iconStyle) ?? symbolImage("terminal", dark: dark))
             item.tag = idx
         }
         for (offset, app) in editors.enumerated() {
-            let item = addItem(to: menu, title: "用 \(app.displayName) 打开",
+            let item = addItem(to: menu, title: "用 \(app.name) 打开",
                                action: #selector(openWithApp(_:)),
                                image: appIcon(app.bundleId, style: iconStyle)
                                    ?? symbolImage("chevron.left.forwardslash.chevron.right", dark: dark))
@@ -111,6 +108,17 @@ class FinderSyncExtension: FIFinderSync {
         newFileItem.submenu = submenu
         menu.addItem(newFileItem)
         return menu
+    }
+
+    // 要在菜单显示的 App：按配置列表过滤启用且已安装的；列表为空（配置未初始化）
+    // 时安全回退到检测到的内置 App。
+    private func appsToShow(_ list: [AppEntry], builtins: [KnownApp]) -> [AppEntry] {
+        if list.isEmpty {
+            let detector = AppDetector(isInstalled: Self.isInstalled)
+            return detector.installed(from: builtins)
+                .map { AppEntry(bundleId: $0.bundleId, name: $0.displayName) }
+        }
+        return list.filter { $0.enabled && Self.isInstalled($0.bundleId) }
     }
 
     @discardableResult

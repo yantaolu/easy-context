@@ -17,8 +17,8 @@ final class ConfigStoreTests: XCTestCase {
     func test_saveThenLoad_roundTrips() throws {
         let sut = ConfigStore(fileURL: tempFileURL())
         var s = Settings()
-        s.terminals = .init(showAll: false, enabled: ["com.googlecode.iterm2"])
-        s.editors = .init(showAll: true, enabled: [])
+        s.terminals = [AppEntry(bundleId: "com.googlecode.iterm2", name: "iTerm", custom: false, enabled: false)]
+        s.editors = [AppEntry(bundleId: "com.example.editor", name: "My Editor", custom: true, enabled: true)]
         s.items.copyFullPath = false
         s.appearance.appIconStyle = .color
         try sut.save(s)
