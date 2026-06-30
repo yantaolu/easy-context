@@ -23,19 +23,4 @@ public struct Settings: Codable, Equatable, Sendable {
         self.enabledEditorBundleIds = enabledEditorBundleIds
         self.defaultTemplate = defaultTemplate
     }
-
-    public static let appGroupId = "group.com.luyantao.easycontext"
-    private static let storageKey = "settings"
-
-    public static func load(from defaults: UserDefaults) -> Settings {
-        guard let data = defaults.data(forKey: storageKey),
-              let decoded = try? JSONDecoder().decode(Settings.self, from: data)
-        else { return Settings() }
-        return decoded
-    }
-
-    public func save(to defaults: UserDefaults) {
-        guard let data = try? JSONEncoder().encode(self) else { return }
-        defaults.set(data, forKey: Self.storageKey)
-    }
 }
