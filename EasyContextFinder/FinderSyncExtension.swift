@@ -105,7 +105,7 @@ class FinderSyncExtension: FIFinderSync {
     }
 
     @objc private func newFile(_ sender: AnyObject?) {
-        NSLog("newFile pending")
+        NewFileController(configStore: configStore).run(in: targetDirectory())
     }
 
     private func writeToPasteboard(_ string: String) {
