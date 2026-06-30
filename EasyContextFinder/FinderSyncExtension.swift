@@ -3,23 +3,43 @@ import FinderSync
 import EasyContextCore
 
 class FinderSyncExtension: FIFinderSync {
-    private let configStore = ConfigStore()
+    // FinderSync 的 XPC 往返会丢弃 NSMenuItem.representedObject，
+    // 故用 tag 索引这份列表来定位被点的 App。
+    private var openableApps: [KnownApp] = []
 
     override init() {
         super.init()
-        FIFinderSyncController.default().directoryURLs = [URL(fileURLWithPath: "/")]
+        updateMonitoredDirectories()
+        // 卷挂载/卸载/改名时刷新监控，使外置磁盘即插即生效。
+        let nc = NSWorkspace.shared.notificationCenter
+        nc.addObserver(self, selector: #selector(volumesChanged),
+                       name: NSWorkspace.didMountNotification, object: nil)
+        nc.addObserver(self, selector: #selector(volumesChanged),
+                       name: NSWorkspace.didUnmountNotification, object: nil)
+        nc.addObserver(self, selector: #selector(volumesChanged),
+                       name: NSWorkspace.didRenameVolumeNotification, object: nil)
+    }
+
+    @objc private func volumesChanged(_ note: Notification) {
+        updateMonitoredDirectories()
+    }
+
+    // 监控启动卷 + 所有已挂载卷（单个 "/" 不覆盖 /Volumes/* 外置盘）。
+    private func updateMonitoredDirectories() {
+        var urls: Set<URL> = [URL(fileURLWithPath: "/")]
+        if let volumes = FileManager.default.mountedVolumeURLs(
+            includingResourceValuesForKeys: nil, options: [.skipHiddenVolumes]) {
+            urls.formUnion(volumes)
+        }
+        FIFinderSyncController.default().directoryURLs = urls
     }
 
     // MARK: - 目标 URL
 
     private func targetURLs() -> [URL] {
         let controller = FIFinderSyncController.default()
-        if let items = controller.selectedItemURLs(), !items.isEmpty {
-            return items
-        }
-        if let target = controller.targetedURL() {
-            return [target]
-        }
+        if let items = controller.selectedItemURLs(), !items.isEmpty { return items }
+        if let target = controller.targetedURL() { return [target] }
         return []
     }
 
@@ -31,44 +51,46 @@ class FinderSyncExtension: FIFinderSync {
     }
 
     // MARK: - 菜单构建
+    //
+    // v1：扩展自检测并列出所有已装终端/编辑器（沙盒下读不到宿主配置）。
 
     override func menu(for menuKind: FIMenuKind) -> NSMenu? {
         guard menuKind == .contextualMenuForItems
                 || menuKind == .contextualMenuForContainer else { return nil }
         guard primaryURL() != nil else { return nil }
 
-        let settings = configStore.load()
         let menu = NSMenu(title: "")
-
-        if settings.copyFullPathEnabled {
-            addItem(to: menu, title: "复制完整路径", action: #selector(copyFullPath(_:)))
-        }
-        if settings.copyRelativePathEnabled {
-            addItem(to: menu, title: "复制相对路径", action: #selector(copyRelativePath(_:)))
-        }
+        addItem(to: menu, title: "复制完整路径", action: #selector(copyFullPath(_:)))
+        addItem(to: menu, title: "复制相对路径", action: #selector(copyRelativePath(_:)))
 
         let detector = AppDetector(isInstalled: Self.isInstalled)
         let terminals = detector.installed(from: KnownApps.terminals)
-            .filter { settings.enabledTerminalBundleIds.contains($0.bundleId) }
         let editors = detector.installed(from: KnownApps.editors)
-            .filter { settings.enabledEditorBundleIds.contains($0.bundleId) }
+        openableApps = terminals + editors
 
-        if !terminals.isEmpty || !editors.isEmpty { menu.addItem(.separator()) }
-        for app in terminals {
-            let item = addItem(to: menu, title: "用 \(app.displayName) 打开终端",
-                               action: #selector(openWithApp(_:)))
-            item.representedObject = app.bundleId
+        if !openableApps.isEmpty { menu.addItem(.separator()) }
+        for (idx, app) in terminals.enumerated() {
+            addItem(to: menu, title: "用 \(app.displayName) 打开终端",
+                    action: #selector(openWithApp(_:))).tag = idx
         }
-        for app in editors {
-            let item = addItem(to: menu, title: "用 \(app.displayName) 打开",
-                               action: #selector(openWithApp(_:)))
-            item.representedObject = app.bundleId
+        for (offset, app) in editors.enumerated() {
+            addItem(to: menu, title: "用 \(app.displayName) 打开",
+                    action: #selector(openWithApp(_:))).tag = terminals.count + offset
         }
 
-        if settings.newFileEnabled {
-            menu.addItem(.separator())
-            addItem(to: menu, title: "新建文件…", action: #selector(newFile(_:)))
+        // 沙盒扩展不能弹模态窗，新建文件用子菜单选模板、直接创建。
+        menu.addItem(.separator())
+        let newFileItem = NSMenuItem(title: "新建文件", action: nil, keyEquivalent: "")
+        let submenu = NSMenu(title: "新建文件")
+        for (idx, template) in FileTemplate.allCases.enumerated() {
+            let it = NSMenuItem(title: template.displayName,
+                                action: #selector(newFileFromTemplate(_:)), keyEquivalent: "")
+            it.target = self
+            it.tag = idx
+            submenu.addItem(it)
         }
+        newFileItem.submenu = submenu
+        menu.addItem(newFileItem)
         return menu
     }
 
@@ -80,7 +102,7 @@ class FinderSyncExtension: FIFinderSync {
         return item
     }
 
-    static func isInstalled(_ bundleId: String) -> Bool {
+    private static func isInstalled(_ bundleId: String) -> Bool {
         NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId) != nil
     }
 
@@ -96,29 +118,29 @@ class FinderSyncExtension: FIFinderSync {
         writeToPasteboard(RelativePathResolver().relativePath(for: url))
     }
 
-    @objc private func openWithApp(_ sender: NSMenuItem) {
-        guard let bundleId = sender.representedObject as? String,
+    @objc private func openWithApp(_ sender: AnyObject?) {
+        guard let item = sender as? NSMenuItem,
+              item.tag >= 0, item.tag < openableApps.count,
               let dir = targetDirectory(),
-              let app = KnownApps.all.first(where: { $0.bundleId == bundleId })
+              let appURL = NSWorkspace.shared.urlForApplication(
+                withBundleIdentifier: openableApps[item.tag].bundleId)
         else { return }
-        run(OpenCommand.open(app: app, directory: dir))
+        // 沙盒下不能 spawn /usr/bin/open，改用 LaunchServices。
+        NSWorkspace.shared.open([dir], withApplicationAt: appURL,
+                                configuration: NSWorkspace.OpenConfiguration(),
+                                completionHandler: nil)
     }
 
-    @objc private func newFile(_ sender: AnyObject?) {
-        NewFileController(configStore: configStore).run(in: targetDirectory())
+    @objc private func newFileFromTemplate(_ sender: AnyObject?) {
+        guard let item = sender as? NSMenuItem,
+              item.tag >= 0, item.tag < FileTemplate.allCases.count,
+              let dir = targetDirectory() else { return }
+        _ = NewFileController.create(template: FileTemplate.allCases[item.tag], in: dir)
     }
 
     private func writeToPasteboard(_ string: String) {
         let pb = NSPasteboard.general
         pb.clearContents()
         pb.setString(string, forType: .string)
-    }
-
-    private func run(_ spec: ProcessSpec) {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: spec.launchPath)
-        process.arguments = spec.arguments
-        do { try process.run() }
-        catch { NSLog("EasyContext open failed: \(error)") }
     }
 }
