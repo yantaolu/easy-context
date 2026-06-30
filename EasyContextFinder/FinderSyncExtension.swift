@@ -60,33 +60,40 @@ class FinderSyncExtension: FIFinderSync {
         guard primaryURL() != nil else { return nil }
 
         let menu = NSMenu(title: "")
-        addItem(to: menu, title: "复制完整路径", action: #selector(copyFullPath(_:)))
-        addItem(to: menu, title: "复制相对路径", action: #selector(copyRelativePath(_:)))
+        addItem(to: menu, title: "复制完整路径", action: #selector(copyFullPath(_:)),
+                image: symbolImage("doc.on.doc"))
+        addItem(to: menu, title: "复制相对路径", action: #selector(copyRelativePath(_:)),
+                image: symbolImage("doc.on.clipboard"))
 
         let detector = AppDetector(isInstalled: Self.isInstalled)
         let terminals = detector.installed(from: KnownApps.terminals)
         let editors = detector.installed(from: KnownApps.editors)
         openableApps = terminals + editors
 
-        if !openableApps.isEmpty { menu.addItem(.separator()) }
         for (idx, app) in terminals.enumerated() {
-            addItem(to: menu, title: "用 \(app.displayName) 打开终端",
-                    action: #selector(openWithApp(_:))).tag = idx
+            let item = addItem(to: menu, title: "用 \(app.displayName) 打开终端",
+                               action: #selector(openWithApp(_:)),
+                               image: appIcon(forBundleId: app.bundleId) ?? symbolImage("terminal"))
+            item.tag = idx
         }
         for (offset, app) in editors.enumerated() {
-            addItem(to: menu, title: "用 \(app.displayName) 打开",
-                    action: #selector(openWithApp(_:))).tag = terminals.count + offset
+            let item = addItem(to: menu, title: "用 \(app.displayName) 打开",
+                               action: #selector(openWithApp(_:)),
+                               image: appIcon(forBundleId: app.bundleId)
+                                   ?? symbolImage("chevron.left.forwardslash.chevron.right"))
+            item.tag = terminals.count + offset
         }
 
         // 沙盒扩展不能弹模态窗，新建文件用子菜单选模板、直接创建。
-        menu.addItem(.separator())
         let newFileItem = NSMenuItem(title: "新建文件", action: nil, keyEquivalent: "")
+        newFileItem.image = symbolImage("doc.badge.plus")
         let submenu = NSMenu(title: "新建文件")
         for (idx, template) in FileTemplate.allCases.enumerated() {
             let it = NSMenuItem(title: template.displayName,
                                 action: #selector(newFileFromTemplate(_:)), keyEquivalent: "")
             it.target = self
             it.tag = idx
+            it.image = symbolImage(Self.templateSymbol(template))
             submenu.addItem(it)
         }
         newFileItem.submenu = submenu
@@ -95,11 +102,37 @@ class FinderSyncExtension: FIFinderSync {
     }
 
     @discardableResult
-    private func addItem(to menu: NSMenu, title: String, action: Selector) -> NSMenuItem {
+    private func addItem(to menu: NSMenu, title: String, action: Selector,
+                         image: NSImage? = nil) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
         item.target = self
+        item.image = image
         menu.addItem(item)
         return item
+    }
+
+    // MARK: - 图标
+
+    private func symbolImage(_ name: String) -> NSImage? {
+        NSImage(systemSymbolName: name, accessibilityDescription: nil)
+    }
+
+    private func appIcon(forBundleId bundleId: String) -> NSImage? {
+        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId)
+        else { return nil }
+        let icon = NSWorkspace.shared.icon(forFile: url.path)
+        icon.size = NSSize(width: 16, height: 16)
+        return icon
+    }
+
+    private static func templateSymbol(_ t: FileTemplate) -> String {
+        switch t {
+        case .blank: return "doc"
+        case .markdown: return "doc.richtext"
+        case .text: return "doc.plaintext"
+        case .shell: return "terminal"
+        case .json: return "curlybraces"
+        }
     }
 
     private static func isInstalled(_ bundleId: String) -> Bool {
