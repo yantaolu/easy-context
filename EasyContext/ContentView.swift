@@ -12,6 +12,7 @@ struct ContentView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            if !store.extensionEnabled { extensionBanner }
             topPart
                 .fixedSize(horizontal: false, vertical: true) // 上半按内容自适应高度
             Divider().padding(.horizontal, 20) // 横分隔不顶到头，与内容同边距
@@ -36,7 +37,7 @@ struct ContentView: View {
 
             VStack(alignment: .leading, spacing: 18) {
                 VStack(alignment: .leading, spacing: 10) {
-                    sectionTitle("外观")
+                    sectionTitle("图标")
                     Picker("", selection: Binding(
                         get: { store.settings.appearance.appIconStyle },
                         set: { store.settings.appearance.appIconStyle = $0; store.persist() })) {
@@ -134,6 +135,25 @@ struct ContentView: View {
         .padding(.vertical, 4)
     }
 
+    private var extensionBanner: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+            Text("访达扩展尚未启用，右键菜单不会出现")
+            Spacer()
+            Button("去启用") { store.openExtensionSettings() }
+            Button {
+                store.refreshExtensionState()
+            } label: {
+                Image(systemName: "arrow.clockwise")
+            }
+            .help("重新检测")
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(Color.orange.opacity(0.9))
+        .foregroundStyle(.white)
+    }
+
     private func sectionTitle(_ text: String) -> some View {
         Text(text).font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
     }
@@ -154,9 +174,7 @@ struct ContentView: View {
     }
 
     private func openExtensionSettings() {
-        if let url = URL(string: "x-apple.systempreferences:com.apple.ExtensionsPreferences") {
-            NSWorkspace.shared.open(url)
-        }
+        store.openExtensionSettings()
     }
 
     private func pickApp(_ category: AppCategory) {
@@ -166,8 +184,24 @@ struct ContentView: View {
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
         panel.prompt = "添加"
-        if panel.runModal() == .OK, let url = panel.url {
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        if store.appSupportsOpeningFolder(url) {
             store.addCustomApp(at: url, category: category)
+        } else {
+            promptUnsupported(url, category)
+        }
+    }
+
+    // 该 App 未声明可打开目录：警告但允许用户仍然添加。
+    private func promptUnsupported(_ appURL: URL, _ category: AppCategory) {
+        let name = appURL.deletingPathExtension().lastPathComponent
+        let alert = NSAlert()
+        alert.messageText = "“\(name)” 可能不支持以目录方式打开"
+        alert.informativeText = "该应用未声明可打开文件夹，从右键菜单点击它时可能无法正常打开目录。仍要添加吗？"
+        alert.addButton(withTitle: "仍然添加")
+        alert.addButton(withTitle: "取消")
+        if alert.runModal() == .alertFirstButtonReturn {
+            store.addCustomApp(at: appURL, category: category)
         }
     }
 

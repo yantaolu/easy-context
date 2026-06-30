@@ -33,6 +33,7 @@ public enum KnownApps {
         KnownApp(bundleId: "co.zeit.hyper", displayName: "Hyper", category: .terminal),
         KnownApp(bundleId: "org.tabby", displayName: "Tabby", category: .terminal),
         KnownApp(bundleId: "com.raphaelamorim.rio", displayName: "Rio", category: .terminal),
+        KnownApp(bundleId: "dev.commandline.waveterm", displayName: "Wave", category: .terminal),
         KnownApp(bundleId: "com.termius-dmg.mac", displayName: "Termius", category: .terminal),
     ]
 
@@ -48,6 +49,7 @@ public enum KnownApps {
         KnownApp(bundleId: "com.barebones.bbedit", displayName: "BBEdit", category: .editor),
         KnownApp(bundleId: "com.macromates.TextMate", displayName: "TextMate", category: .editor),
         KnownApp(bundleId: "org.vim.MacVim", displayName: "MacVim", category: .editor),
+        KnownApp(bundleId: "org.gnu.Emacs", displayName: "Emacs", category: .editor),
         KnownApp(bundleId: "com.apple.dt.Xcode", displayName: "Xcode", category: .editor),
         // JetBrains 全家桶
         KnownApp(bundleId: "com.jetbrains.WebStorm", displayName: "WebStorm", category: .editor),
