@@ -37,7 +37,7 @@ struct ContentView: View {
 
             VStack(alignment: .leading, spacing: 18) {
                 VStack(alignment: .leading, spacing: 10) {
-                    sectionTitle("图标")
+                    sectionTitle("菜单图标")
                     Picker("", selection: Binding(
                         get: { store.settings.appearance.appIconStyle },
                         set: { store.settings.appearance.appIconStyle = $0; store.persist() })) {

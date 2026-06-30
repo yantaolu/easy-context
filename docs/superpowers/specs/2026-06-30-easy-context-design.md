@@ -1,109 +1,128 @@
-# Easy Context — 设计文档
+# Easy Context — 设计文档（实现现状 / as-built）
 
-- 日期：2026-06-30
-- 状态：已确认，待实现计划
+- 初始设计：2026-06-30
+- 本次同步：2026-06-30（按实际实现重写；早期「关沙盒 + App Group」方案已废弃）
 - 作者：luyt（与 Claude 共同设计）
+
+> 本文档描述**当前实际架构**。开发过程中因 FinderSync 的真机约束做了多处关键调整，
+> 与最初设计差异较大；变更纪要见文末「附录 A：相对初始设计的变更」。
 
 ## 1. 背景与目标
 
-用户长期使用 Windows 丰富的右键菜单，转用 macOS 后不适应访达精简的右键菜单。曾购买 EasyNewFile，但该应用更新缓慢、功能不足。本项目从零自研一款 macOS 应用，**扩展访达（Finder）右键菜单**，覆盖日常高频操作。
+用户长期使用 Windows 丰富的右键菜单，转用 macOS 后不适应访达精简的右键菜单。曾购买 EasyNewFile，但更新缓慢、功能不足。本项目自研一款 macOS 应用，**扩展访达（Finder）右键菜单**，覆盖日常高频操作。
 
-当前阶段定位：**本地自用，暂不考虑分发**（不做公证 / 不上架 Mac App Store）。因此关闭 App Sandbox，使用本地签名运行，可自由启动第三方终端 / 编辑器、直接访问外置磁盘。
+定位：**本地自用**，不公证、不上架；**ad-hoc 签名**即可运行，无需 Apple 开发者账号。
 
-## 2. 范围（v1）
+## 2. 功能范围（当前）
 
-平铺菜单，包含以下功能：
+右键文件/目录时，扩展按配置注入（平铺，新建文件为子菜单）：
 
-1. **复制完整路径**——文件或目录右键复制其绝对路径。
-2. **复制相对路径**——相对最近的 `.git` 仓库根目录；不在 git 仓库内时回退到家目录 `~`。
-3. **打开终端**——为每个检测到的终端各生成一个菜单项，在目标目录打开。终端类型自动识别。
-4. **用编辑器打开**——为每个检测到的代码编辑器各生成一个菜单项，打开目标目录。编辑器自动识别。
-5. **外置磁盘支持**——内置盘与所有挂载到 `/Volumes/` 的外置磁盘均自动生效。
-6. **新建文件**——在当前目录新建文件，弹出轻量输入框（文件名 + 模板类型）。
+- **复制完整路径**
+- **复制相对路径**（相对最近 `.git` 根；不在仓库内回退 `~/...`；再不在返回绝对路径）
+- **用 \<终端\> 打开终端** ——配置启用且已安装的终端各一项，在目标目录打开
+- **用 \<编辑器\> 打开** ——同上，编辑器
+- **新建文件 ›** ——子菜单选模板（空白 / .md / .txt / .sh / .json），在目标目录直接创建（默认名「未命名」，重名加序号）
+- **外置磁盘**：内置盘与所有 `/Volumes/*` 外置盘均生效
 
-菜单形态：**平铺列表**（不收进二级子菜单）。
+菜单图标：终端/编辑器用各自 App 真图标，内置项用 SF Symbols；支持**黑白/彩色**切换、并适配**深色模式**。
 
-### 明确不在 v1（留作后续）
+## 3. 总体架构
 
-复制相对路径的家目录变体、复制文件名、`file://` URL、复制文件内容、用浏览器打开、计算 Hash、复制文件信息、压缩 / 解压、`cd ` 前缀、git 客户端打开、菜单栏常驻等。这些作为 v2 起的可配置开关逐步加入。
+单个 Xcode 工程（由 **XcodeGen** 从 `project.yml` 生成，`.xcodeproj`/`build/` 不入库），三部分：
 
-## 3. 整体架构
+### 3.1 EasyContextCore（本地 Swift 包，纯逻辑）
+宿主与扩展共享。命令行 `swift test` 驱动 TDD（24 个测试）。含：
+- `TargetDirectoryResolver`：选中文件→其所在目录，选中目录→自身。
+- `RelativePathResolver`：相对 git 根/家目录/绝对路径。
+- `KnownApp` / `KnownApps`：内置终端与编辑器清单（含主流 AI 编辑器 Cursor/Windsurf/Trae/Zed 等、JetBrains 全家桶、Wave/Ghostty 等终端）。
+- `AppDetector`：按 `isInstalled` 谓词过滤已安装。
+- `FileTemplate` / `UniqueNameResolver`：新建文件模板与重名去重。
+- `AppEntry` / `Settings` / `ConfigStore`：配置模型与文件读写（见 §5）。
 
-单个 Xcode 工程，三部分：
+### 3.2 FinderSync 扩展（EasyContextFinder，沙盒）
+- macOS 唯一官方的访达右键菜单扩展机制（`FIFinderSync`）。
+- **必须开启 App Sandbox**（pkd 拒绝非沙盒插件——这是早期「关沙盒」方案被推翻的根因）。
+- 主类 `FinderSyncExtension`，监控启动卷 + 所有挂载卷（覆盖外置盘），读配置构建菜单、执行动作。
 
-### 3.1 宿主 App（SwiftUI）
-- 提供设置界面。
-- 职责：
-  - 扫描系统已安装的终端 / 编辑器（基于内置「已知 App 清单」）。
-  - 让用户勾选哪些菜单项、哪些终端 / 编辑器在右键菜单中显示。
-  - 配置新建文件的默认模板。
-  - 引导用户前往「系统设置 → 通用 → 登录项与扩展 → 访达扩展」启用本扩展。
-- 菜单栏小图标：v1 不做。
+### 3.3 宿主 App（EasyContext，SwiftUI，非沙盒）
+- 设置界面（见 §6）。
+- 启动时 reconcile 配置、检测扩展是否启用、引导用户启用扩展。
 
-### 3.2 FinderSync 扩展
-- macOS 唯一官方支持扩展访达右键菜单的机制（`FIFinderSync` / `FIFinderSyncController`，Cocoa 专属 API）。
-- 职责：向右键菜单注入菜单项、响应点击、执行动作。
-- 监控根设为 `/`，从而覆盖内置盘与所有外置磁盘。
+## 4. 签名、沙盒与文件访问
 
-### 3.3 共享层
-- 通过 **App Group** 共享配置（`UserDefaults(suiteName:)`）。
-- 存放：已知 App 清单、App 检测逻辑、各动作（复制路径 / 打开终端 / 打开编辑器 / 新建文件）的实现。
-- 宿主与扩展引用同一份代码，避免逻辑重复。
+- **签名**：ad-hoc（`CODE_SIGN_IDENTITY="-"`），无需账号；产物对扩展加载已足够。
+- **扩展沙盒**：开启。entitlements（`EasyContextFinder/EasyContextFinder.entitlements`）：
+  - `com.apple.security.app-sandbox = true`
+  - `com.apple.security.files.user-selected.read-write = true`
+  - `com.apple.security.temporary-exception.files.absolute-path.read-write = [/Users/, /Volumes/, /private/, /tmp/]`
+    —— 本地自用（非上架）下放开常见文件位置，使沙盒扩展能在右键目录打开 App / 新建文件、覆盖外置盘、并读取共享配置。
+- **宿主沙盒**：关闭（可自由跑 `pluginkit`、读 `.app` 信息、写配置）。
+- **构建命令**（务必这条；`ENABLE_DEBUG_DYLIB=NO` 必须，否则 Debug 的 debug-dylib 桩使扩展无法独立加载）：
+  ```bash
+  xcodegen generate
+  xcodebuild -project EasyContext.xcodeproj -scheme EasyContext -configuration Debug \
+    -derivedDataPath build CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=YES \
+    CODE_SIGNING_ALLOWED=YES ENABLE_DEBUG_DYLIB=NO build
+  ```
+- **安装/启用**：拷 `.app` 到 `/Applications` → 运行一次（注册扩展）→ 系统设置「访达扩展」勾选 → 即生效。
 
-## 4. 技术栈
+## 5. 共享配置
 
-- 语言 / UI：Swift + SwiftUI（宿主），Swift + AppKit/Foundation（扩展）。
-- bundle id 前缀：`com.luyantao.easycontext`（宿主 App `com.luyantao.easycontext`，扩展 `com.luyantao.easycontext.finder`，App Group `group.com.luyantao.easycontext`）。
-- App Sandbox：关闭（自用阶段）。
-- 签名：本地 Developer ID 或自签名。
-- 不做公证、不上架。
+- 路径：**`~/.easy-context/config.json`**。两端用 `getpwuid(getuid())->pw_dir` 取**真实家目录**（沙盒里 `NSHomeDirectory()` 会重定向到容器，故不能用；该路径在 `/Users/` 下，被扩展 entitlement 放行），保证宿主与扩展读同一份。
+- Schema（version 2，解码容忍缺字段→回退默认）：
+  ```jsonc
+  {
+    "version": 2,
+    "items": { "copyFullPath": true, "copyRelativePath": true, "newFile": true },
+    "terminals": [ { "bundleId": "...", "name": "...", "custom": false, "enabled": true } ],
+    "editors":   [ /* 同结构 */ ],
+    "appearance": { "appIconStyle": "monochrome" }   // monochrome | color
+  }
+  ```
+- **AppEntry**：`bundleId`（唯一键）、`name`、`custom`（内置/自定义）、`enabled`（是否显示）。
+- **reconcile**（宿主启动跑）：并入已安装的内置 App（缺失则加，默认 enabled）、去重、排序（内置在前按内置清单顺序、自定义在后保留添加顺序）；保留既有 `enabled`、自定义项、以及被卸载的内置条目。
+- **扩展显示**：`enabled && 已安装` 的条目按列表顺序显示；列表为空（配置未初始化）时安全回退为检测到的内置 App。
 
-### 技术栈决策说明
-右键菜单注入只能由原生 FinderSync 扩展实现，Tauri / Electron / 纯 Rust 无法提供该扩展二进制。该扩展是整个应用的核心价值，绕不开原生。由于目标为 Mac-only，跨平台方案的优势归零，混入 Web/Rust 宿主只会增加跨进程配置桥接的复杂度而无收益。故全程 Swift/SwiftUI。
+## 6. 设置界面（宿主）
 
-## 5. 菜单项详细行为
+- 顶部横幅：用 `pluginkit -m -i <扩展 id>` 检测扩展是否启用（行首 `+`=启用）；**未启用时显示橙色横幅**「去启用」（`FIFinderSyncController.showExtensionManagementInterface()` 直开扩展管理）+「重新检测」；App 重新激活时复查。
+- 布局：宽窗口（820×507，高:宽≈0.618），上下两部分各两栏。
+  - 上半：左「菜单项」（3 个开关，名称左/switch 右）｜右「菜单图标」(黑白/彩色) + 「其他」(打开配置目录 / 访达扩展设置)。
+  - 下半：左「终端」｜右「编辑器」——应用列表（图标+名称+switch），底部 `+/-`（`+` 文件选择器添加自定义；`-` 删选中的自定义项，内置不可删）。
+  - 列间淡色竖分隔、上下横分隔内缩、列表行无分隔线。
+- **自定义添加**：选 `.app` → 读其 bundleId/名称 → 用 `urlsForApplications(toOpen:)` 检测是否声明可打开目录，不支持则警告「可能不支持以目录方式打开」但仍允许添加。
 
-右键文件或目录时注入（每项在设置中可独立开关）：
+## 7. 关键实现要点（FinderSync 真机约束）
 
-| 菜单项 | 作用对象 | 行为 |
+- **打开方式**：沙盒禁止 spawn 进程，故用 `NSWorkspace.open([dir], withApplicationAt:)`（LaunchServices），不用 `Process`/`/usr/bin/open`。
+- **菜单项定位**：FinderSync 的 XPC 往返会丢弃 `NSMenuItem.representedObject`，故用 **`tag`** 索引应用列表。
+- **新建文件**：扩展不能弹模态窗（NSAlert 抛异常），故改为**模板子菜单 + 直接创建**（无命名弹框，用户自行重命名）。
+- **外置磁盘**：单个 `/` 不覆盖外置卷，故监控**所有挂载卷** + 监听挂载/卸载/改名动态刷新。
+- **图标深色适配**：FinderSync 把 template 符号栅格化成固定黑色、不随深浅变化，故按当前外观手动给符号着色；App 图标用纯灰度（浅/深色背景下都可辨）。
+
+## 8. 验证
+
+- Core：`cd EasyContextCore && swift test`（24/24）。
+- 集成：访达 UI / 扩展加载只能手动验证——右键内置盘与外置盘目录，逐项验证复制路径、打开终端/编辑器、新建文件（各模板、重名、可执行位）、设置实时联动、深浅色图标、未启用横幅。
+
+## 9. 后续可选项（未做）
+
+- **宿主代执行**：让非沙盒宿主代扩展执行任意打开方式（CLI/AppleScript/`open`），以支持「声明不支持目录打开」的 App。
+- 正式分发（公证/上架）—— 届时需改回 App Group 共享配置并申请相应 entitlement（很可能需付费账号）。
+- PearAI/Void/Aide 等无可靠 bundle id 的 AI 编辑器纳入内置清单（目前靠「+」自定义添加）。
+
+---
+
+## 附录 A：相对初始设计的变更
+
+| 初始设计 | 现状 | 原因 |
 |---|---|---|
-| 复制完整路径 | 文件 / 目录 | 绝对路径写入 `NSPasteboard`，按原始路径不转义 |
-| 复制相对路径 | 文件 / 目录 | 向上查找最近 `.git` 目录为根算相对路径；无则回退 `~` |
-| 用 \<终端\> 打开终端 | 目录（选中文件时取其所在目录） | 在目标目录打开该终端 |
-| 用 \<编辑器\> 打开 | 目录（选中文件时取其所在目录） | 用该编辑器打开目标目录 |
-| 新建文件… | 当前目录 | 弹输入框（文件名 + 模板下拉：空白 / .md / .txt / .sh / .json），在当前目录创建 |
-
-- 选中的是文件而非目录时，终端 / 编辑器动作自动取该文件所在目录。
-- `.sh` 模板创建后写入 shebang（`#!/bin/bash`）并赋可执行权限。
-
-## 6. App 自动识别
-
-- 内置「已知 App 清单」，每条含：bundle id、显示名、类别（终端 / 编辑器）、打开命令策略。
-- 检测：用 `NSWorkspace.shared.urlForApplication(withBundleIdentifier:)` 逐个判断是否安装；已安装的才出现在设置中、可勾选。
-- 打开统一走 `open -a <App> <目标目录>`（绝大多数终端 / 编辑器支持「在该目录打开」）。
-- 个别需特殊参数的（如某些终端需 `--working-directory`），在清单中标注其专属策略，由动作层按策略执行。
-- 候选清单（初版，可增补）：
-  - 终端：Terminal、iTerm、Warp、Ghostty、kitty、WezTerm、Alacritty、Hyper。
-  - 编辑器：VSCode、Cursor、Trae、WebStorm、IntelliJ IDEA、Sublime Text、Zed。
-
-## 7. 外置磁盘支持
-
-- FinderSync 仅在「监控目录」下显示菜单。
-- 将监控根设为 `/`，使内置盘与所有 `/Volumes/*` 外置挂载点自动覆盖，用户无需额外配置。
-
-## 8. 边界与错误处理
-
-- App 被卸载后，清单检测自动失效，菜单不显示死项。
-- 打开 / 执行命令失败时静默记日志（自用阶段够用），不弹窗打扰。
-- 新建文件遇重名：自动追加序号（如 `untitled 2.md`），避免覆盖。
-- 路径含空格 / 中文：复制按原始路径处理，不做转义。
-
-## 9. 验证方式
-
-- 在真实访达环境手动验证各菜单项：复制路径（粘贴核对）、打开终端 / 编辑器（确认定位到正确目录）、新建文件（确认文件与模板内容）。
-- 外置磁盘：插入 U 盘 / 移动硬盘，在 `/Volumes/` 下验证菜单出现且动作生效。
-- 自动识别：装 / 卸某终端或编辑器后，确认设置列表与菜单同步变化。
-
-## 10. 后续（非 v1）
-
-复制文件名 / `file://` / 文件内容、用浏览器打开、计算 Hash、文件信息、压缩解压、`cd ` 前缀复制、git 客户端打开、二级子菜单形态、菜单栏常驻、最终分发（公证 / 上架）方向再评估。
+| 关闭 App Sandbox | 扩展**必须开沙盒** | pkd 拒绝非沙盒 FinderSync 插件 |
+| App Group 共享 `UserDefaults` | `~/.easy-context/config.json` 文件 + getpwuid | 无开发者账号；App Group entitlement 难生效 |
+| `Process` 跑 `/usr/bin/open -b` | `NSWorkspace.open` | 沙盒禁止 spawn 进程 |
+| `OpenCommand`/`ProcessSpec`（Core） | 已移除 | 改用 NSWorkspace 后成死代码 |
+| 新建文件 NSAlert 命名弹框 | 模板子菜单直接创建 | 扩展不能弹模态窗 |
+| 配置 `showAll` + enabled 列表 | AppEntry 列表 + reconcile | 支持固定/自定义 App、去重排序 |
+| 监控根 `/` | 监控所有挂载卷 + 动态刷新 | `/` 不覆盖外置卷 |
+| 菜单 `representedObject` 带 bundleId | 改用 `tag` | XPC 往返丢弃 representedObject |
+| 手动建 Xcode 工程 | XcodeGen `project.yml` | 可脚本化、可复现、可版本化 |
