@@ -84,6 +84,20 @@ cd EasyContextCore && swift test
 
 详见 [设计文档](docs/superpowers/specs/2026-06-30-easy-context-design.md)（含相对初始设计的关键变更）。
 
+## FinderSync 开发要点（贡献者须知）
+
+这类扩展有不少非显而易见的约束，踩过的坑记录在此，避免重蹈：
+
+- **`menu(for:)` 与菜单点击的动作回调运行在后台 XPC 工作线程，不是主线程**；而 `init()` 与 NSWorkspace 卷挂载/卸载通知在主线程。⚠️ 曾因误加 `assert(Thread.isMainThread)` 到 `menu(for:)`、错误假设它在主线程，导致每次右键扩展崩溃。由此衍生：
+  - 跨「工作线程菜单构建」与「主线程卷通知」共享的缓存**必须加锁**（本项目用 `NSRecursiveLock`，临界区只读写缓存、把读盘/渲染等耗时操作放在锁外）。
+  - 离屏图标绘制用 **bitmap-backed `NSGraphicsContext`**，不要用 `NSImage.lockFocus`（主线程取向的 API，在工作线程属未受支持路径，会偶发失败/崩溃）。
+  - 读系统深浅色用全局 **`AppleInterfaceStyle`**，不要用 `NSApp.effectiveAppearance`（主线程属性，工作线程取值不可靠）。
+- **扩展必须开启 App Sandbox**（pkd 拒绝非沙盒插件）；本地自用靠 `temporary-exception` entitlement 放行 `/Users//Volumes/` 等文件访问。
+- **菜单项的 `representedObject` 会在 XPC 往返中丢失**，故用 `tag` 索引应用列表。
+- **打开 App 用 `NSWorkspace.open`**（沙盒禁止 spawn 进程，不能用 `Process`/`open`）；**新建文件用子菜单**直接创建（扩展弹模态 `NSAlert` 会抛异常）。
+- **监控所有挂载卷**（单个 `/` 不覆盖 `/Volumes/*` 外置盘），并监听挂载/卸载/改名动态刷新。
+- **Debug 构建须 `ENABLE_DEBUG_DYLIB=NO`**，否则 debug-dylib 桩会让扩展无法独立加载。
+
 ## 已知限制
 
 - **分发**：ad-hoc 签名分发给他人需对方手动允许 + 清除 quarantine。要做到「下载即用、无警告」，需 **Apple Developer ID 证书 + 公证（notarization）**（付费账号）。

@@ -10,6 +10,7 @@ final class SettingsStore: ObservableObject {
 
     private let store = ConfigStore()
     private static let extensionBundleId = "com.luyantao.easycontext.finder"
+    private var activeObserver: NSObjectProtocol?
 
     init() {
         let original = store.load()
@@ -23,10 +24,14 @@ final class SettingsStore: ObservableObject {
 
         refreshExtensionState()
         // App 重新激活时复查（用户去系统设置启用后切回来即更新横幅）。
-        NotificationCenter.default.addObserver(
+        activeObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in self?.refreshExtensionState() }
         }
+    }
+
+    deinit {
+        if let activeObserver { NotificationCenter.default.removeObserver(activeObserver) }
     }
 
     var configPath: String { store.path }

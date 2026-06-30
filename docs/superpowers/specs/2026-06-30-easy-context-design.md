@@ -94,6 +94,7 @@
 
 ## 7. 关键实现要点（FinderSync 真机约束）
 
+- **线程模型（最易踩坑）**：`menu(for:)` 与菜单点击的动作回调在**后台 XPC 工作线程**运行，**不是主线程**；`init()` 与 NSWorkspace 卷通知在主线程。⚠️ 曾误加 `assert(Thread.isMainThread)` 致每次右键崩溃。由此：跨两者共享的缓存用 `NSRecursiveLock` 加锁（临界区只读写缓存、耗时计算放锁外）；离屏图标渲染用 bitmap-backed `NSGraphicsContext`（不用 `NSImage.lockFocus`）；深浅色判断读全局 `AppleInterfaceStyle`（不用主线程属性 `NSApp.effectiveAppearance`）。
 - **打开方式**：沙盒禁止 spawn 进程，故用 `NSWorkspace.open([dir], withApplicationAt:)`（LaunchServices），不用 `Process`/`/usr/bin/open`。
 - **菜单项定位**：FinderSync 的 XPC 往返会丢弃 `NSMenuItem.representedObject`，故用 **`tag`** 索引应用列表。
 - **新建文件**：扩展不能弹模态窗（NSAlert 抛异常），故改为**模板子菜单 + 直接创建**（无命名弹框，用户自行重命名）。
