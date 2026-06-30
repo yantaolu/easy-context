@@ -8,3 +8,5 @@ EasyContext.xcodeproj/
 build/
 EasyContext/Info.plist
 EasyContextFinder/Info.plist
+dist/
+build-release/
