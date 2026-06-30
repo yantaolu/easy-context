@@ -1,4 +1,5 @@
 import Cocoa
+import CoreImage
 import FinderSync
 import EasyContextCore
 
@@ -52,38 +53,48 @@ class FinderSyncExtension: FIFinderSync {
 
     // MARK: - 菜单构建
     //
-    // v1：扩展自检测并列出所有已装终端/编辑器（沙盒下读不到宿主配置）。
+    // 扩展按共享配置 config.json 决定显示哪些项 / 哪些 App / 图标风格。
 
     override func menu(for menuKind: FIMenuKind) -> NSMenu? {
         guard menuKind == .contextualMenuForItems
                 || menuKind == .contextualMenuForContainer else { return nil }
         guard primaryURL() != nil else { return nil }
 
+        let config = ConfigStore().load()
+        let iconStyle = config.appearance.appIconStyle
         let menu = NSMenu(title: "")
-        addItem(to: menu, title: "复制完整路径", action: #selector(copyFullPath(_:)),
-                image: symbolImage("doc.on.doc"))
-        addItem(to: menu, title: "复制相对路径", action: #selector(copyRelativePath(_:)),
-                image: symbolImage("doc.on.clipboard"))
+
+        if config.items.copyFullPath {
+            addItem(to: menu, title: "复制完整路径", action: #selector(copyFullPath(_:)),
+                    image: symbolImage("doc.on.doc"))
+        }
+        if config.items.copyRelativePath {
+            addItem(to: menu, title: "复制相对路径", action: #selector(copyRelativePath(_:)),
+                    image: symbolImage("doc.on.clipboard"))
+        }
 
         let detector = AppDetector(isInstalled: Self.isInstalled)
-        let terminals = detector.installed(from: KnownApps.terminals)
-        let editors = detector.installed(from: KnownApps.editors)
+        let terminals = config.visibleApps(detector.installed(from: KnownApps.terminals),
+                                           selection: config.terminals)
+        let editors = config.visibleApps(detector.installed(from: KnownApps.editors),
+                                         selection: config.editors)
         openableApps = terminals + editors
 
         for (idx, app) in terminals.enumerated() {
             let item = addItem(to: menu, title: "用 \(app.displayName) 打开终端",
                                action: #selector(openWithApp(_:)),
-                               image: appIcon(forBundleId: app.bundleId) ?? symbolImage("terminal"))
+                               image: appIcon(app.bundleId, style: iconStyle) ?? symbolImage("terminal"))
             item.tag = idx
         }
         for (offset, app) in editors.enumerated() {
             let item = addItem(to: menu, title: "用 \(app.displayName) 打开",
                                action: #selector(openWithApp(_:)),
-                               image: appIcon(forBundleId: app.bundleId)
+                               image: appIcon(app.bundleId, style: iconStyle)
                                    ?? symbolImage("chevron.left.forwardslash.chevron.right"))
             item.tag = terminals.count + offset
         }
 
+        guard config.items.newFile else { return menu }
         // 沙盒扩展不能弹模态窗，新建文件用子菜单选模板、直接创建。
         let newFileItem = NSMenuItem(title: "新建文件", action: nil, keyEquivalent: "")
         newFileItem.image = symbolImage("doc.badge.plus")
@@ -117,12 +128,29 @@ class FinderSyncExtension: FIFinderSync {
         NSImage(systemSymbolName: name, accessibilityDescription: nil)
     }
 
-    private func appIcon(forBundleId bundleId: String) -> NSImage? {
+    private static let iconSize = NSSize(width: 16, height: 16)
+
+    private func appIcon(_ bundleId: String, style: Settings.AppIconStyle) -> NSImage? {
         guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId)
         else { return nil }
         let icon = NSWorkspace.shared.icon(forFile: url.path)
-        icon.size = NSSize(width: 16, height: 16)
-        return icon
+        icon.size = Self.iconSize
+        switch style {
+        case .color: return icon
+        case .monochrome: return Self.desaturated(icon) ?? icon
+        }
+    }
+
+    // 去饱和成灰度，保留形状细节、贴合菜单单色调。
+    private static func desaturated(_ image: NSImage) -> NSImage? {
+        guard let tiff = image.tiffRepresentation,
+              let source = CIImage(data: tiff) else { return nil }
+        let mono = source.applyingFilter("CIPhotoEffectMono")
+        let rep = NSCIImageRep(ciImage: mono)
+        let result = NSImage(size: iconSize)
+        result.addRepresentation(rep)
+        result.size = iconSize
+        return result
     }
 
     private static func templateSymbol(_ t: FileTemplate) -> String {

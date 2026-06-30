@@ -10,8 +10,11 @@ final class SettingsStore: ObservableObject {
 
     init() {
         self.settings = store.load()
-        seedEnabledIfFirstRun()
+        // 首次运行写出默认配置文件，方便用户看到/手改。
+        if !store.hasStored() { try? store.save(settings) }
     }
+
+    var configPath: String { store.path }
 
     private var detector: AppDetector {
         AppDetector(isInstalled: { NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0) != nil })
@@ -20,35 +23,30 @@ final class SettingsStore: ObservableObject {
     var detectedTerminals: [KnownApp] { detector.installed(from: KnownApps.terminals) }
     var detectedEditors: [KnownApp] { detector.installed(from: KnownApps.editors) }
 
-    /// 首次运行：默认勾选所有已检测到的 App。
-    private func seedEnabledIfFirstRun() {
-        if !store.hasStored() {
-            settings.enabledTerminalBundleIds = detectedTerminals.map(\.bundleId)
-            settings.enabledEditorBundleIds = detectedEditors.map(\.bundleId)
-            persist()
-        }
-    }
-
     func persist() {
         try? store.save(settings)
     }
 
     func isEnabled(_ app: KnownApp) -> Bool {
-        switch app.category {
-        case .terminal: return settings.enabledTerminalBundleIds.contains(app.bundleId)
-        case .editor: return settings.enabledEditorBundleIds.contains(app.bundleId)
-        }
+        selection(for: app.category).enabled.contains(app.bundleId)
     }
 
-    func toggle(_ app: KnownApp, on: Bool) {
-        func update(_ ids: inout [String]) {
-            if on { if !ids.contains(app.bundleId) { ids.append(app.bundleId) } }
-            else { ids.removeAll { $0 == app.bundleId } }
+    func setEnabled(_ app: KnownApp, on: Bool) {
+        func update(_ sel: inout Settings.AppSelection) {
+            if on {
+                if !sel.enabled.contains(app.bundleId) { sel.enabled.append(app.bundleId) }
+            } else {
+                sel.enabled.removeAll { $0 == app.bundleId }
+            }
         }
         switch app.category {
-        case .terminal: update(&settings.enabledTerminalBundleIds)
-        case .editor: update(&settings.enabledEditorBundleIds)
+        case .terminal: update(&settings.terminals)
+        case .editor: update(&settings.editors)
         }
         persist()
+    }
+
+    private func selection(for category: AppCategory) -> Settings.AppSelection {
+        category == .terminal ? settings.terminals : settings.editors
     }
 }

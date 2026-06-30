@@ -5,7 +5,7 @@ final class ConfigStoreTests: XCTestCase {
     private func tempFileURL() -> URL {
         FileManager.default.temporaryDirectory
             .appendingPathComponent("easycontext-test-\(ProcessInfo.processInfo.globallyUniqueString)")
-            .appendingPathComponent("settings.json")
+            .appendingPathComponent("config.json")
     }
 
     func test_load_returnsDefaults_whenFileMissing() {
@@ -17,10 +17,10 @@ final class ConfigStoreTests: XCTestCase {
     func test_saveThenLoad_roundTrips() throws {
         let sut = ConfigStore(fileURL: tempFileURL())
         var s = Settings()
-        s.enabledEditorBundleIds = ["com.microsoft.VSCode"]
-        s.enabledTerminalBundleIds = ["com.googlecode.iterm2"]
-        s.defaultTemplate = .markdown
-        s.copyFullPathEnabled = false
+        s.terminals = .init(showAll: false, enabled: ["com.googlecode.iterm2"])
+        s.editors = .init(showAll: true, enabled: [])
+        s.items.copyFullPath = false
+        s.appearance.appIconStyle = .color
         try sut.save(s)
         XCTAssertTrue(sut.hasStored())
         XCTAssertEqual(sut.load(), s)
