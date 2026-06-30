@@ -38,7 +38,7 @@
   - 让用户勾选哪些菜单项、哪些终端 / 编辑器在右键菜单中显示。
   - 配置新建文件的默认模板。
   - 引导用户前往「系统设置 → 通用 → 登录项与扩展 → 访达扩展」启用本扩展。
-- 可选：菜单栏小图标，用于快速打开设置（v1 可不做，列为可选）。
+- 菜单栏小图标：v1 不做。
 
 ### 3.2 FinderSync 扩展
 - macOS 唯一官方支持扩展访达右键菜单的机制（`FIFinderSync` / `FIFinderSyncController`，Cocoa 专属 API）。
@@ -53,6 +53,7 @@
 ## 4. 技术栈
 
 - 语言 / UI：Swift + SwiftUI（宿主），Swift + AppKit/Foundation（扩展）。
+- bundle id 前缀：`com.luyantao.easycontext`（宿主 App `com.luyantao.easycontext`，扩展 `com.luyantao.easycontext.finder`，App Group `group.com.luyantao.easycontext`）。
 - App Sandbox：关闭（自用阶段）。
 - 签名：本地 Developer ID 或自签名。
 - 不做公证、不上架。
@@ -94,7 +95,7 @@
 
 - App 被卸载后，清单检测自动失效，菜单不显示死项。
 - 打开 / 执行命令失败时静默记日志（自用阶段够用），不弹窗打扰。
-- 新建文件遇重名：自动追加序号或提示，避免覆盖。
+- 新建文件遇重名：自动追加序号（如 `untitled 2.md`），避免覆盖。
 - 路径含空格 / 中文：复制按原始路径处理，不做转义。
 
 ## 9. 验证方式
