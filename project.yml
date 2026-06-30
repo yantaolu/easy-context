@@ -1,3 +1,9 @@
+# 架构约束（勿删）：宿主 App 与 FinderSync 扩展通过共享文件
+# ~/Library/Application Support/EasyContext/settings.json 交换配置，
+# 依赖【两个 target 都不开启 App Sandbox】——否则各自落到沙盒容器，
+# applicationSupportDirectory 路径分叉，配置共享会静默失效。
+# 若将来为公证/上架启用沙盒，必须改用 App Group（group.com.luyantao.easycontext）
+# 并相应改回 ConfigStore 的路径来源。
 name: EasyContext
 options:
   bundleIdPrefix: com.luyantao.easycontext
