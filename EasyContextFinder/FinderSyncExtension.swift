@@ -211,8 +211,9 @@ class FinderSyncExtension: FIFinderSync {
                 colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)
         else { return nil }
         rep.size = size
+        guard let ctx = NSGraphicsContext(bitmapImageRep: rep) else { return nil }
         NSGraphicsContext.saveGraphicsState()
-        NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+        NSGraphicsContext.current = ctx
         draw(NSRect(origin: .zero, size: size))
         NSGraphicsContext.restoreGraphicsState()
         let out = NSImage(size: size)
