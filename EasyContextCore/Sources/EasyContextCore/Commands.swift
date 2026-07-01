@@ -41,6 +41,11 @@ public struct CommandEntry: Codable, Equatable, Sendable, Identifiable {
 public enum TerminalLaunch {
     public static let systemTerminalBundleId = "com.apple.Terminal"
 
+    /// 从外部运行命令表现不可靠的终端（UI 据此给提示）。
+    /// Ghostty：macOS 单实例 + `-e` 安全确认，已在运行时无法干净地被外部启动命令
+    /// （带 -n 会弹框+多开窗口；去 -n 则 -e 命令被丢弃不执行）。属 Ghostty 既定设计。
+    public static let externalExecUnreliable: Set<String> = ["com.mitchellh.ghostty"]
+
     /// 内置默认模板（bundleId -> 模板）。AppleScript 类直接用 system attribute 读环境。
     public static let builtinTemplates: [String: String] = [
         "com.mitchellh.ghostty":

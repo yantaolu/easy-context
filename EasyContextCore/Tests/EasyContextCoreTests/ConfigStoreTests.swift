@@ -34,4 +34,42 @@ final class ConfigStoreTests: XCTestCase {
         let sut = ConfigStore(fileURL: url)
         XCTAssertEqual(sut.load(), Settings())
     }
+
+    // MARK: loadOutcome 区分 missing / ok / corrupt
+
+    func test_loadOutcome_missing() {
+        let sut = ConfigStore(fileURL: tempFileURL())
+        XCTAssertEqual(sut.loadOutcome(), .missing)
+    }
+
+    func test_loadOutcome_ok() throws {
+        let sut = ConfigStore(fileURL: tempFileURL())
+        var s = Settings(); s.items.newFile = false
+        try sut.save(s)
+        XCTAssertEqual(sut.loadOutcome(), .ok(s))
+    }
+
+    func test_loadOutcome_corrupt_andBackupPreservesOriginal() throws {
+        let url = tempFileURL()
+        try FileManager.default.createDirectory(
+            at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data("{ broken".utf8).write(to: url)
+        let sut = ConfigStore(fileURL: url)
+        XCTAssertEqual(sut.loadOutcome(), .corrupt)
+        // 备份保留原始损坏内容
+        let bak = sut.backupCorruptFile()
+        XCTAssertNotNil(bak)
+        XCTAssertEqual(try String(contentsOf: bak!, encoding: .utf8), "{ broken")
+    }
+
+    // MARK: IPC token
+
+    func test_ipcToken_generatesStableAndReadable() {
+        let sut = ConfigStore(fileURL: tempFileURL())
+        XCTAssertEqual(sut.readIPCToken(), "") // 未生成前为空
+        let t1 = sut.ensureIPCToken()
+        XCTAssertFalse(t1.isEmpty)
+        XCTAssertEqual(sut.ensureIPCToken(), t1)  // 稳定，不重复生成
+        XCTAssertEqual(sut.readIPCToken(), t1)    // 只读也拿到同一个
+    }
 }

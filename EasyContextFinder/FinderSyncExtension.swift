@@ -9,6 +9,9 @@ class FinderSyncExtension: FIFinderSync {
     private var openableApps: [AppEntry] = []
     private var runnableCommands: [CommandEntry] = []
     private var commandTerm: String = ""
+    // 本次菜单对应的目标 URL 快照（按 menuKind 定），动作回调用它、不在点击时重解析，
+    // 避免「容器右键却命中残留选中项」及构建↔点击间目标漂移。
+    private var menuTargetURL: URL?
 
     // 缓存（扩展进程常驻，跨多次右键存活，避免每次重读/重查/重渲染）。
     // 注意：menu(for:) 在 XPC 工作线程回调、volumesChanged 在主线程，两者会并发
@@ -58,17 +61,26 @@ class FinderSyncExtension: FIFinderSync {
 
     // MARK: - 目标 URL
 
-    private func targetURLs() -> [URL] {
-        let controller = FIFinderSyncController.default()
-        if let items = controller.selectedItemURLs(), !items.isEmpty { return items }
-        if let target = controller.targetedURL() { return [target] }
-        return []
+    // 按 menuKind 定目标：容器菜单（空白处右键）优先容器本身，避免命中残留选中项；
+    // 条目菜单优先选中项。
+    private func resolveTarget(for menuKind: FIMenuKind) -> URL? {
+        let c = FIFinderSyncController.default()
+        switch menuKind {
+        case .contextualMenuForContainer:
+            return c.targetedURL() ?? c.selectedItemURLs()?.first
+        default:
+            return c.selectedItemURLs()?.first ?? c.targetedURL()
+        }
     }
 
-    private func primaryURL() -> URL? { targetURLs().first }
+    // 动作回调读的是构建菜单时定下的快照，而非重新解析当前 Finder 状态。
+    private func snapshotURL() -> URL? {
+        cacheLock.lock(); defer { cacheLock.unlock() }
+        return menuTargetURL
+    }
 
     private func targetDirectory() -> URL? {
-        guard let url = primaryURL() else { return nil }
+        guard let url = snapshotURL() else { return nil }
         return TargetDirectoryResolver().directory(for: url)
     }
 
@@ -79,7 +91,8 @@ class FinderSyncExtension: FIFinderSync {
     override func menu(for menuKind: FIMenuKind) -> NSMenu? {
         guard menuKind == .contextualMenuForItems
                 || menuKind == .contextualMenuForContainer else { return nil }
-        guard primaryURL() != nil else { return nil }
+        guard let target = resolveTarget(for: menuKind) else { return nil }
+        cacheLock.lock(); menuTargetURL = target; cacheLock.unlock()
 
         let config = currentSettings()
         let iconStyle = config.appearance.appIconStyle
@@ -319,12 +332,12 @@ class FinderSyncExtension: FIFinderSync {
     // MARK: - 动作
 
     @objc private func copyFullPath(_ sender: AnyObject?) {
-        guard let url = primaryURL() else { return }
+        guard let url = snapshotURL() else { return }
         writeToPasteboard(url.path)
     }
 
     @objc private func copyRelativePath(_ sender: AnyObject?) {
-        guard let url = primaryURL() else { return }
+        guard let url = snapshotURL() else { return }
         writeToPasteboard(RelativePathResolver().relativePath(for: url))
     }
 
@@ -359,6 +372,7 @@ class FinderSyncExtension: FIFinderSync {
             URLQueryItem(name: "cmd", value: cmds[item.tag].name),
             URLQueryItem(name: "dir", value: dir.path),
             URLQueryItem(name: "term", value: term),
+            URLQueryItem(name: "t", value: ConfigStore().readIPCToken()), // 宿主据此验真
         ]
         guard let url = comps.url else { return }
         NSWorkspace.shared.open(url)

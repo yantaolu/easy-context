@@ -33,11 +33,33 @@ public struct ConfigStore {
         FileManager.default.fileExists(atPath: fileURL.path)
     }
 
-    public func load() -> Settings {
+    /// 加载结果，区分「文件缺失」与「文件损坏」，供宿主避免用默认值覆盖损坏文件。
+    public enum LoadOutcome: Equatable {
+        case ok(Settings)
+        case missing          // 文件不存在 → 正常用默认
+        case corrupt          // 文件在但读/解码失败 → 用默认但别覆盖，先备份
+    }
+
+    public func loadOutcome() -> LoadOutcome {
+        guard FileManager.default.fileExists(atPath: fileURL.path) else { return .missing }
         guard let data = try? Data(contentsOf: fileURL),
               let decoded = try? JSONDecoder().decode(Settings.self, from: data)
-        else { return Settings() }
-        return decoded
+        else { return .corrupt }
+        return .ok(decoded)
+    }
+
+    public func load() -> Settings {
+        if case .ok(let s) = loadOutcome() { return s }
+        return Settings()
+    }
+
+    /// 把损坏的配置文件备份到 config.json.bak（覆盖旧备份），保留用户可修复的原文。
+    @discardableResult
+    public func backupCorruptFile() -> URL? {
+        let bak = fileURL.deletingLastPathComponent().appendingPathComponent("config.json.bak")
+        try? FileManager.default.removeItem(at: bak)
+        do { try FileManager.default.copyItem(at: fileURL, to: bak); return bak }
+        catch { return nil }
     }
 
     public func save(_ settings: Settings) throws {
@@ -72,6 +94,35 @@ public struct ConfigStore {
         if let data = try? encoder.encode(payload) {
             try? data.write(to: templatesReferenceURL, options: .atomic)
         }
+    }
+
+    // MARK: - IPC token（挡外部/网页伪造 easycontext:// URL）
+    //
+    // 与 config.json 同目录的 .ipc-token（0600）。扩展把它带进 URL、宿主比对。
+    // 网页/其它 app 读不到此文件 → 无法伪造有效 URL。（同 UID 进程能读，但那已具
+    // 用户权限、不在威胁模型内。）
+    public var ipcTokenURL: URL {
+        fileURL.deletingLastPathComponent().appendingPathComponent(".ipc-token")
+    }
+
+    /// 只读现有 token（不生成）。供沙盒扩展用。
+    public func readIPCToken() -> String {
+        guard let t = try? String(contentsOf: ipcTokenURL, encoding: .utf8) else { return "" }
+        return t.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// 读，缺失则生成并以 0600 写入。供非沙盒宿主用。
+    @discardableResult
+    public func ensureIPCToken() -> String {
+        let existing = readIPCToken()
+        if !existing.isEmpty { return existing }
+        let token = UUID().uuidString
+        let dir = fileURL.deletingLastPathComponent()
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try? token.write(to: ipcTokenURL, atomically: true, encoding: .utf8)
+        try? FileManager.default.setAttributes([.posixPermissions: 0o600],
+                                               ofItemAtPath: ipcTokenURL.path)
+        return token
     }
 
     private struct TemplatesReference: Encodable {

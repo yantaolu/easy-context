@@ -23,6 +23,7 @@ struct ContentView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            if store.configCorrupt { corruptBanner }
             if !store.extensionEnabled { extensionBanner }
             HStack(spacing: 0) {
                 leftColumn
@@ -134,6 +135,12 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 6) {
             sectionTitle("自定义命令")
             defaultTerminalPicker
+            if TerminalLaunch.externalExecUnreliable.contains(store.resolvedDefaultTerminal) {
+                Text("⚠ 该终端从外部运行命令会弹确认且可能多开窗口，建议改用 Terminal / iTerm")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             List(selection: commandSelBinding) {
                 ForEach(store.settings.commands) { cmd in
                     commandRow(cmd)
@@ -286,6 +293,19 @@ struct ContentView: View {
         }
         .buttonStyle(.borderless)
         .padding(.vertical, 4)
+    }
+
+    private var corruptBanner: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "exclamationmark.octagon.fill")
+            Text("配置文件损坏，已备份为 config.json.bak，当前使用默认设置")
+            Spacer()
+            Button("打开配置目录") { openConfigDirectory() }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(Color.red.opacity(0.85))
+        .foregroundStyle(.white)
     }
 
     private var extensionBanner: some View {

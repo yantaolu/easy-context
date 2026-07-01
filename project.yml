@@ -1,9 +1,10 @@
-# 架构约束（勿删）：宿主 App 与 FinderSync 扩展通过共享文件
-# ~/Library/Application Support/EasyContext/settings.json 交换配置，
-# 依赖【两个 target 都不开启 App Sandbox】——否则各自落到沙盒容器，
-# applicationSupportDirectory 路径分叉，配置共享会静默失效。
-# 若将来为公证/上架启用沙盒，必须改用 App Group（group.com.luyantao.easycontext）
-# 并相应改回 ConfigStore 的路径来源。
+# 架构约束（勿删）：宿主 App（非沙盒）与 FinderSync 扩展（沙盒，pkd 强制要求）
+# 通过共享文件 ~/.easy-context/config.json 交换配置。关键：ConfigStore 用
+# getpwuid(getuid())->pw_dir 取【真实】家目录——沙盒里 NSHomeDirectory() 会被重定向
+# 到容器，导致宿主与扩展读到不同文件、配置“不生效”；getpwuid 读用户数据库、不被
+# 沙盒重定向，两端都得到 /Users/<用户>。扩展靠 EasyContextFinder.entitlements 里的
+# temporary-exception.files.absolute-path.read-write 放行该路径读写。
+# 若将来为公证/上架收紧沙盒，需改用 App Group 容器并相应改 ConfigStore 的路径来源。
 name: EasyContext
 options:
   bundleIdPrefix: com.luyantao.easycontext

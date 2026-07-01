@@ -7,21 +7,34 @@ import EasyContextCore
 final class SettingsStore: ObservableObject {
     @Published var settings: Settings
     @Published var extensionEnabled: Bool = true // 先假定已启用，避免闪现横幅
+    @Published var configCorrupt: Bool = false    // 配置损坏（已备份、用默认）→ 顶部横幅提示
 
     private let store = ConfigStore()
     private static let extensionBundleId = "com.luyantao.easycontext.finder"
     private var activeObserver: NSObjectProtocol?
 
     init() {
-        let original = store.load()
+        // 区分「缺失」与「损坏」：损坏时备份原文件、用默认、且【不自动覆盖】原文件。
+        let outcome = store.loadOutcome()
+        let original: Settings
+        switch outcome {
+        case .ok(let loaded): original = loaded
+        case .missing: original = Settings()
+        case .corrupt:
+            configCorrupt = true
+            store.backupCorruptFile()
+            original = Settings()
+        }
         var s = original
         // 启动即 reconcile：并入已安装的内置 App、去重、排序，保留用户选择与自定义项。
         s.reconcile(installedTerminals: Self.installed(KnownApps.terminals),
                     installedEditors: Self.installed(KnownApps.editors))
         self.settings = s
         // 内容没变就不重写，避免无谓 bump mtime（否则扩展端缓存会被迫重载一次）。
-        if s != original || !store.hasStored() { try? store.save(s) }
-        // 生成内置模板参考文件，供高级用户照着覆盖 terminalTemplates。
+        // 损坏时【不写】——避免默认值覆盖用户可修复的原文件（已备份到 .bak）。
+        if outcome != .corrupt, s != original || !store.hasStored() { try? store.save(s) }
+        // 生成 IPC token（挡外部伪造 URL）与内置模板参考文件。
+        store.ensureIPCToken()
         store.writeTemplatesReference(builtin: TerminalLaunch.builtinTemplates)
 
         refreshExtensionState()

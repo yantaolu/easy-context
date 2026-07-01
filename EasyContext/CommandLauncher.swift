@@ -14,8 +14,17 @@ enum CommandLauncher {
         guard let cmdName = value("cmd"), let dir = value("dir"), let term = value("term")
         else { return }
 
-        let settings = ConfigStore().load() // 权威当前配置
-        // 安全：命令必须在用户配置里且启用（按名字查，不执行 URL 里的任意命令串）。
+        let configStore = ConfigStore()
+        // 安全①：token 必须匹配（挡网页/其它 app 伪造的 easycontext:// URL）。
+        let expected = configStore.readIPCToken()
+        guard !expected.isEmpty, value("t") == expected else { return }
+        // 安全②：目录必须真实存在且是目录（挡任意/伪造路径）。
+        var isDir: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: dir, isDirectory: &isDir), isDir.boolValue
+        else { return }
+
+        let settings = configStore.load() // 权威当前配置
+        // 安全③：命令必须在用户配置里且启用（按名字查，不执行 URL 里的任意命令串）。
         guard let entry = settings.commands.first(where: { $0.name == cmdName && $0.enabled })
         else { return }
         // 终端必须有模板（内置或用户覆盖）。
