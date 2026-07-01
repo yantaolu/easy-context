@@ -36,19 +36,31 @@ echo "==> 版本：$VERSION"
 echo "==> 组装安装内容"
 ROOT="$(mktemp -d)"
 SCRIPTS="$(mktemp -d)"
+PLISTDIR="$(mktemp -d)"; PLIST="$PLISTDIR/component.plist"
 cp -R "$APP" "$ROOT/"                                   # 装到 /Applications/EasyContext.app
 install -m 0755 "$PKG_SCRIPTS/preinstall"  "$SCRIPTS/preinstall"
 install -m 0755 "$PKG_SCRIPTS/postinstall" "$SCRIPTS/postinstall"
 
+# 关闭「Bundle 重定位」：pkgbuild 默认给 app 生成 <relocate>，安装器一旦在系统别处
+# （如开发目录 build-release）发现同 bundle id 的旧副本，就会把新版装到那个旧位置、
+# 而非 /Applications——表现为“装完 /Applications 里什么都没有”。故强制 false。
+pkgbuild --analyze --root "$ROOT" "$PLIST" >/dev/null
+i=0
+while /usr/libexec/PlistBuddy -c "Print :$i:BundleIsRelocatable" "$PLIST" >/dev/null 2>&1; do
+  /usr/libexec/PlistBuddy -c "Set :$i:BundleIsRelocatable false" "$PLIST"
+  i=$((i+1))
+done
+
 echo "==> 打包 pkg（不签名）"
 mkdir -p dist; rm -f dist/EasyContext.pkg
 pkgbuild --root "$ROOT" \
+  --component-plist "$PLIST" \
   --identifier "$IDENTIFIER" \
   --version "$VERSION" \
   --install-location /Applications \
   --scripts "$SCRIPTS" \
   dist/EasyContext.pkg
 
-rm -rf "$ROOT" "$SCRIPTS"
+rm -rf "$ROOT" "$SCRIPTS" "$PLISTDIR"
 echo "==> 完成：$(pwd)/dist/EasyContext.pkg"
 ls -lh dist/EasyContext.pkg
