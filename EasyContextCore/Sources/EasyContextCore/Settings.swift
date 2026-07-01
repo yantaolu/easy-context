@@ -32,19 +32,33 @@ public struct Settings: Codable, Equatable, Sendable {
     public var items: Items
     public var terminals: [AppEntry]
     public var editors: [AppEntry]
+    public var commands: [CommandEntry]
+    public var defaultTerminal: String?          // 终端 bundleId；nil=按解析逻辑
+    public var terminalTemplates: [String: String] // bundleId -> 用户覆盖的启动模板
     public var appearance: Appearance
 
+    public static let defaultCommands: [CommandEntry] = [
+        CommandEntry(name: "Claude", command: "claude"),
+        CommandEntry(name: "Codex", command: "codex"),
+    ]
+
     public init(
-        version: Int = 2,
+        version: Int = 3,
         items: Items = Items(),
         terminals: [AppEntry] = [],
         editors: [AppEntry] = [],
+        commands: [CommandEntry] = Settings.defaultCommands,
+        defaultTerminal: String? = nil,
+        terminalTemplates: [String: String] = [:],
         appearance: Appearance = Appearance()
     ) {
         self.version = version
         self.items = items
         self.terminals = terminals
         self.editors = editors
+        self.commands = commands
+        self.defaultTerminal = defaultTerminal
+        self.terminalTemplates = terminalTemplates
         self.appearance = appearance
     }
 
@@ -94,6 +108,9 @@ public struct Settings: Codable, Equatable, Sendable {
         items = (try? c.decodeIfPresent(Items.self, forKey: .items) ?? d.items) ?? d.items
         terminals = (try? c.decodeIfPresent([AppEntry].self, forKey: .terminals) ?? []) ?? []
         editors = (try? c.decodeIfPresent([AppEntry].self, forKey: .editors) ?? []) ?? []
+        commands = (try? c.decodeIfPresent([CommandEntry].self, forKey: .commands) ?? d.commands) ?? d.commands
+        defaultTerminal = (try? c.decodeIfPresent(String.self, forKey: .defaultTerminal)) ?? nil
+        terminalTemplates = (try? c.decodeIfPresent([String: String].self, forKey: .terminalTemplates) ?? [:]) ?? [:]
         appearance = (try? c.decodeIfPresent(Appearance.self, forKey: .appearance) ?? d.appearance) ?? d.appearance
     }
 }

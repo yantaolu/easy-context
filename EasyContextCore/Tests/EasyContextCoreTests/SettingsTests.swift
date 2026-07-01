@@ -4,12 +4,17 @@ import XCTest
 final class SettingsTests: XCTestCase {
     func test_defaultInit_hasExpectedDefaults() {
         let s = Settings()
-        XCTAssertEqual(s.version, 2)
+        XCTAssertEqual(s.version, 3)
         XCTAssertTrue(s.items.copyFullPath)
         XCTAssertTrue(s.items.copyRelativePath)
         XCTAssertTrue(s.items.newFile)
         XCTAssertEqual(s.terminals, [])
         XCTAssertEqual(s.editors, [])
+        // v3：预置 Claude/Codex 命令、默认终端 nil、无模板覆盖
+        XCTAssertEqual(s.commands.map(\.name), ["Claude", "Codex"])
+        XCTAssertEqual(s.commands.map(\.command), ["claude", "codex"])
+        XCTAssertNil(s.defaultTerminal)
+        XCTAssertEqual(s.terminalTemplates, [:])
         XCTAssertEqual(s.appearance.appIconStyle, .monochrome)
     }
 
@@ -23,7 +28,15 @@ final class SettingsTests: XCTestCase {
         XCTAssertFalse(s.terminals[0].enabled)
         XCTAssertFalse(s.terminals[0].custom) // 缺省
         XCTAssertTrue(s.items.copyFullPath)   // 未写→默认
+        // v2 旧配置（无 commands 键）加载后回退预置命令
+        XCTAssertEqual(s.commands.map(\.name), ["Claude", "Codex"])
         XCTAssertEqual(s.appearance.appIconStyle, .monochrome)
+    }
+
+    // 显式空 commands（present but []）应保留为空，不被回退
+    func test_decode_emptyCommands_staysEmpty() throws {
+        let s = try JSONDecoder().decode(Settings.self, from: Data(#"{ "commands": [] }"#.utf8))
+        XCTAssertEqual(s.commands, [])
     }
 
     // reconcile：新增缺失内置、去重、内置在前按内置顺序、自定义在后、保留 enabled
