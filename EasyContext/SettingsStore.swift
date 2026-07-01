@@ -90,6 +90,12 @@ final class SettingsStore: ObservableObject {
         category == .terminal ? settings.terminals : settings.editors
     }
 
+    /// 设置界面只展示【已安装】的 App：未安装的仍保留在配置里（保留开关状态、
+    /// 重装后自动回来），只是不在列表里显示——避免出现卸载后残留的“未安装”死条目。
+    func visibleEntries(_ category: AppCategory) -> [AppEntry] {
+        entries(category).filter { isInstalled($0) }
+    }
+
     func isInstalled(_ entry: AppEntry) -> Bool {
         NSWorkspace.shared.urlForApplication(withBundleIdentifier: entry.bundleId) != nil
     }

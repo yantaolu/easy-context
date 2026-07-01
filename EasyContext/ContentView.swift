@@ -231,7 +231,7 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 6) {
             sectionTitle(title)
             List(selection: appSelBinding(category)) {
-                ForEach(store.entries(category)) { entry in
+                ForEach(store.visibleEntries(category)) { entry in
                     appRow(entry, category: category)
                         .tag(entry.bundleId)
                         .listRowSeparator(.hidden)
@@ -251,8 +251,8 @@ struct ContentView: View {
     }
 
     private func appRow(_ entry: AppEntry, category: AppCategory) -> some View {
-        let installed = store.isInstalled(entry)
-        return HStack(spacing: 10) {
+        // 只有已安装的 App 会进到这里（见 store.visibleEntries），无需再判断“未安装”。
+        HStack(spacing: 10) {
             if let icon = store.icon(entry) {
                 Image(nsImage: icon).resizable().frame(width: 18, height: 18)
             } else {
@@ -261,10 +261,7 @@ struct ContentView: View {
                     .frame(width: 18, height: 18)
                     .foregroundStyle(.secondary)
             }
-            Text(entry.name).foregroundStyle(installed ? .primary : .secondary)
-            if !installed {
-                Text("未安装").font(.caption).foregroundStyle(.tertiary)
-            }
+            Text(entry.name)
             if entry.custom {
                 Text("自定义").font(.caption).foregroundStyle(.tertiary)
             }
