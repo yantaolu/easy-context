@@ -9,12 +9,13 @@ private typealias CoreSettings = EasyContextCore.Settings
 private enum RowSelection: Hashable {
     case terminal(String)
     case editor(String)
-    case command(Int)
+    case command(String) // 命令 id（稳定 UUID）
 }
 
 struct ContentView: View {
     @StateObject private var store = SettingsStore()
     @State private var selection: RowSelection?
+    @FocusState private var focusedCommand: String? // 命令输入框焦点键（"name-<id>"/"cmd-<id>"）
     // 统一行高（内容 18 + 上下 insets 各 5 = 28），左右两列开关据此对齐。
     private let listRowContentHeight: CGFloat = 18
     // 终端/菜单项固定显示 3 行的容器高度（贴合 3 行）。
@@ -134,15 +135,17 @@ struct ContentView: View {
             sectionTitle("自定义命令")
             defaultTerminalPicker
             List(selection: commandSelBinding) {
-                ForEach(store.settings.commands.indices, id: \.self) { i in
-                    commandRow(i)
-                        .tag(i)
+                ForEach(store.settings.commands) { cmd in
+                    commandRow(cmd)
+                        .tag(cmd.id)
                         .listRowSeparator(.hidden)
                         .listRowInsets(EdgeInsets(top: 5, leading: 0, bottom: 5, trailing: 0))
                 }
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
+            // 焦点离开命令输入框（点别处/切行）→ 落盘，兜住防抖未触发的收尾。
+            .onChange(of: focusedCommand) { _ in store.flushCommands() }
             commandFooterBar
         }
         .frame(maxWidth: .infinity)
@@ -167,17 +170,22 @@ struct ContentView: View {
         .padding(.bottom, 2)
     }
 
-    private func commandRow(_ i: Int) -> some View {
-        HStack(spacing: 8) {
+    private func commandRow(_ cmd: CommandEntry) -> some View {
+        let id = cmd.id
+        return HStack(spacing: 8) {
             TextField("名称", text: Binding(
-                get: { store.settings.commands.indices.contains(i) ? store.settings.commands[i].name : "" },
-                set: { store.updateCommandName(at: i, $0) }))
+                get: { store.command(id)?.name ?? "" },
+                set: { store.updateCommandName(id: id, $0) }))
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 96)
+                .focused($focusedCommand, equals: "name-\(id)")
+                .onSubmit { store.flushCommands() }
             TextField("命令，如 claude", text: Binding(
-                get: { store.settings.commands.indices.contains(i) ? store.settings.commands[i].command : "" },
-                set: { store.updateCommandString(at: i, $0) }))
+                get: { store.command(id)?.command ?? "" },
+                set: { store.updateCommandString(id: id, $0) }))
                 .textFieldStyle(.roundedBorder)
+                .focused($focusedCommand, equals: "cmd-\(id)")
+                .onSubmit { store.flushCommands() }
         }
     }
 
@@ -190,7 +198,7 @@ struct ContentView: View {
             Button { removeSelectedCommand() } label: {
                 Image(systemName: "minus").frame(width: 22, height: 18)
             }
-            .disabled(selectedCommandIndex == nil)
+            .disabled(selectedCommandId == nil)
             .help("删除选中的命令")
             Spacer()
         }
@@ -198,14 +206,14 @@ struct ContentView: View {
         .padding(.vertical, 4)
     }
 
-    private var selectedCommandIndex: Int? {
-        if case .command(let i) = selection { return i }
+    private var selectedCommandId: String? {
+        if case .command(let id) = selection { return id }
         return nil
     }
 
     private func removeSelectedCommand() {
-        guard let i = selectedCommandIndex else { return }
-        store.removeCommand(at: i)
+        guard let id = selectedCommandId else { return }
+        store.removeCommand(id: id)
         selection = nil
     }
 
@@ -391,9 +399,9 @@ struct ContentView: View {
             })
     }
 
-    private var commandSelBinding: Binding<Int?> {
+    private var commandSelBinding: Binding<String?> {
         Binding(
-            get: { if case .command(let i) = selection { return i } else { return nil } },
+            get: { if case .command(let id) = selection { return id } else { return nil } },
             set: { newValue in selection = newValue.map { .command($0) } })
     }
 

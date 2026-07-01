@@ -48,4 +48,38 @@ public struct ConfigStore {
         let data = try encoder.encode(settings)
         try data.write(to: fileURL, options: .atomic)
     }
+
+    /// 与 config.json 同目录的内置模板参考文件（只读用途）。
+    public var templatesReferenceURL: URL {
+        fileURL.deletingLastPathComponent()
+            .appendingPathComponent("terminal-templates.reference.json")
+    }
+
+    /// 写出内置终端启动模板参考（每次启动覆盖生成，best-effort，失败静默）。
+    /// 用户不知道 bundleId / 内置模板长啥样，照此文件复制到 config.json 的
+    /// terminalTemplates 里即可覆盖修改。
+    public func writeTemplatesReference(builtin: [String: String]) {
+        let dir = fileURL.deletingLastPathComponent()
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let payload = TemplatesReference(
+            note: "内置终端启动模板参考（只读；每次启动自动覆盖，改这里无效）。"
+                + "要覆盖某终端：把它的 bundleId 与模板复制到 config.json 的 terminalTemplates 里修改。"
+                + "占位符 {dir}=当前目录、{cmd}=命令（执行时替换为 \"$EC_DIR\"/\"$EC_CMD\"，勿自行加引号）；"
+                + "可用 $EC_SHELL=用户登录 shell。值只走环境变量，天然免注入。",
+            templates: builtin)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        if let data = try? encoder.encode(payload) {
+            try? data.write(to: templatesReferenceURL, options: .atomic)
+        }
+    }
+
+    private struct TemplatesReference: Encodable {
+        let note: String
+        let templates: [String: String]
+        enum CodingKeys: String, CodingKey {
+            case note = "_说明"
+            case templates
+        }
+    }
 }

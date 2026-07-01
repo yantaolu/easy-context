@@ -15,9 +15,10 @@
 - **复制完整路径** / **复制相对路径**（相对最近的 `.git` 仓库根，不在仓库内回退 `~`）
 - **用终端打开**当前目录 —— 自动识别 Terminal、iTerm、Warp、Ghostty、kitty、WezTerm、Alacritty、Hyper、Tabby、Rio、Wave、Termius
 - **用编辑器打开**当前目录 —— VS Code、Cursor、Windsurf、Trae、Zed、Sublime Text、Nova、BBEdit、Xcode、JetBrains 全家桶（WebStorm / IntelliJ / PyCharm / GoLand / CLion / PhpStorm / RubyMine / Rider / DataGrip / Fleet）、Android Studio 等
+- **在终端运行命令**（`用 XX 运行 YY`）—— 一键在**执行终端**里于当前目录运行 AI CLI 等命令（预置 `claude` / `codex`，可自定义增删）
 - **新建文件** —— 子菜单选模板（空白 / Markdown / 文本 / Shell / JSON），重名自动加序号，`.sh` 自动加可执行位
 - **内置盘 + 外置磁盘**都生效
-- **可配置设置界面**：选择显示哪些终端 / 编辑器、`+` 自定义添加未识别的 App、菜单图标黑白 / 彩色、深色模式自动适配
+- **可配置设置界面**：选择菜单显示哪些终端 / 编辑器、管理自定义命令、选执行终端、`+` 自定义添加未识别的 App、菜单图标黑白 / 彩色、深色模式自动适配
 
 ## 安装
 
@@ -44,18 +45,31 @@
 
 ```jsonc
 {
-  "version": 2,
+  "version": 3,
   "items": { "copyFullPath": true, "copyRelativePath": true, "newFile": true },
   "terminals": [
     { "bundleId": "com.apple.Terminal", "name": "Terminal", "custom": false, "enabled": true }
   ],
   "editors":  [ /* 同结构 */ ],
-  "appearance": { "appIconStyle": "monochrome" }   // monochrome | color
+  "commands": [                                     // 「用 XX 运行 YY」的命令
+    { "id": "…uuid…", "name": "Claude", "command": "claude", "enabled": true }
+  ],
+  "defaultTerminal": null,                          // 执行终端 bundleId；null=第一个已安装终端
+  "terminalTemplates": {},                          // 终端启动模板的“用户覆盖”，空=全用内置
+  "appearance": { "appIconStyle": "monochrome" }    // monochrome | color
 }
 ```
 
-- `enabled` 控制是否在右键菜单显示；`custom: true` 为用户自行添加的 App。
+- 终端 / 编辑器的 `enabled` 控制**是否在右键菜单显示**；`custom: true` 为用户自行添加的 App。
 - 启动时会自动并入新检测到的内置 App、去重并排序（内置在前、自定义在后），并保留你的开关与自定义项。
+
+### 在终端运行命令
+
+- 右键菜单出现 `用 <执行终端> 运行 <命令名>`（如 `用 Terminal 运行 Claude`），在**当前目录**打开终端并运行该命令。
+- **执行终端 ≠ 菜单显示**：执行终端是「命令在哪跑」，只看**装没装**，与「菜单显示的终端」开关无关；设置界面「执行终端」下拉列出全部已安装终端，`null` 时取第一个已安装终端（系统 Terminal 兜底）。
+- **PATH**：GUI 进程 PATH 精简，`-e` 型终端（Ghostty/kitty/WezTerm/Alacritty）经用户登录 shell `$EC_SHELL -lic <cmd>` 运行，确保能找到 `~/.local/bin` 等里的 `claude`/`codex`。
+- **自定义启动模板**：`terminalTemplates` 只存**覆盖**（空 = 用内置）。想改某终端：参照配置目录里自动生成的 **`terminal-templates.reference.json`**（列出全部内置模板与 bundleId），把对应条目复制到 `terminalTemplates` 修改。占位符 `{dir}`/`{cmd}` 会替换为 `"$EC_DIR"`/`"$EC_CMD"`（值只走环境变量，勿自行加引号），可用 `$EC_SHELL`。
+- ⚠️ **Ghostty 作执行终端**：Ghostty 对「外部经 `-e` 执行命令」**每次弹安全确认**且官方不提供关闭（既定安全设计）。建议执行终端用 **Terminal / iTerm**（AppleScript，单窗口、无弹框）——默认即 Terminal。
 
 ## 从源码构建
 
@@ -102,3 +116,4 @@ cd EasyContextCore && swift test
 
 - **分发**：ad-hoc 签名分发给他人需对方手动允许 + 清除 quarantine。要做到「下载即用、无警告」，需 **Apple Developer ID 证书 + 公证（notarization）**（付费账号）。
 - 部分小众 AI 编辑器（PearAI / Void 等）暂无可靠 bundle id，未进内置清单，可用设置界面的 `+` 自行添加。
+- **Ghostty 作执行终端**每次运行命令会弹 Ghostty 自带的安全确认（官方设计，无法关闭）；想免弹框请把执行终端设为 Terminal / iTerm。

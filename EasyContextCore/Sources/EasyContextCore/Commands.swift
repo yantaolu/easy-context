@@ -1,14 +1,17 @@
 import Foundation
 
 /// 一条可在终端运行的命令（如 Claude → `claude`）。
+///
+/// `id` 是稳定标识（UUID），与 `name` 解耦——改名不改 id，保证 SwiftUI 列表
+/// 身份稳定（编辑中的输入不丢）。URL/宿主查命令仍按 `name`（用户可见键）。
 public struct CommandEntry: Codable, Equatable, Sendable, Identifiable {
-    public var name: String       // 显示名，也作 id / URL 里的引用键
+    public let id: String
+    public var name: String       // 显示名，也作 URL 里的引用键
     public var command: String    // 实际命令行
     public var enabled: Bool
 
-    public var id: String { name }
-
-    public init(name: String, command: String, enabled: Bool = true) {
+    public init(id: String = UUID().uuidString, name: String, command: String, enabled: Bool = true) {
+        self.id = id
         self.name = name
         self.command = command
         self.enabled = enabled
@@ -16,6 +19,9 @@ public struct CommandEntry: Codable, Equatable, Sendable, Identifiable {
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
+        // 旧配置无 id → 回填一个（本次会话内稳定，写盘后固化）。
+        let decodedId = (try? c.decodeIfPresent(String.self, forKey: .id)) ?? nil
+        id = (decodedId?.isEmpty == false ? decodedId! : UUID().uuidString)
         name = try c.decode(String.self, forKey: .name)
         command = try c.decode(String.self, forKey: .command)
         enabled = (try? c.decodeIfPresent(Bool.self, forKey: .enabled) ?? true) ?? true

@@ -21,6 +21,8 @@ final class SettingsStore: ObservableObject {
         self.settings = s
         // 内容没变就不重写，避免无谓 bump mtime（否则扩展端缓存会被迫重载一次）。
         if s != original || !store.hasStored() { try? store.save(s) }
+        // 生成内置模板参考文件，供高级用户照着覆盖 terminalTemplates。
+        store.writeTemplatesReference(builtin: TerminalLaunch.builtinTemplates)
 
         refreshExtensionState()
         // App 重新激活时复查（用户去系统设置启用后切回来即更新横幅）。
@@ -121,7 +123,11 @@ final class SettingsStore: ObservableObject {
 
     // MARK: - 自定义命令
 
-    /// 追加一条新命令（默认启用），名称自动去重。
+    func command(_ id: String) -> CommandEntry? {
+        settings.commands.first { $0.id == id }
+    }
+
+    /// 追加一条新命令（默认启用），名称自动去重。结构性改动 → 立即写盘。
     func addCommand() {
         var name = "命令"
         var n = 1
@@ -133,22 +139,42 @@ final class SettingsStore: ObservableObject {
         persist()
     }
 
-    func removeCommand(at index: Int) {
-        guard settings.commands.indices.contains(index) else { return }
-        settings.commands.remove(at: index)
+    /// 结构性改动 → 立即写盘。
+    func removeCommand(id: String) {
+        settings.commands.removeAll { $0.id == id }
         persist()
     }
 
-    func updateCommandName(at index: Int, _ value: String) {
-        guard settings.commands.indices.contains(index) else { return }
-        settings.commands[index].name = value
+    // 文本编辑：只改内存（保证不丢输入）+ 防抖写盘；失焦/回车再由 UI 调 flushCommands()。
+    func updateCommandName(id: String, _ value: String) {
+        guard let i = settings.commands.firstIndex(where: { $0.id == id }) else { return }
+        settings.commands[i].name = value
+        scheduleSave()
+    }
+
+    func updateCommandString(id: String, _ value: String) {
+        guard let i = settings.commands.firstIndex(where: { $0.id == id }) else { return }
+        settings.commands[i].command = value
+        scheduleSave()
+    }
+
+    /// UI 在输入框失焦/回车时调用，立刻落盘（并取消挂起的防抖任务）。
+    func flushCommands() {
+        saveTask?.cancel()
+        saveTask = nil
         persist()
     }
 
-    func updateCommandString(at index: Int, _ value: String) {
-        guard settings.commands.indices.contains(index) else { return }
-        settings.commands[index].command = value
-        persist()
+    private var saveTask: Task<Void, Never>?
+
+    /// 防抖写盘：合并连续按键，最后一次后 0.4s 才写盘，避免每字符一次磁盘 I/O。
+    private func scheduleSave() {
+        saveTask?.cancel()
+        saveTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            guard !Task.isCancelled else { return }
+            self?.persist()
+        }
     }
 
     // MARK: - 默认终端（运行命令用）

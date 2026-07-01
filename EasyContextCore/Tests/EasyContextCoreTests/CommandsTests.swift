@@ -9,7 +9,25 @@ final class CommandsTests: XCTestCase {
         XCTAssertEqual(s.name, "Claude")
         XCTAssertEqual(s.command, "claude")
         XCTAssertTrue(s.enabled) // 缺省
-        XCTAssertEqual(s.id, "Claude")
+        XCTAssertFalse(s.id.isEmpty) // 旧配置无 id → 回填非空
+    }
+
+    // id 稳定：显式提供则保留；两条无 id 的解码各得不同 id
+    func test_commandEntry_id_preservedOrBackfilled() throws {
+        let withId = try JSONDecoder().decode(CommandEntry.self,
+            from: Data(#"{ "id": "fixed-123", "name": "A", "command": "a" }"#.utf8))
+        XCTAssertEqual(withId.id, "fixed-123")
+
+        let list = try JSONDecoder().decode([CommandEntry].self,
+            from: Data(#"[{"name":"A","command":"a"},{"name":"B","command":"b"}]"#.utf8))
+        XCTAssertFalse(list[0].id.isEmpty)
+        XCTAssertNotEqual(list[0].id, list[1].id) // 各自独立 id
+
+        // 改名不改 id
+        var e = CommandEntry(name: "A", command: "a")
+        let original = e.id
+        e.name = "B"
+        XCTAssertEqual(e.id, original)
     }
 
     // MARK: 模板取用
