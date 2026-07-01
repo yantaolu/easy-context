@@ -44,7 +44,7 @@ targets:
       properties:
         CFBundleDisplayName: Easy Context
         LSMinimumSystemVersion: "13.0"
-        LSUIElement: false
+        LSUIElement: true
         CFBundleURLTypes:
           - CFBundleURLName: com.luyantao.easycontext
             CFBundleURLSchemes: [easycontext]

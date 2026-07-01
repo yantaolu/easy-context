@@ -65,18 +65,38 @@ FinderSync 扩展是**沙盒**的，**不能 spawn 进程**，因而无法直接
 ### 4.1 PATH（关键）：`-e` 型终端经登录 shell 运行
 
 GUI 启动的进程只有精简 PATH（无 `~/.local/bin`、`~/.npm-global/bin` 等），`-e` 直接
-exec 的终端（Ghostty/kitty/WezTerm/Alacritty）会找不到 claude/codex。故这类内置模板
+exec 的终端（kitty/WezTerm/Alacritty）会找不到 claude/codex。故这类内置模板
 通过用户**登录+交互 shell** 运行命令：`$EC_SHELL -lic {cmd}`（`-l` source `.zprofile`、
 `-i` source `.zshrc` → PATH 齐全），与 Terminal.app 的 `do script` 行为一致。
 `$EC_SHELL` 由宿主注入（`getpwuid` 取用户登录 shell，兜底 `/bin/zsh`），
 与 `EC_DIR`/`EC_CMD` 一样只走环境变量。
 
-### 4.2 已知限制：Ghostty 作执行终端
+### 4.2 Ghostty：改用 AppleScript（1.3.0+）
 
-Ghostty 对「外部通过 `-e` 请求执行命令」**每次弹安全确认**（"Allow Ghostty to
-execute …"），且**官方拒绝提供关闭开关**（GHSA-q9fg-cpmh-c78x，属既定安全设计）。
-故**建议执行终端用 Terminal/iTerm**（AppleScript `do script`，单窗口、无弹框）；
-默认解析出的第一个已安装终端即系统 Terminal，开箱即净。
+Ghostty 的 `open ... -e` 外部执行路径**每次弹安全确认**（"Allow Ghostty to execute …"，
+GHSA-q9fg-cpmh-c78x，官方不提供关闭）且带 `-n` 会双开窗口——故**放弃 `-e`**。
+Ghostty 1.3.0+ 提供 **AppleScript** 接口，用 `input text` 把命令**打进交互 shell**
+（而非 `-e` 执行）：单窗口、无「execute」弹框、PATH 天然正确，与 Terminal.app 的
+`do script` 等价。内置模板（用 `system attribute` 读 EC_DIR/EC_CMD）：
+
+```
+osascript -e 'tell application "Ghostty"' \
+  -e 'set cfg to new surface configuration' \
+  -e 'set initial working directory of cfg to (system attribute "EC_DIR")' \
+  -e 'set win to new window with configuration cfg' \
+  -e 'input text (system attribute "EC_CMD") to (terminal 1 of selected tab of win)' \
+  -e 'send key "enter" to (terminal 1 of selected tab of win)' \
+  -e 'end tell'
+```
+
+仅**首次**需一次性自动化授权（macOS TCC「控制 Ghostty」，同 Terminal/iTerm）。
+
+### 4.3 宿主为后台代理（LSUIElement）
+
+宿主用 AppKit AppDelegate 手动管窗（非 SwiftUI 自动开窗）：处理 `easycontext://`
+（run/newfile）时**不显示配置窗**（无闪烁）；用户双击 App / 再次打开时才显示配置窗
+并临时露出 Dock 图标，关窗退回后台。IPC token 生成 / 模板参考文件写出移到
+`applicationDidFinishLaunching`（无论是否显示配置窗都执行）。
 
 ## 5. 命令配置
 

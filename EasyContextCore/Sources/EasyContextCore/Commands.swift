@@ -41,15 +41,22 @@ public struct CommandEntry: Codable, Equatable, Sendable, Identifiable {
 public enum TerminalLaunch {
     public static let systemTerminalBundleId = "com.apple.Terminal"
 
-    /// 从外部运行命令表现不可靠的终端（UI 据此给提示）。
-    /// Ghostty：macOS 单实例 + `-e` 安全确认，已在运行时无法干净地被外部启动命令
-    /// （带 -n 会弹框+多开窗口；去 -n 则 -e 命令被丢弃不执行）。属 Ghostty 既定设计。
-    public static let externalExecUnreliable: Set<String> = ["com.mitchellh.ghostty"]
+    /// 从外部运行命令表现不可靠的终端（UI 据此给提示）。目前为空——
+    /// Ghostty 曾因 `-e` 安全确认+双开不可靠，现改用 AppleScript（1.3.0+）已解决。
+    public static let externalExecUnreliable: Set<String> = []
 
     /// 内置默认模板（bundleId -> 模板）。AppleScript 类直接用 system attribute 读环境。
     public static let builtinTemplates: [String: String] = [
+        // Ghostty 1.3.0+ 支持 AppleScript：用 input text 把命令打进交互 shell（非 -e
+        // 执行）→ 免「Allow execute」弹框、单窗口、PATH 正确。值走环境变量 EC_DIR/EC_CMD。
         "com.mitchellh.ghostty":
-            "open -na Ghostty --args --working-directory={dir} -e $EC_SHELL -lic {cmd}",
+            "osascript -e 'tell application \"Ghostty\"' "
+            + "-e 'set cfg to new surface configuration' "
+            + "-e 'set initial working directory of cfg to (system attribute \"EC_DIR\")' "
+            + "-e 'set win to new window with configuration cfg' "
+            + "-e 'input text (system attribute \"EC_CMD\") to (terminal 1 of selected tab of win)' "
+            + "-e 'send key \"enter\" to (terminal 1 of selected tab of win)' "
+            + "-e 'end tell'",
         "net.kovidgoyal.kitty":
             "open -na kitty --args --directory {dir} $EC_SHELL -lic {cmd}",
         "com.github.wez.wezterm":

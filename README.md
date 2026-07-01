@@ -16,7 +16,7 @@
 - **用终端打开**当前目录 —— 自动识别 Terminal、iTerm、Warp、Ghostty、kitty、WezTerm、Alacritty、Hyper、Tabby、Rio、Wave、Termius
 - **用编辑器打开**当前目录 —— VS Code、Cursor、Windsurf、Trae、Zed、Sublime Text、Nova、BBEdit、Xcode、JetBrains 全家桶（WebStorm / IntelliJ / PyCharm / GoLand / CLion / PhpStorm / RubyMine / Rider / DataGrip / Fleet）、Android Studio 等
 - **在终端运行命令**（`用 XX 运行 YY`）—— 一键在**执行终端**里于当前目录运行 AI CLI 等命令（预置 `claude` / `codex`，可自定义增删）
-- **新建文件** —— 子菜单选模板（空白 / Markdown / 文本 / Shell / JSON），重名自动加序号，`.sh` 自动加可执行位
+- **新建文件** —— 子菜单选模板（空白 / Markdown / 文本 / Shell / JSON），弹**命名面板**输入文件名（预选基名、保留扩展名；重名自动加序号、`.sh` 自动加可执行位），创建后在 Finder 中选中
 - **内置盘 + 外置磁盘**都生效
 - **可配置设置界面**：选择菜单显示哪些终端 / 编辑器、管理自定义命令、选执行终端、`+` 自定义添加未识别的 App、菜单图标黑白 / 彩色、深色模式自动适配
 
@@ -67,9 +67,9 @@
 
 - 右键菜单出现 `用 <执行终端> 运行 <命令名>`（如 `用 Terminal 运行 Claude`），在**当前目录**打开终端并运行该命令。
 - **执行终端 ≠ 菜单显示**：执行终端是「命令在哪跑」，只看**装没装**，与「菜单显示的终端」开关无关；设置界面「执行终端」下拉列出全部已安装终端，`null` 时取第一个已安装终端（系统 Terminal 兜底）。
-- **PATH**：GUI 进程 PATH 精简，`-e` 型终端（Ghostty/kitty/WezTerm/Alacritty）经用户登录 shell `$EC_SHELL -lic <cmd>` 运行，确保能找到 `~/.local/bin` 等里的 `claude`/`codex`。
+- **PATH**：GUI 进程 PATH 精简，`-e` 型终端（kitty/WezTerm/Alacritty）经用户登录 shell `$EC_SHELL -lic <cmd>` 运行，确保能找到 `~/.local/bin` 等里的 `claude`/`codex`。Terminal/iTerm/Ghostty 用 AppleScript 把命令输入交互 shell，PATH 天然正确。
 - **自定义启动模板**：`terminalTemplates` 只存**覆盖**（空 = 用内置）。想改某终端：参照配置目录里自动生成的 **`terminal-templates.reference.json`**（列出全部内置模板与 bundleId），把对应条目复制到 `terminalTemplates` 修改。占位符 `{dir}`/`{cmd}` 会替换为 `"$EC_DIR"`/`"$EC_CMD"`（值只走环境变量，勿自行加引号），可用 `$EC_SHELL`。
-- ⚠️ **Ghostty 作执行终端**：Ghostty 对「外部经 `-e` 执行命令」**每次弹安全确认**且官方不提供关闭（既定安全设计）。建议执行终端用 **Terminal / iTerm**（AppleScript，单窗口、无弹框）——默认即 Terminal。
+- **Ghostty / Terminal / iTerm** 用 AppleScript 运行命令（把命令输入交互 shell，非 `-e` 执行）：单窗口、无「Allow execute」弹框、PATH 正确；仅**首次**需一次性授权「EasyContext 控制 <终端>」（macOS 自动化权限，同 Terminal/iTerm）。Ghostty 需 1.3.0+。
 
 ## 从源码构建
 
@@ -116,4 +116,4 @@ cd EasyContextCore && swift test
 
 - **分发**：ad-hoc 签名分发给他人需对方手动允许 + 清除 quarantine。要做到「下载即用、无警告」，需 **Apple Developer ID 证书 + 公证（notarization）**（付费账号）。
 - 部分小众 AI 编辑器（PearAI / Void 等）暂无可靠 bundle id，未进内置清单，可用设置界面的 `+` 自行添加。
-- **Ghostty 作执行终端**每次运行命令会弹 Ghostty 自带的安全确认（官方设计，无法关闭）；想免弹框请把执行终端设为 Terminal / iTerm。
+- **在终端运行命令 / 新建文件**由宿主 App 处理（后台代理，无 Dock 图标；双击 App 才显示配置窗）：首次用 AppleScript 型终端（Terminal / iTerm / Ghostty）运行命令时，会弹一次性「控制终端」的自动化授权。

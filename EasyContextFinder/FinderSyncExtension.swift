@@ -378,11 +378,21 @@ class FinderSyncExtension: FIFinderSync {
         NSWorkspace.shared.open(url)
     }
 
+    // 新建文件：交给宿主弹命名面板→创建→在 Finder 选中（沙盒扩展不能弹 UI）。
     @objc private func newFileFromTemplate(_ sender: AnyObject?) {
         guard let item = sender as? NSMenuItem,
               item.tag >= 0, item.tag < FileTemplate.allCases.count,
               let dir = targetDirectory() else { return }
-        _ = NewFileController.create(template: FileTemplate.allCases[item.tag], in: dir)
+        var comps = URLComponents()
+        comps.scheme = "easycontext"
+        comps.host = "newfile"
+        comps.queryItems = [
+            URLQueryItem(name: "dir", value: dir.path),
+            URLQueryItem(name: "template", value: FileTemplate.allCases[item.tag].rawValue),
+            URLQueryItem(name: "t", value: ConfigStore().readIPCToken()),
+        ]
+        guard let url = comps.url else { return }
+        NSWorkspace.shared.open(url)
     }
 
     private func writeToPasteboard(_ string: String) {

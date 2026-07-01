@@ -33,9 +33,7 @@ final class SettingsStore: ObservableObject {
         // 内容没变就不重写，避免无谓 bump mtime（否则扩展端缓存会被迫重载一次）。
         // 损坏时【不写】——避免默认值覆盖用户可修复的原文件（已备份到 .bak）。
         if outcome != .corrupt, s != original || !store.hasStored() { try? store.save(s) }
-        // 生成 IPC token（挡外部伪造 URL）与内置模板参考文件。
-        store.ensureIPCToken()
-        store.writeTemplatesReference(builtin: TerminalLaunch.builtinTemplates)
+        // 注：IPC token 生成与模板参考文件写出已移到 AppDelegate（无论是否显示设置窗都要跑）。
 
         refreshExtensionState()
         // App 重新激活时复查（用户去系统设置启用后切回来即更新横幅）。

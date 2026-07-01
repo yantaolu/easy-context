@@ -36,4 +36,9 @@ public enum FileTemplate: String, CaseIterable, Codable, Sendable {
         case .json: return "JSON (.json)"
         }
     }
+
+    /// 命名面板预填的默认完整文件名（如「未命名.md」；空白模板无扩展名）。
+    public var defaultFileName: String {
+        fileExtension.isEmpty ? "未命名" : "未命名." + fileExtension
+    }
 }

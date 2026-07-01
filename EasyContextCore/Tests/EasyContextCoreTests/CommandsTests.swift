@@ -57,17 +57,25 @@ final class CommandsTests: XCTestCase {
         XCTAssertEqual(TerminalLaunch.render(t), t)
     }
 
-    // -e 型终端（Ghostty 等）通过登录 shell 运行命令，保证 GUI 下 PATH 齐全
+    // -e 型终端（kitty/WezTerm/Alacritty）通过登录 shell 运行命令，保证 GUI 下 PATH 齐全
     func test_builtin_dashE_terminals_runViaLoginShell() {
-        for id in ["com.mitchellh.ghostty", "net.kovidgoyal.kitty",
-                   "com.github.wez.wezterm", "org.alacritty"] {
+        for id in ["net.kovidgoyal.kitty", "com.github.wez.wezterm", "org.alacritty"] {
             let t = TerminalLaunch.builtinTemplates[id]!
             XCTAssertTrue(t.contains("$EC_SHELL -lic {cmd}"), "\(id) 应经 $EC_SHELL -lic 运行命令")
-            // 渲染后：目录/命令走环境变量引用，$EC_SHELL 原样透传
             let r = TerminalLaunch.render(t)
             XCTAssertTrue(r.contains("$EC_SHELL -lic \"$EC_CMD\""))
             XCTAssertFalse(r.contains("{cmd}"))
         }
+    }
+
+    // Ghostty 改用 AppleScript（1.3.0+）：input text 打进交互 shell，非 -e 执行
+    func test_builtin_ghostty_usesAppleScript() {
+        let t = TerminalLaunch.builtinTemplates["com.mitchellh.ghostty"]!
+        XCTAssertTrue(t.contains("osascript"))
+        XCTAssertTrue(t.contains("input text (system attribute \"EC_CMD\")"))
+        XCTAssertFalse(t.contains("-e $EC_SHELL")) // 不再走 open -e
+        // 无 {dir}/{cmd} 占位符（用 system attribute 读环境）→ render 不改动
+        XCTAssertEqual(TerminalLaunch.render(t), t)
     }
 
     // MARK: 默认终端解析
