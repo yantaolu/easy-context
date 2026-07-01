@@ -66,7 +66,7 @@ struct ContentView: View {
             sectionTitle("菜单项")
             // 也用原生 List（不可选中），与右列「终端」List 同机制→开关精确对齐。
             List {
-                menuRow("复制完整路径", \.copyFullPath)
+                menuRow("复制路径", \.copyFullPath)
                 menuRow("复制相对路径", \.copyRelativePath)
                 menuRow("新建文件", \.newFile)
             }
