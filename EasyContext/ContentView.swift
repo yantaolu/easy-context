@@ -52,7 +52,7 @@ struct ContentView: View {
                     sectionTitle("其他")
                     Button("打开配置目录") { openConfigDirectory() }
                         .buttonStyle(.link)
-                    Button("访达扩展设置…") { openExtensionSettings() }
+                    Button("访达扩展设置") { openExtensionSettings() }
                         .buttonStyle(.link)
                 }
             }
