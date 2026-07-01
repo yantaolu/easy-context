@@ -18,22 +18,35 @@ FinderSync 扩展是**沙盒**的，**不能 spawn 进程**，因而无法直接
 
 **安全**：URL 只带**命令 id**（不带原始命令串）+ 目录 + 终端 bundleId。宿主从**用户自己的配置**按 id 查出真正命令再执行。即使他人伪造 URL，也只能触发用户已定义的命令，无法注入任意命令；终端 bundleId 也须在已知/已启用列表内。
 
-## 3. 「在终端运行命令」配方（宿主，非沙盒）
+## 3. 启动机制：每终端「启动模板」（用户可配置）
 
-宿主可自由 spawn。按终端分策略，**优先用原生「工作目录 + 执行命令」参数**（干净、无 `cd` 回显）：
+不为每个终端硬编码启动方式，而是把「怎么在某终端里于某目录运行某命令」抽象成一条**启动模板**——一条命令字符串，带两个占位符：
 
-| 终端 | 方式 |
+- `{dir}` —— 目标目录
+- `{cmd}` —— 要运行的命令（来自 commands 配置）
+
+宿主（非沙盒）把占位符**替换后用 `/bin/sh -c` 执行**。内置常见终端的默认模板，**用户可在设置里改写或为任意终端新增**模板。
+
+**内置默认模板**（优先用原生「工作目录 + 执行命令」参数，干净无 `cd` 回显）：
+
+| 终端 | 内置模板 |
 |---|---|
-| Ghostty | `open -na Ghostty --args --working-directory=<dir> -e <cmd>`（真机核对参数名） |
-| kitty | `open -na kitty --args --directory <dir> <cmd>` |
-| WezTerm | `open -na WezTerm --args start --cwd <dir> -- <cmd>` |
-| Alacritty | `open -na Alacritty --args --working-directory <dir> -e <cmd>` |
-| Terminal.app | AppleScript `do script "cd <dir> && <cmd>"`（会回显 cd，机制所限） |
-| iTerm | AppleScript（iTerm 脚本接口） |
-| 兜底 | 写临时 `.command`（`cd <dir>; <cmd>`）用 Terminal.app 打开 |
+| Ghostty | `open -na Ghostty --args --working-directory={dir} -e {cmd}` |
+| kitty | `open -na kitty --args --directory {dir} {cmd}` |
+| WezTerm | `open -na WezTerm --args start --cwd {dir} -- {cmd}` |
+| Alacritty | `open -na Alacritty --args --working-directory {dir} -e {cmd}` |
+| Terminal.app | `osascript -e 'tell app "Terminal" to do script "cd {dir} && {cmd}"'`（AppleScript，会回显 cd） |
+| iTerm | osascript（iTerm 脚本接口） |
 
-- ⚠️ 每个终端的启动参数**逐个真机验证**；先跑通 **Terminal + Ghostty**（用户主用），其余尽量支持、验证到哪算哪，调不通的在设置里对该终端标注「运行命令暂不支持」。
-- 命令结束是否保留窗口：默认**不强加** `exec $SHELL`（更干净），后续可作为选项。
+**转义与占位符约定（安全关键）**：
+- `{dir}`、`{cmd}` 替换时由程序**自动做 shell 转义**（`{dir}` 来自右键路径，可能含空格/引号/中文；`{cmd}` 来自用户配置）——防止破坏命令或注入。
+- 因此**模板里占位符不要自己加引号**：写 `--working-directory={dir}`，不要写 `--working-directory="{dir}"`。
+- AppleScript 类（Terminal/iTerm）是「shell 套 osascript 套 AppleScript 字符串」多层嵌套引用，用户手写易错——故**内置写好并验证**；高级用户可覆盖但默认不用碰（其 `{dir}/{cmd}` 转义按 AppleScript 字符串上下文处理）。
+
+**取模板逻辑**：`用户覆盖模板[bundleId]` → 否则 `内置默认模板[bundleId]` → 都没有 → 菜单点击提示「请先在设置里填该终端的启动模板」。
+
+- ⚠️ 内置默认逐个真机验证；先跑通 **Terminal + Ghostty**（用户主用），其余尽量支持；调不通的用户可自行改模板。
+- 命令结束是否保留窗口：默认**不强加** `exec $SHELL`（更干净），用户可在自己的模板里加。
 
 ## 4. 「默认终端」设置（统一，所有命令都用它）
 
@@ -72,15 +85,23 @@ FinderSync 扩展是**沙盒**的，**不能 spawn 进程**，因而无法直接
     { "name": "Codex",  "command": "codex",  "enabled": true }
   ],
   "defaultTerminal": "com.mitchellh.ghostty",   // 空/缺省=按解析逻辑取第一个/系统默认
+  "terminalTemplates": {                         // 仅存用户覆盖/自定义；缺省用内置
+    "com.example.myterm": "open -na MyTerm --args --cwd={dir} -e {cmd}"
+  },
   "appearance": { ... }
 }
 ```
 
+- 内置默认模板放在 Core（`TerminalLaunchTemplates.builtin`，宿主取用）；`terminalTemplates` 只存用户改写/新增的。
+- 设置界面「默认终端」下方，为每个已启用终端显示一个**启动模板输入框**（预填「用户覆盖或内置默认」的当前值；用户编辑即写为覆盖）。
+
 ## 8. 分阶段实现计划（任务级）
 
 **阶段 1 — Core（可 swift test）**
-- `CommandEntry` 模型；`Settings` 加 `commands`、`defaultTerminal`，容错解码，v3。
+- `CommandEntry` 模型；`Settings` 加 `commands`、`defaultTerminal`、`terminalTemplates`，容错解码，v3。
 - 默认命令预置（Claude/Codex）。
+- `TerminalLaunchTemplates.builtin`（bundleId→模板）+ 取模板函数 `template(for:overrides:) -> String?`（用户覆盖优先、否则内置）。
+- 占位符替换 + shell 转义纯函数：`renderTemplate(_:dir:cmd:) -> String`（对 {dir}/{cmd} 做 shell 转义），含单元测试（含空格/引号/中文路径不破坏、不注入）。
 - 「默认终端解析」纯函数：`resolveDefaultTerminal(terminals:, defaultTerminal:) -> KnownApp?/系统默认`，含单元测试（配置/卸载回退/无启用回退系统默认）。
 
 **阶段 2 — URL scheme 打通（可验证往返）**
@@ -89,9 +110,8 @@ FinderSync 扩展是**沙盒**的，**不能 spawn 进程**，因而无法直接
 - 扩展侧临时加个测试菜单项，`NSWorkspace.open` 一个 URL，确认宿主被拉起并收到参数。
 
 **阶段 3 — TerminalLauncher（宿主，真机验证）**
-- 宿主里按终端 bundleId 的启动配方（先 Terminal + Ghostty，再 iTerm/kitty/WezTerm/Alacritty，兜底 `.command`）。
-- 宿主 URL 处理：按 cmd id 从配置查命令 → 校验终端 → 用配方在目录运行。
-- 逐终端真机验证「在目录里干净地跑起 claude」。
+- 宿主 URL 处理：按 cmd id 从配置查命令 → 校验终端在白名单 → 取模板（Core）→ `renderTemplate` 替换转义 → `/bin/sh -c` 执行。
+- 真机验证内置模板：先 **Terminal + Ghostty** 跑通「在目录里干净地起 claude」，再验 iTerm/kitty/WezTerm/Alacritty；调不通的靠用户模板兜底。
 
 **阶段 4 — 扩展菜单集成**
 - 扩展读配置里的 commands + 解析默认终端 → 生成「用 XX 运行 YY」菜单项（tag 索引，遵循既有线程/缓存约定）。
@@ -100,6 +120,7 @@ FinderSync 扩展是**沙盒**的，**不能 spawn 进程**，因而无法直接
 **阶段 5 — 设置界面**
 - 「默认终端」下拉（已启用终端 + 系统默认，按解析逻辑给默认选中）。
 - 「命令」列表管理（增删、改名、改命令、开关），写回配置。
+- 每个已启用终端一个**启动模板输入框**（预填「用户覆盖或内置默认」，编辑即写为覆盖；可「恢复默认」）。
 
 **阶段 6 — 收尾**
 - URL 参数安全校验（命令按 id 查、终端白名单、目录存在性）。
