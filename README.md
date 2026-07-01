@@ -22,17 +22,15 @@
 
 ## 安装
 
-> 应用为 ad-hoc 签名、**未做 Apple 公证**，首次安装需手动允许一次（详见 DMG 内「安装说明（必读）.txt」）。
+> 应用为 ad-hoc 签名、**未做 Apple 公证**，首次打开安装包需手动允许一次（详见 [`packaging/安装说明.txt`](packaging/安装说明.txt)）。
 
-1. 打开 `EasyContext.dmg`，把 **EasyContext** 拖到「应用程序」。
-2. 首次打开：在「应用程序」里**右键 EasyContext →「打开」**→ 弹窗再点「打开」。
-3. 让扩展生效（关键，必做）。打开「终端」执行：
-   ```bash
-   sudo xattr -dr com.apple.quarantine /Applications/EasyContext.app
-   ```
-4. 启用扩展：打开 EasyContext，点顶部横幅「去启用」，或
+1. **右键**点 `EasyContext.pkg` →「打开」→ 弹窗再点「打开」（不签名安装包直接双击会被拦，用右键打开这一次即可）。
+2. 按安装向导点「继续 / 安装」，输入密码授权装到「应用程序」。装完 App 会自动启动；重装 / 更新时安装程序会**自动关闭旧版本**，无需手动退出、也不会再报「正在使用中」。
+3. 启用扩展：打开 EasyContext，点顶部横幅「去启用」，或
    **系统设置 → 通用 → 登录项与扩展 → 访达扩展 → 勾选 EasyContextFinder**。
-5. 在访达里右键任意文件 / 文件夹即可使用。
+4. 在访达里右键任意文件 / 文件夹即可使用。
+
+> pkg 装出来的 App 不带隔离标记，**无需再执行 `sudo xattr -dr com.apple.quarantine`**。命令行安装可用 `sudo installer -pkg EasyContext.pkg -target /`。
 
 ## 配置
 
@@ -85,8 +83,8 @@ xcodebuild -project EasyContext.xcodeproj -scheme EasyContext -configuration Deb
 # 纯逻辑层单元测试
 cd EasyContextCore && swift test
 
-# 打包成带样式的分发 DMG（自动建 venv 装 dmgbuild）
-./scripts/build-dmg.sh   # 产物：dist/EasyContext.dmg
+# 打包成分发用 .pkg（安装时自动关旧进程/扩展、装出的 App 免清 quarantine）
+./scripts/build-pkg.sh   # 产物：dist/EasyContext.pkg
 ```
 
 ## 架构
@@ -114,6 +112,6 @@ cd EasyContextCore && swift test
 
 ## 已知限制
 
-- **分发**：ad-hoc 签名分发给他人需对方手动允许 + 清除 quarantine。要做到「下载即用、无警告」，需 **Apple Developer ID 证书 + 公证（notarization）**（付费账号）。
+- **分发**：用 `.pkg`（`scripts/build-pkg.sh`）分发——安装出来的 App 不带 quarantine、无需手动清理，且 preinstall 会自动关掉正在运行的旧 App 与 FinderSync 扩展，重装不再报「正在使用中」。不签名的 pkg 首次打开仍需右键→打开放行一次；要做到「双击即装、全程零提示」，需 **Apple Developer ID 证书 + 公证（notarization）**（付费账号，详见 `scripts/build-pkg.sh` 顶部注释）。
 - 部分小众 AI 编辑器（PearAI / Void 等）暂无可靠 bundle id，未进内置清单，可用设置界面的 `+` 自行添加。
 - **在终端运行命令 / 新建文件**由宿主 App 处理（后台代理，无 Dock 图标；双击 App 才显示配置窗）：首次用 AppleScript 型终端（Terminal / iTerm / Ghostty）运行命令时，会弹一次性「控制终端」的自动化授权。

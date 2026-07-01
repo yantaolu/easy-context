@@ -1,0 +1,23 @@
+#!/bin/bash
+# 覆盖安装【前】执行：关闭正在运行的 EasyContext 与其 FinderSync 扩展，
+# 释放对 .app 包的占用，避免“项目 EasyContext.app 正在使用中”导致安装失败。
+#
+# 说明：安装器以 root 身份运行本脚本。必须以 exit 0 结尾，
+#       任何非 0 退出都会让整个安装中止。
+set +e
+
+CONSOLE_USER="$(stat -f '%Su' /dev/console 2>/dev/null)"
+
+# 1) 先以登录用户身份礼貌退出宿主 App（菜单栏后台应用，无 Dock 图标）
+if [ -n "$CONSOLE_USER" ] && [ "$CONSOLE_USER" != "root" ]; then
+  sudo -u "$CONSOLE_USER" /usr/bin/osascript -e 'quit app "EasyContext"' 2>/dev/null
+fi
+sleep 1
+
+# 2) 兜底强杀宿主与 FinderSync 扩展进程（root 可结束任意用户进程），
+#    彻底释放对 .app 包的文件占用
+pkill -x EasyContext 2>/dev/null
+pkill -f EasyContextFinder 2>/dev/null
+sleep 1
+
+exit 0

@@ -1,0 +1,19 @@
+#!/bin/bash
+# 安装完成【后】执行：以登录用户身份重启 EasyContext。
+# App 启动时会自动重新注册 FinderSync 扩展，因此无需手动开扩展。
+#
+# 注意：绝不能以 root 直接 open App——那样 getuid()==0，配置会读写到
+#       /var/root/.easy-context 而不是用户家目录，导致“配置不生效”。
+#       故用 launchctl asuser + sudo -u 切回登录用户。
+set +e
+
+CONSOLE_USER="$(stat -f '%Su' /dev/console 2>/dev/null)"
+if [ -n "$CONSOLE_USER" ] && [ "$CONSOLE_USER" != "root" ]; then
+  CONSOLE_UID="$(id -u "$CONSOLE_USER" 2>/dev/null)"
+  if [ -n "$CONSOLE_UID" ]; then
+    launchctl asuser "$CONSOLE_UID" sudo -u "$CONSOLE_USER" \
+      /usr/bin/open "/Applications/EasyContext.app" 2>/dev/null
+  fi
+fi
+
+exit 0
