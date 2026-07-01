@@ -39,6 +39,19 @@ final class CommandsTests: XCTestCase {
         XCTAssertEqual(TerminalLaunch.render(t), t)
     }
 
+    // -e 型终端（Ghostty 等）通过登录 shell 运行命令，保证 GUI 下 PATH 齐全
+    func test_builtin_dashE_terminals_runViaLoginShell() {
+        for id in ["com.mitchellh.ghostty", "net.kovidgoyal.kitty",
+                   "com.github.wez.wezterm", "org.alacritty"] {
+            let t = TerminalLaunch.builtinTemplates[id]!
+            XCTAssertTrue(t.contains("$EC_SHELL -lic {cmd}"), "\(id) 应经 $EC_SHELL -lic 运行命令")
+            // 渲染后：目录/命令走环境变量引用，$EC_SHELL 原样透传
+            let r = TerminalLaunch.render(t)
+            XCTAssertTrue(r.contains("$EC_SHELL -lic \"$EC_CMD\""))
+            XCTAssertFalse(r.contains("{cmd}"))
+        }
+    }
+
     // MARK: 默认终端解析
     private func term(_ id: String) -> AppEntry { AppEntry(bundleId: id, name: id, custom: false, enabled: true) }
 

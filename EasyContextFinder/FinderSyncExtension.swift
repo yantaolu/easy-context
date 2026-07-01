@@ -5,8 +5,10 @@ import EasyContextCore
 
 class FinderSyncExtension: FIFinderSync {
     // FinderSync 的 XPC 往返会丢弃 NSMenuItem.representedObject，
-    // 故用 tag 索引这份列表来定位被点的 App。
+    // 故用 tag 索引这些列表来定位被点的项。
     private var openableApps: [AppEntry] = []
+    private var runnableCommands: [CommandEntry] = []
+    private var commandTerm: String = ""
 
     // 缓存（扩展进程常驻，跨多次右键存活，避免每次重读/重查/重渲染）。
     // 注意：menu(for:) 在 XPC 工作线程回调、volumesChanged 在主线程，两者会并发
@@ -113,6 +115,26 @@ class FinderSyncExtension: FIFinderSync {
             item.tag = terminals.count + offset
         }
 
+        // 在执行终端运行命令（claude/codex 等）。执行终端与「菜单是否显示」解耦，
+        // 只要装了就能用；故从「已安装终端」解析（忽略启用状态）。
+        let enabledCmds = config.commands.filter { $0.enabled }
+        if !enabledCmds.isEmpty {
+            let installedTerms = installedTerminals(config.terminals)
+            let termId = TerminalLaunch.resolveDefaultTerminal(eligible: installedTerms,
+                                                              preferred: config.defaultTerminal)
+            let termName = terminalName(termId, eligible: installedTerms)
+            cacheLock.lock()
+            runnableCommands = enabledCmds
+            commandTerm = termId
+            cacheLock.unlock()
+            let termIcon = appIcon(termId, style: iconStyle) ?? symbolImage("terminal", dark: dark)
+            for (idx, cmd) in enabledCmds.enumerated() {
+                let item = addItem(to: menu, title: "用 \(termName) 运行 \(cmd.name)",
+                                   action: #selector(openWithCommand(_:)), image: termIcon)
+                item.tag = idx
+            }
+        }
+
         guard config.items.newFile else { return menu }
         // 沙盒扩展不能弹模态窗，新建文件用子菜单选模板、直接创建。
         let newFileItem = NSMenuItem(title: "新建文件", action: nil, keyEquivalent: "")
@@ -140,6 +162,22 @@ class FinderSyncExtension: FIFinderSync {
                 .map { AppEntry(bundleId: $0.bundleId, name: $0.displayName) }
         }
         return list.filter { $0.enabled && isInstalled($0.bundleId) }
+    }
+
+    // 已安装的终端（忽略「菜单显示」开关）；配置为空时回退到检测到的内置终端。
+    private func installedTerminals(_ list: [AppEntry]) -> [AppEntry] {
+        if list.isEmpty {
+            let detector = AppDetector(isInstalled: isInstalled)
+            return detector.installed(from: KnownApps.terminals)
+                .map { AppEntry(bundleId: $0.bundleId, name: $0.displayName) }
+        }
+        return list.filter { isInstalled($0.bundleId) }
+    }
+
+    private func terminalName(_ bundleId: String, eligible: [AppEntry]) -> String {
+        if let e = eligible.first(where: { $0.bundleId == bundleId }) { return e.name }
+        if let k = KnownApps.terminals.first(where: { $0.bundleId == bundleId }) { return k.displayName }
+        return bundleId
     }
 
     // 配置按修改时间缓存：mtime 没变就用缓存，避免每次右键重读+解码；
@@ -303,6 +341,27 @@ class FinderSyncExtension: FIFinderSync {
         NSWorkspace.shared.open([dir], withApplicationAt: url,
                                 configuration: NSWorkspace.OpenConfiguration(),
                                 completionHandler: nil)
+    }
+
+    // 在默认终端运行命令：构造 easycontext:// URL 交给宿主执行（沙盒不能自己 spawn）。
+    @objc private func openWithCommand(_ sender: AnyObject?) {
+        guard let item = sender as? NSMenuItem else { return }
+        cacheLock.lock()
+        let cmds = runnableCommands
+        let term = commandTerm
+        cacheLock.unlock()
+        guard item.tag >= 0, item.tag < cmds.count, !term.isEmpty,
+              let dir = targetDirectory() else { return }
+        var comps = URLComponents()
+        comps.scheme = "easycontext"
+        comps.host = "run"
+        comps.queryItems = [
+            URLQueryItem(name: "cmd", value: cmds[item.tag].name),
+            URLQueryItem(name: "dir", value: dir.path),
+            URLQueryItem(name: "term", value: term),
+        ]
+        guard let url = comps.url else { return }
+        NSWorkspace.shared.open(url)
     }
 
     @objc private func newFileFromTemplate(_ sender: AnyObject?) {

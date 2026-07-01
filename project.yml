@@ -44,6 +44,10 @@ targets:
         CFBundleDisplayName: Easy Context
         LSMinimumSystemVersion: "13.0"
         LSUIElement: false
+        CFBundleURLTypes:
+          - CFBundleURLName: com.luyantao.easycontext
+            CFBundleURLSchemes: [easycontext]
+        NSAppleEventsUsageDescription: "用于在你选择的终端里运行命令（如 claude / codex）。"
   EasyContextFinder:
     type: app-extension
     platform: macOS

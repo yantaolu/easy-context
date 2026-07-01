@@ -38,24 +38,45 @@ FinderSync 扩展是**沙盒**的，**不能 spawn 进程**，因而无法直接
 | Terminal.app | `osascript -e 'tell app "Terminal" to do script "cd {dir} && {cmd}"'`（AppleScript，会回显 cd） |
 | iTerm | osascript（iTerm 脚本接口） |
 
-**转义与占位符约定（安全关键）**：
-- `{dir}`、`{cmd}` 替换时由程序**自动做 shell 转义**（`{dir}` 来自右键路径，可能含空格/引号/中文；`{cmd}` 来自用户配置）——防止破坏命令或注入。
-- 因此**模板里占位符不要自己加引号**：写 `--working-directory={dir}`，不要写 `--working-directory="{dir}"`。
-- AppleScript 类（Terminal/iTerm）是「shell 套 osascript 套 AppleScript 字符串」多层嵌套引用，用户手写易错——故**内置写好并验证**；高级用户可覆盖但默认不用碰（其 `{dir}/{cmd}` 转义按 AppleScript 字符串上下文处理）。
+**占位符 = 环境变量（安全关键，免注入）**：
+- 执行时宿主把真实目录/命令放进**环境变量** `EC_DIR` / `EC_CMD`，再 `/bin/sh -c "<模板>"`。
+- 模板里的 `{dir}` / `{cmd}` 在执行前被替换为 **`"$EC_DIR"` / `"$EC_CMD"`**（只替换占位符 token，不替换值本身）。**值全程走环境变量、绝不拼进命令串** → 天然免注入，路径含空格/引号/中文也不会破坏命令。
+- 因此**模板里占位符不要自己加引号**：写 `--working-directory={dir}`（→ `--working-directory="$EC_DIR"`）。
+- AppleScript 类（Terminal/iTerm）直接用 `system attribute "EC_DIR"` 从环境读值（AppleScript 里 `quoted form of` 再做 cd 的 shell 引用）——故内置写好、验证过，高级用户可覆盖但默认不用碰。
 
 **取模板逻辑**：`用户覆盖模板[bundleId]` → 否则 `内置默认模板[bundleId]` → 都没有 → 菜单点击提示「请先在设置里填该终端的启动模板」。
 
 - ⚠️ 内置默认逐个真机验证；先跑通 **Terminal + Ghostty**（用户主用），其余尽量支持；调不通的用户可自行改模板。
 - 命令结束是否保留窗口：默认**不强加** `exec $SHELL`（更干净），用户可在自己的模板里加。
 
-## 4. 「默认终端」设置（统一，所有命令都用它）
+## 4. 「执行终端」设置（统一，所有命令都用它）
 
-- 配置项 `defaultTerminal`（存 bundleId，或 sentinel `"system"` 表示系统默认 Terminal.app）。
-- 设置界面下拉框选项 = **已启用且已安装的终端** + 常驻项「系统默认终端」。
-- 解析逻辑（设置界面与扩展运行时一致）：
-  1. `defaultTerminal` 指向的终端**已启用且已安装** → 用它；
-  2. 否则（未配置 / 已卸载）→ **第一个已启用且已安装的终端**；
+- 配置项 `defaultTerminal`（存 bundleId；空/缺省 = 按解析逻辑取第一个）。
+- **与「菜单显示」解耦**：终端列表的开关只决定「用 X 打开终端」是否出现在右键菜单；
+  「执行终端」是「命令在哪跑」，只看**装没装**，与开关无关。
+- 设置界面下拉框选项 = **全部已安装的终端**（无已安装时常驻「系统 Terminal」兜底，
+  保证下拉永不为空、不抖动）。
+- 解析逻辑（设置界面与扩展运行时一致，`resolveDefaultTerminal(eligible:preferred:)`，
+  其中 eligible = **已安装终端**）：
+  1. `defaultTerminal` 指向的终端**已安装** → 用它；
+  2. 否则（未配置 / 已卸载）→ **第一个已安装的终端**；
   3. 都没有 → **系统默认终端（Terminal.app）**（常驻兜底）。
+
+### 4.1 PATH（关键）：`-e` 型终端经登录 shell 运行
+
+GUI 启动的进程只有精简 PATH（无 `~/.local/bin`、`~/.npm-global/bin` 等），`-e` 直接
+exec 的终端（Ghostty/kitty/WezTerm/Alacritty）会找不到 claude/codex。故这类内置模板
+通过用户**登录+交互 shell** 运行命令：`$EC_SHELL -lic {cmd}`（`-l` source `.zprofile`、
+`-i` source `.zshrc` → PATH 齐全），与 Terminal.app 的 `do script` 行为一致。
+`$EC_SHELL` 由宿主注入（`getpwuid` 取用户登录 shell，兜底 `/bin/zsh`），
+与 `EC_DIR`/`EC_CMD` 一样只走环境变量。
+
+### 4.2 已知限制：Ghostty 作执行终端
+
+Ghostty 对「外部通过 `-e` 请求执行命令」**每次弹安全确认**（"Allow Ghostty to
+execute …"），且**官方拒绝提供关闭开关**（GHSA-q9fg-cpmh-c78x，属既定安全设计）。
+故**建议执行终端用 Terminal/iTerm**（AppleScript `do script`，单窗口、无弹框）；
+默认解析出的第一个已安装终端即系统 Terminal，开箱即净。
 
 ## 5. 命令配置
 

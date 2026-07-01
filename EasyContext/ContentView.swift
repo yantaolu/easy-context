@@ -5,88 +5,231 @@ import EasyContextCore
 // SwiftUI 也有个 Settings（场景）类型，显式指向我们的配置类型以消歧。
 private typealias CoreSettings = EasyContextCore.Settings
 
+// 全局单一选中：同一时刻只有一个列表行高亮，切列表/点空白即自动取消上一个。
+private enum RowSelection: Hashable {
+    case terminal(String)
+    case editor(String)
+    case command(Int)
+}
+
 struct ContentView: View {
     @StateObject private var store = SettingsStore()
-    @State private var terminalSel: String?
-    @State private var editorSel: String?
+    @State private var selection: RowSelection?
+    // 统一行高（内容 18 + 上下 insets 各 5 = 28），左右两列开关据此对齐。
+    private let listRowContentHeight: CGFloat = 18
+    // 终端/菜单项固定显示 3 行的容器高度（贴合 3 行）。
+    private let threeRowsHeight: CGFloat = 88
 
     var body: some View {
         VStack(spacing: 0) {
             if !store.extensionEnabled { extensionBanner }
-            topPart
-                .fixedSize(horizontal: false, vertical: true) // 上半按内容自适应高度
-            Divider().padding(.horizontal, 20) // 横分隔不顶到头，与内容同边距
-            bottomPart // 下半占剩余空间
-        }
-        .frame(width: 820, height: 507) // 宽窗口，高:宽 ≈ 0.618
-    }
-
-    // MARK: - 上半：菜单项 | 外观 + 其他
-
-    private var topPart: some View {
-        HStack(alignment: .top, spacing: 28) {
-            VStack(alignment: .leading, spacing: 12) {
-                sectionTitle("菜单项")
-                itemToggle("复制完整路径", \.copyFullPath)
-                itemToggle("复制相对路径", \.copyRelativePath)
-                itemToggle("新建文件", \.newFile)
+            HStack(spacing: 0) {
+                leftColumn
+                columnDivider
+                rightColumn
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            columnDivider
-
-            VStack(alignment: .leading, spacing: 18) {
-                VStack(alignment: .leading, spacing: 10) {
-                    sectionTitle("菜单图标")
-                    Picker("", selection: Binding(
-                        get: { store.settings.appearance.appIconStyle },
-                        set: { store.settings.appearance.appIconStyle = $0; store.persist() })) {
-                        Text("黑白").tag(CoreSettings.AppIconStyle.monochrome)
-                        Text("彩色").tag(CoreSettings.AppIconStyle.color)
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.segmented)
-                    .fixedSize()
-                }
-                VStack(alignment: .leading, spacing: 8) {
-                    sectionTitle("其他")
-                    Button("打开配置目录") { openConfigDirectory() }
-                        .buttonStyle(.link)
-                    Button("访达扩展设置") { openExtensionSettings() }
-                        .buttonStyle(.link)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxHeight: .infinity)
         }
-        .padding(20)
+        .frame(width: 800, height: 494) // 高 = 800 × 0.618
     }
 
-    // MARK: - 下半：终端 | 编辑器（两列间留间距、无分隔线）
+    // MARK: - 左列：菜单项 / 菜单图标 / 编辑器
 
-    private var bottomPart: some View {
-        HStack(alignment: .top, spacing: 24) {
-            appColumn("终端", category: .terminal)
-            columnDivider
-            appColumn("编辑器", category: .editor)
+    private var leftColumn: some View {
+        VStack(spacing: 0) {
+            sectionBox(menuItemsSection)
+            rowDivider
+            sectionBox(iconSection)
+            rowDivider
+            sectionBox(appColumn("菜单显示的编辑器", category: .editor), fill: true)
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 14)
-        .frame(maxHeight: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
-    private func appColumn(_ title: String, category: AppCategory) -> some View {
+    // MARK: - 右列：其他 / 终端 / 自定义命令
+
+    private var rightColumn: some View {
+        VStack(spacing: 0) {
+            sectionBox(appColumn("菜单显示的终端", category: .terminal, fixedThreeRows: true))
+            rowDivider
+            sectionBox(commandColumn, fill: true)
+            rowDivider
+            sectionBox(otherSection)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
+    private var menuItemsSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            sectionTitle(title)
-            List(selection: selectionBinding(category)) {
-                ForEach(store.entries(category)) { entry in
-                    appRow(entry, category: category)
-                        .tag(entry.bundleId)
-                        .listRowSeparator(.hidden) // 应用之间不要横分隔线
+            sectionTitle("菜单项")
+            // 也用原生 List（不可选中），与右列「终端」List 同机制→开关精确对齐。
+            List {
+                menuRow("复制完整路径", \.copyFullPath)
+                menuRow("复制相对路径", \.copyRelativePath)
+                menuRow("新建文件", \.newFile)
+            }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .environment(\.defaultMinListRowHeight, listRowContentHeight)
+            .scrollDisabled(true)
+            .frame(height: threeRowsHeight)
+        }
+    }
+
+    private func menuRow(_ title: String,
+                         _ keyPath: WritableKeyPath<CoreSettings.Items, Bool>) -> some View {
+        itemToggle(title, keyPath)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: 5, leading: 0, bottom: 5, trailing: 0))
+    }
+
+    private var iconSection: some View {
+        HStack(spacing: 8) {
+            sectionTitle("应用图标")
+            Spacer()
+            Picker("", selection: Binding(
+                get: { store.settings.appearance.appIconStyle },
+                set: { store.settings.appearance.appIconStyle = $0; store.persist() })) {
+                Text("黑白").tag(CoreSettings.AppIconStyle.monochrome)
+                Text("彩色").tag(CoreSettings.AppIconStyle.color)
+            }
+            .labelsHidden()
+            .fixedSize()
+        }
+    }
+
+    // 单行：标题左，两个 link 按钮右对齐。
+    private var otherSection: some View {
+        HStack(spacing: 8) {
+            sectionTitle("其他")
+            Spacer()
+            Button("打开配置目录") { openConfigDirectory() }
+                .buttonStyle(.link)
+            Button("访达扩展设置") { openExtensionSettings() }
+                .buttonStyle(.link)
+                .padding(.leading, 12)
+        }
+    }
+
+    // 每个组别的统一内边距；fill=true 的组撑满剩余高度（内部列表可滚动）。
+    private func sectionBox<Content: View>(_ content: Content, fill: Bool = false) -> some View {
+        content
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, maxHeight: fill ? .infinity : nil, alignment: .topLeading)
+    }
+
+    // 组间横分隔线（与组内容边缘对齐）。
+    private var rowDivider: some View {
+        Rectangle()
+            .fill(Color.primary.opacity(0.08))
+            .frame(height: 1)
+            .padding(.horizontal, 16)
+    }
+
+    // MARK: - 自定义命令组（默认终端下拉 + 命令列表）
+
+    private var commandColumn: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            sectionTitle("自定义命令")
+            defaultTerminalPicker
+            List(selection: commandSelBinding) {
+                ForEach(store.settings.commands.indices, id: \.self) { i in
+                    commandRow(i)
+                        .tag(i)
+                        .listRowSeparator(.hidden)
                         .listRowInsets(EdgeInsets(top: 5, leading: 0, bottom: 5, trailing: 0))
                 }
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
+            commandFooterBar
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var defaultTerminalPicker: some View {
+        HStack(spacing: 8) {
+            Text("执行终端").font(.callout).foregroundStyle(.secondary)
+            Spacer()
+            // 始终是下拉框（选项永不为空，无已安装时只列系统 Terminal）→ 不抖动。
+            // 选项 = 全部已安装终端，与「菜单显示」开关无关。
+            Picker("", selection: Binding(
+                get: { store.resolvedDefaultTerminal },
+                set: { store.setDefaultTerminal($0) })) {
+                ForEach(store.terminalOptions) { t in
+                    Text(t.name).tag(t.bundleId)
+                }
+            }
+            .labelsHidden()
+            .fixedSize()
+        }
+        .padding(.bottom, 2)
+    }
+
+    private func commandRow(_ i: Int) -> some View {
+        HStack(spacing: 8) {
+            TextField("名称", text: Binding(
+                get: { store.settings.commands.indices.contains(i) ? store.settings.commands[i].name : "" },
+                set: { store.updateCommandName(at: i, $0) }))
+                .textFieldStyle(.roundedBorder)
+                .frame(width: 96)
+            TextField("命令，如 claude", text: Binding(
+                get: { store.settings.commands.indices.contains(i) ? store.settings.commands[i].command : "" },
+                set: { store.updateCommandString(at: i, $0) }))
+                .textFieldStyle(.roundedBorder)
+        }
+    }
+
+    private var commandFooterBar: some View {
+        HStack(spacing: 4) {
+            Button { store.addCommand() } label: {
+                Image(systemName: "plus").frame(width: 22, height: 18)
+            }
+            .help("新增命令")
+            Button { removeSelectedCommand() } label: {
+                Image(systemName: "minus").frame(width: 22, height: 18)
+            }
+            .disabled(selectedCommandIndex == nil)
+            .help("删除选中的命令")
+            Spacer()
+        }
+        .buttonStyle(.borderless)
+        .padding(.vertical, 4)
+    }
+
+    private var selectedCommandIndex: Int? {
+        if case .command(let i) = selection { return i }
+        return nil
+    }
+
+    private func removeSelectedCommand() {
+        guard let i = selectedCommandIndex else { return }
+        store.removeCommand(at: i)
+        selection = nil
+    }
+
+    // 原生 List：自带选中高亮 + 点空白取消 + 统一 padding。
+    // fixedThreeRows=true → 固定 3 行高（≤3 不滚动、>3 滚动）；否则撑满剩余。
+    private func appColumn(_ title: String, category: AppCategory,
+                           fixedThreeRows: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            sectionTitle(title)
+            List(selection: appSelBinding(category)) {
+                ForEach(store.entries(category)) { entry in
+                    appRow(entry, category: category)
+                        .tag(entry.bundleId)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(top: 5, leading: 0, bottom: 5, trailing: 0))
+                }
+            }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .environment(\.defaultMinListRowHeight, listRowContentHeight)
+            // 保留 List 正常交互 + 内容不足时也有橡皮筋回弹（不禁用滚动）。
+            .alwaysBounce()
+            .frame(height: fixedThreeRows ? threeRowsHeight : nil)
+            .frame(maxHeight: fixedThreeRows ? nil : .infinity)
             listFooterBar(category: category)
         }
         .frame(maxWidth: .infinity)
@@ -116,6 +259,7 @@ struct ContentView: View {
                 .toggleStyle(.switch)
                 .controlSize(.small)
         }
+        .frame(height: listRowContentHeight)
     }
 
     // 列表底部 +/- 控件；- 仅对选中的自定义项可用（内置项不可删）。
@@ -159,12 +303,12 @@ struct ContentView: View {
         Text(text).font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
     }
 
-    // 非常淡的竖分隔线，自动适配深浅色。
+    // 非常淡的竖分隔线，自动适配深浅色；上下留边距不贴边。
     private var columnDivider: some View {
         Rectangle()
             .fill(Color.primary.opacity(0.08))
             .frame(width: 1)
-            .padding(.vertical, 4)
+            .padding(.vertical, 14)
     }
 
     // MARK: - 操作
@@ -207,7 +351,12 @@ struct ContentView: View {
     }
 
     private func selectedEntry(_ category: AppCategory) -> AppEntry? {
-        let sel = category == .terminal ? terminalSel : editorSel
+        let sel: String?
+        switch selection {
+        case .terminal(let id) where category == .terminal: sel = id
+        case .editor(let id) where category == .editor: sel = id
+        default: sel = nil
+        }
         return store.entries(category).first { $0.bundleId == sel }
     }
 
@@ -222,8 +371,30 @@ struct ContentView: View {
 
     // MARK: - 绑定
 
-    private func selectionBinding(_ category: AppCategory) -> Binding<String?> {
-        category == .terminal ? $terminalSel : $editorSel
+    // 把全局 selection 映射成各 List 需要的 Binding；某 List 选中即改写全局，
+    // 其它 List 的 get 随之返回 nil → 自动取消，实现「全局单选」。
+    private func appSelBinding(_ category: AppCategory) -> Binding<String?> {
+        Binding(
+            get: {
+                switch selection {
+                case .terminal(let id) where category == .terminal: return id
+                case .editor(let id) where category == .editor: return id
+                default: return nil
+                }
+            },
+            set: { newValue in
+                if let id = newValue {
+                    selection = (category == .terminal) ? .terminal(id) : .editor(id)
+                } else {
+                    selection = nil // 点空白取消
+                }
+            })
+    }
+
+    private var commandSelBinding: Binding<Int?> {
+        Binding(
+            get: { if case .command(let i) = selection { return i } else { return nil } },
+            set: { newValue in selection = newValue.map { .command($0) } })
     }
 
     private func itemToggle(_ title: String,
@@ -236,6 +407,7 @@ struct ContentView: View {
                 .toggleStyle(.switch)
                 .controlSize(.small)
         }
+        .frame(height: listRowContentHeight)
     }
 
     private func itemBinding(_ keyPath: WritableKeyPath<CoreSettings.Items, Bool>) -> Binding<Bool> {
@@ -248,5 +420,16 @@ struct ContentView: View {
         Binding(
             get: { entry.enabled },
             set: { store.setEnabled(entry, on: $0, category: category) })
+    }
+}
+
+private extension View {
+    // 内容不足时也允许纵向橡皮筋回弹（macOS 13.3+）；旧系统原样返回。
+    @ViewBuilder func alwaysBounce() -> some View {
+        if #available(macOS 13.3, *) {
+            self.scrollBounceBehavior(.always, axes: .vertical)
+        } else {
+            self
+        }
     }
 }

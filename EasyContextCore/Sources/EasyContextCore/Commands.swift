@@ -27,19 +27,24 @@ public struct CommandEntry: Codable, Equatable, Sendable, Identifiable {
 /// 模板是一条命令，带占位符 `{dir}`（目录）、`{cmd}`（命令）。执行时宿主把真实
 /// 目录/命令放进环境变量 EC_DIR / EC_CMD，并把占位符替换为 `"$EC_DIR"`/`"$EC_CMD"`
 /// 后 `/bin/sh -c` 执行——值全程走环境变量、绝不拼进命令串，天然免注入。
+///
+/// PATH 说明：GUI 启动的进程只有精简 PATH（无 ~/.local/bin 等），`-e` 型终端
+/// 直接 exec 会找不到 claude/codex。故这类模板通过用户登录 shell 运行命令
+/// `$EC_SHELL -lic {cmd}`（-l 登录 + -i 交互 → source .zprofile/.zshrc → PATH 齐全），
+/// 与 Terminal.app 的 `do script` 行为一致。$EC_SHELL 由宿主注入（用户登录 shell）。
 public enum TerminalLaunch {
     public static let systemTerminalBundleId = "com.apple.Terminal"
 
     /// 内置默认模板（bundleId -> 模板）。AppleScript 类直接用 system attribute 读环境。
     public static let builtinTemplates: [String: String] = [
         "com.mitchellh.ghostty":
-            "open -na Ghostty --args --working-directory={dir} -e {cmd}",
+            "open -na Ghostty --args --working-directory={dir} -e $EC_SHELL -lic {cmd}",
         "net.kovidgoyal.kitty":
-            "open -na kitty --args --directory {dir} {cmd}",
+            "open -na kitty --args --directory {dir} $EC_SHELL -lic {cmd}",
         "com.github.wez.wezterm":
-            "open -na WezTerm --args start --cwd {dir} -- {cmd}",
+            "open -na WezTerm --args start --cwd {dir} -- $EC_SHELL -lic {cmd}",
         "org.alacritty":
-            "open -na Alacritty --args --working-directory {dir} -e {cmd}",
+            "open -na Alacritty --args --working-directory {dir} -e $EC_SHELL -lic {cmd}",
         "com.apple.Terminal":
             "osascript -e 'tell application \"Terminal\" to do script "
             + "\"cd \" & quoted form of (system attribute \"EC_DIR\") & \" && \" "

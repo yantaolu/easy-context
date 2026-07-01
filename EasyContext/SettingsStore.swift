@@ -119,6 +119,66 @@ final class SettingsStore: ObservableObject {
         persist()
     }
 
+    // MARK: - 自定义命令
+
+    /// 追加一条新命令（默认启用），名称自动去重。
+    func addCommand() {
+        var name = "命令"
+        var n = 1
+        while settings.commands.contains(where: { $0.name == name }) {
+            n += 1
+            name = "命令\(n)"
+        }
+        settings.commands.append(CommandEntry(name: name, command: "", enabled: true))
+        persist()
+    }
+
+    func removeCommand(at index: Int) {
+        guard settings.commands.indices.contains(index) else { return }
+        settings.commands.remove(at: index)
+        persist()
+    }
+
+    func updateCommandName(at index: Int, _ value: String) {
+        guard settings.commands.indices.contains(index) else { return }
+        settings.commands[index].name = value
+        persist()
+    }
+
+    func updateCommandString(at index: Int, _ value: String) {
+        guard settings.commands.indices.contains(index) else { return }
+        settings.commands[index].command = value
+        persist()
+    }
+
+    // MARK: - 默认终端（运行命令用）
+
+    /// 已安装的终端（按配置顺序）。执行终端只看「装没装」，与菜单显示开关无关。
+    var installedTerminals: [AppEntry] {
+        settings.terminals.filter { isInstalled($0) }
+    }
+
+    /// 执行终端下拉的选项，永不为空：无已安装终端时回退系统 Terminal，
+    /// 保证下拉框始终存在（不再切换成文字提示→避免抖动）。
+    var terminalOptions: [AppEntry] {
+        let installed = installedTerminals
+        if !installed.isEmpty { return installed }
+        let sysId = TerminalLaunch.systemTerminalBundleId
+        if let sys = settings.terminals.first(where: { $0.bundleId == sysId }) { return [sys] }
+        return [AppEntry(bundleId: sysId, name: "Terminal", custom: false, enabled: false)]
+    }
+
+    /// 当前生效的执行终端 bundleId（解析后的，nil 偏好回退到第一个已安装）。
+    var resolvedDefaultTerminal: String {
+        TerminalLaunch.resolveDefaultTerminal(eligible: installedTerminals,
+                                              preferred: settings.defaultTerminal)
+    }
+
+    func setDefaultTerminal(_ bundleId: String) {
+        settings.defaultTerminal = bundleId
+        persist()
+    }
+
     func persist() { try? store.save(settings) }
 
     private func mutate(_ category: AppCategory, _ block: (inout [AppEntry]) -> Void) {
