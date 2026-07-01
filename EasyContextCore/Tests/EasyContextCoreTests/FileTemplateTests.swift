@@ -14,8 +14,7 @@ final class FileTemplateTests: XCTestCase {
         XCTAssertFalse(FileTemplate.json.isExecutable)
     }
 
-    func test_blank_hasNoExtensionNoContent() {
-        XCTAssertEqual(FileTemplate.blank.fileExtension, "")
-        XCTAssertEqual(FileTemplate.blank.initialContent, "")
+    func test_allCases_excludesBlank() {
+        XCTAssertEqual(FileTemplate.allCases.map(\.rawValue), ["markdown", "text", "shell", "json"])
     }
 }

@@ -47,7 +47,7 @@ final class NewFileMakerTests: XCTestCase {
     func test_create_stripsPathTraversal() throws {
         let dir = try tempDir()
         // 名字里带目录/穿越成分 → 只取 lastPathComponent，文件落在 dir 内
-        let url = NewFileMaker.create(template: .blank, in: dir, requestedName: "../evil")
+        let url = NewFileMaker.create(template: .text, in: dir, requestedName: "../evil")
         XCTAssertEqual(url?.deletingLastPathComponent().standardizedFileURL,
                        dir.standardizedFileURL)
         XCTAssertEqual(url?.lastPathComponent, "evil")

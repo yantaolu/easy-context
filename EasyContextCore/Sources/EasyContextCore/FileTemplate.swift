@@ -1,5 +1,4 @@
 public enum FileTemplate: String, CaseIterable, Codable, Sendable {
-    case blank
     case markdown
     case text
     case shell
@@ -7,7 +6,6 @@ public enum FileTemplate: String, CaseIterable, Codable, Sendable {
 
     public var fileExtension: String {
         switch self {
-        case .blank: return ""
         case .markdown: return "md"
         case .text: return "txt"
         case .shell: return "sh"
@@ -17,7 +15,7 @@ public enum FileTemplate: String, CaseIterable, Codable, Sendable {
 
     public var initialContent: String {
         switch self {
-        case .blank, .text, .markdown: return ""
+        case .text, .markdown: return ""
         case .shell: return "#!/bin/bash\n"
         case .json: return "{}\n"
         }
@@ -29,7 +27,6 @@ public enum FileTemplate: String, CaseIterable, Codable, Sendable {
 
     public var displayName: String {
         switch self {
-        case .blank: return "空白文件"
         case .markdown: return "Markdown (.md)"
         case .text: return "文本 (.txt)"
         case .shell: return "Shell (.sh)"

@@ -7,6 +7,7 @@ class FinderSyncExtension: FIFinderSync {
     // FinderSync 的 XPC 往返会丢弃 NSMenuItem.representedObject，
     // 故用 tag 索引这些列表来定位被点的项。
     private var openableApps: [AppEntry] = []
+    private var openableTerminalCount = 0 // openableApps 前 N 个是终端，其余是编辑器
     private var runnableCommands: [CommandEntry] = []
     private var commandTerm: String = ""
     // 本次菜单对应的目标 URL 快照（按 menuKind 定），动作回调用它、不在点击时重解析，
@@ -100,7 +101,7 @@ class FinderSyncExtension: FIFinderSync {
         let menu = NSMenu(title: "")
 
         if config.items.copyFullPath {
-            addItem(to: menu, title: "复制完整路径", action: #selector(copyFullPath(_:)),
+            addItem(to: menu, title: "复制路径", action: #selector(copyFullPath(_:)),
                     image: symbolImage("doc.on.doc", dark: dark))
         }
         if config.items.copyRelativePath {
@@ -112,6 +113,7 @@ class FinderSyncExtension: FIFinderSync {
         let editors = appsToShow(config.editors, builtins: KnownApps.editors)
         cacheLock.lock()
         openableApps = terminals + editors
+        openableTerminalCount = terminals.count
         cacheLock.unlock()
 
         for (idx, app) in terminals.enumerated() {
@@ -321,7 +323,6 @@ class FinderSyncExtension: FIFinderSync {
 
     private static func templateSymbol(_ t: FileTemplate) -> String {
         switch t {
-        case .blank: return "doc"
         case .markdown: return "doc.richtext"
         case .text: return "doc.plaintext"
         case .shell: return "terminal"
@@ -345,13 +346,16 @@ class FinderSyncExtension: FIFinderSync {
         guard let item = sender as? NSMenuItem else { return }
         cacheLock.lock()
         let apps = openableApps
+        let terminalCount = openableTerminalCount
         cacheLock.unlock()
         guard item.tag >= 0, item.tag < apps.count,
-              let dir = targetDirectory(),
               let url = appURL(apps[item.tag].bundleId)
         else { return }
+        // 终端只能对目录（文件→父目录）；编辑器打开右键对象本身（文件就开文件）。
+        let isTerminal = item.tag < terminalCount
+        guard let openTarget = isTerminal ? targetDirectory() : snapshotURL() else { return }
         // 沙盒下不能 spawn /usr/bin/open，改用 LaunchServices。
-        NSWorkspace.shared.open([dir], withApplicationAt: url,
+        NSWorkspace.shared.open([openTarget], withApplicationAt: url,
                                 configuration: NSWorkspace.OpenConfiguration(),
                                 completionHandler: nil)
     }
