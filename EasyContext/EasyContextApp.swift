@@ -66,11 +66,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             win.contentViewController = NSHostingController(rootView: ContentView())
             win.isReleasedWhenClosed = false
             win.delegate = self
-            win.center()
             settingsWindow = win
         }
+        if let win = settingsWindow { centerOnActiveScreen(win) }
         settingsWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    // 居中到「鼠标所在的显示器」（而非主屏），并避开菜单栏/程序坞（visibleFrame）。
+    private func centerOnActiveScreen(_ window: NSWindow) {
+        let mouse = NSEvent.mouseLocation
+        let screen = NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) }
+            ?? NSScreen.main
+        guard let vf = screen?.visibleFrame else { window.center(); return }
+        let size = window.frame.size
+        let x = vf.origin.x + (vf.width - size.width) / 2
+        let y = vf.origin.y + (vf.height - size.height) / 2
+        window.setFrameOrigin(NSPoint(x: x, y: y))
     }
 
     // 关设置窗 → 退回后台代理（去 Dock 图标）；App 继续跑以处理后续 URL。
