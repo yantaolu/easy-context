@@ -1,28 +1,25 @@
 import Foundation
 
 public struct RelativePathResolver {
-    private let directoryExists: (URL) -> Bool
+    private let gitMarkerExists: (URL) -> Bool
     private let homeDirectory: URL
 
-    public init(directoryExists: @escaping (URL) -> Bool, homeDirectory: URL) {
-        self.directoryExists = directoryExists
+    public init(gitMarkerExists: @escaping (URL) -> Bool, homeDirectory: URL) {
+        self.gitMarkerExists = gitMarkerExists
         self.homeDirectory = homeDirectory
     }
 
     public init(fileManager: FileManager = .default) {
-        self.directoryExists = { url in
-            var isDir: ObjCBool = false
-            let exists = fileManager.fileExists(atPath: url.path, isDirectory: &isDir)
-            return exists && isDir.boolValue
-        }
+        // `.git` 存在即可，不限类型：普通仓库是目录，worktree / submodule 下是文件（gitlink）。
+        self.gitMarkerExists = { fileManager.fileExists(atPath: $0.path) }
         self.homeDirectory = fileManager.homeDirectoryForCurrentUser
     }
 
-    /// 从 url 向上（含自身目录）查找第一个含 `.git` 的祖先。
+    /// 从 url 向上（含自身目录）查找第一个含 `.git`（目录或 gitlink 文件）的祖先。
     public func gitRoot(for url: URL) -> URL? {
         var current = url.standardizedFileURL
         while true {
-            if directoryExists(current.appendingPathComponent(".git")) {
+            if gitMarkerExists(current.appendingPathComponent(".git")) {
                 // Normalize via .path to strip trailing slash added by deletingLastPathComponent()
                 return URL(fileURLWithPath: current.path)
             }

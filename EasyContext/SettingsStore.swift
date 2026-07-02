@@ -310,8 +310,10 @@ final class SettingsStore: ObservableObject {
     }
 
     func persist() {
-        try? store.save(settings)
+        guard (try? store.save(settings)) != nil else { return }   // 写盘失败：保持原状
         lastToken = store.fileToken()   // 记住自身写盘的指纹，避免 reloadIfChanged 把它误判为外部改动
+        // 损坏状态下用户主动改动会写出一份合法配置 → 撤下损坏横幅（原文件仍留在 .bak）。
+        if configCorrupt { configCorrupt = false }
     }
 
     private func mutate(_ category: AppCategory, _ block: (inout [AppEntry]) -> Void) {
