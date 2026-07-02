@@ -151,7 +151,7 @@ class FinderSyncExtension: FIFinderSync {
         }
 
         guard config.items.newFile else { return menu }
-        // 沙盒扩展不能弹模态窗，新建文件用子菜单选模板、直接创建。
+        // 沙盒扩展不能弹模态窗：新建文件用子菜单选模板，点选后交宿主弹命名面板创建。
         let newFileItem = NSMenuItem(title: "新建文件", action: nil, keyEquivalent: "")
         newFileItem.image = symbolImage("doc.badge.plus", dark: dark)
         let submenu = NSMenu(title: "新建文件")

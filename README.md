@@ -16,7 +16,7 @@
 - **用终端打开**当前目录 —— 自动识别 Terminal、iTerm、Warp、Ghostty、kitty、WezTerm、Alacritty、Hyper、Tabby、Rio、Wave、Termius
 - **用编辑器打开**当前目录 —— VS Code、VSCodium、Cursor、Trae、Devin（原 Windsurf）、CodeBuddy、Zed、Sublime Text、Nova、BBEdit、TextMate、MacVim、Emacs、Xcode、JetBrains 全家桶（WebStorm / IntelliJ IDEA〔含 CE〕/ PyCharm〔含 CE〕/ GoLand / CLion / PhpStorm / RubyMine / Rider / DataGrip / Fleet）、Android Studio 等
 - **在终端运行命令**（`用 XX 运行 YY`）—— 一键在**执行终端**里于当前目录运行 AI CLI 等命令（预置 `claude` / `codex`，可自定义增删）
-- **新建文件** —— 子菜单选模板（空白 / Markdown / 文本 / Shell / JSON），弹**命名面板**输入文件名（预选基名、保留扩展名；重名自动加序号、`.sh` 自动加可执行位），创建后在 Finder 中选中
+- **新建文件** —— 子菜单选模板（Markdown / 文本 / Shell / JSON），弹**命名面板**输入文件名（预选基名、保留扩展名；重名自动加序号、`.sh` 自动加可执行位），创建后在 Finder 中选中
 - **内置盘 + 外置磁盘**都生效
 - **可配置设置界面**：选择菜单显示哪些终端 / 编辑器、管理自定义命令、选执行终端、`+` 自定义添加未识别的 App、菜单图标黑白 / 彩色、深色模式自动适配
 
@@ -92,7 +92,7 @@ cd EasyContextCore && swift test
 
 - **EasyContextCore**（本地 Swift 包）：纯逻辑（路径解析、App 检测、配置模型 / reconcile、文件模板…），命令行 `swift test` 驱动 TDD。
 - **EasyContextFinder**（FinderSync 扩展，沙盒）：注入右键菜单、执行动作。
-- **EasyContext**（SwiftUI 宿主，非沙盒）：设置界面、引导启用扩展。
+- **EasyContext**（AppKit 宿主 + SwiftUI 设置界面，非沙盒）：后台代理型 App，手动管窗，处理设置界面、引导启用扩展、执行命令 / 新建文件。
 - 宿主与扩展通过共享文件 `~/.easy-context/config.json` 交换配置。
 
 详见 [设计文档](docs/superpowers/specs/2026-06-30-easy-context-design.md)（含相对初始设计的关键变更）。
@@ -107,7 +107,7 @@ cd EasyContextCore && swift test
   - 读系统深浅色用全局 **`AppleInterfaceStyle`**，不要用 `NSApp.effectiveAppearance`（主线程属性，工作线程取值不可靠）。
 - **扩展必须开启 App Sandbox**（pkd 拒绝非沙盒插件）；本地自用靠 `temporary-exception` entitlement 放行 `/Users//Volumes/` 等文件访问。
 - **菜单项的 `representedObject` 会在 XPC 往返中丢失**，故用 `tag` 索引应用列表。
-- **打开 App 用 `NSWorkspace.open`**（沙盒禁止 spawn 进程，不能用 `Process`/`open`）；**新建文件用子菜单**直接创建（扩展弹模态 `NSAlert` 会抛异常）。
+- **打开 App 用 `NSWorkspace.open`**（沙盒禁止 spawn 进程，不能用 `Process`/`open`）；**新建文件用子菜单**选模板、点选后交宿主弹命名面板创建（扩展弹模态 UI 会抛异常）。
 - **监控所有挂载卷**（单个 `/` 不覆盖 `/Volumes/*` 外置盘），并监听挂载/卸载/改名动态刷新。
 - **Debug 构建须 `ENABLE_DEBUG_DYLIB=NO`**，否则 debug-dylib 桩会让扩展无法独立加载。
 
