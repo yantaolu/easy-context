@@ -47,7 +47,7 @@ final class SettingsStore: ObservableObject {
             forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in
                 self?.refreshExtensionState()
-                self?.refreshAppList()
+                await self?.refreshAppList()
             }
         }
     }
@@ -100,12 +100,17 @@ final class SettingsStore: ObservableObject {
     ///   ① reloadIfChanged：外部改过配置就重读覆盖内存；
     ///   ② reconcile：并入运行期新装的内置 App（轴 A，条目集变化）；
     ///   ③ 安装签名：已有条目装/卸时强制重渲染，让 visibleEntries 的实时 isInstalled 重算（轴 B）。
-    func refreshAppList() {
+    func refreshAppList() async {
         var published = reloadIfChanged()
 
+        // 一次安装态快照，放离主线程——避免切前台时在主线程同步等 40+ 次 LaunchServices 查询
+        // （与 refreshExtensionState 的后台化约定一致）。probe 须在挂起前于主线程取值。
+        let probe = probeBundleIds
+        let installed = await Task.detached { Self.installedSet(of: probe) }.value
+
         var s = settings
-        s.reconcile(installedTerminals: Self.installed(KnownApps.terminals),
-                    installedEditors: Self.installed(KnownApps.editors))
+        s.reconcile(installedTerminals: KnownApps.terminals.filter { installed.contains($0.bundleId) },
+                    installedEditors:   KnownApps.editors.filter { installed.contains($0.bundleId) })
         if s != settings {
             settings = s                       // @Published → 重渲染
             // 损坏时只更新内存，不覆盖用户那份已备份、可手动修复的原文件（与 init 一致）。
@@ -114,7 +119,9 @@ final class SettingsStore: ObservableObject {
         }
 
         // 轴 B：条目安装态翻转 → 仅在真的变了、且本次尚未因 settings 变更而重渲染时，手动触发。
-        let sig = installSignature()
+        // 注：probe 在挂起前取值，若这期间用户恰好新增自定义 App，其安装态本轮未探到、会被当
+        // 未安装暂不显示，下次激活自愈——概率极低，可接受。
+        let sig = signature(installed: installed)
         if sig != lastInstallSignature {
             lastInstallSignature = sig
             if !published { objectWillChange.send() }
@@ -145,9 +152,25 @@ final class SettingsStore: ObservableObject {
         }
     }
 
-    /// 当前已安装条目的 bundleId 集合——轴 B 的「安装态签名」，变化即意味着有条目装/卸。
+    /// 需要探测安装态的全部 bundleId：内置名单 ∪ 当前条目（含自定义）。
+    private var probeBundleIds: Set<String> {
+        Set(KnownApps.terminals.map(\.bundleId) + KnownApps.editors.map(\.bundleId)
+            + settings.terminals.map(\.bundleId) + settings.editors.map(\.bundleId))
+    }
+
+    /// 已安装条目的 bundleId 集合——轴 B 的「安装态签名」，由一次安装态快照派生（不再各自查 LS）。
+    private func signature(installed: Set<String>) -> Set<String> {
+        Set((settings.terminals + settings.editors).map(\.bundleId).filter { installed.contains($0) })
+    }
+
+    /// init 冷启动时算一次签名基线（同步、主线程；一次性开销可接受）。
     private func installSignature() -> Set<String> {
-        Set((settings.terminals + settings.editors).filter { isInstalled($0) }.map { $0.bundleId })
+        signature(installed: Self.installedSet(of: probeBundleIds))
+    }
+
+    /// 探测这批 bundleId 里哪些已安装。纯 LS 查询、不碰 actor 状态 → 可离主线程调用。
+    nonisolated private static func installedSet(of bundleIds: Set<String>) -> Set<String> {
+        bundleIds.filter { NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0) != nil }
     }
 
     func entries(_ category: AppCategory) -> [AppEntry] {
