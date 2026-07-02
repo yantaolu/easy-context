@@ -14,7 +14,7 @@
 
 - **复制完整路径** / **复制相对路径**（相对最近的 `.git` 仓库根，不在仓库内回退 `~`）
 - **用终端打开**当前目录 —— 自动识别 Terminal、iTerm、Warp、Ghostty、kitty、WezTerm、Alacritty、Hyper、Tabby、Rio、Wave、Termius
-- **用编辑器打开**当前目录 —— VS Code、Cursor、Windsurf、Trae、Zed、Sublime Text、Nova、BBEdit、Xcode、JetBrains 全家桶（WebStorm / IntelliJ / PyCharm / GoLand / CLion / PhpStorm / RubyMine / Rider / DataGrip / Fleet）、Android Studio 等
+- **用编辑器打开**当前目录 —— VS Code、VSCodium、Cursor、Trae、Devin（原 Windsurf）、CodeBuddy、Zed、Sublime Text、Nova、BBEdit、TextMate、MacVim、Emacs、Xcode、JetBrains 全家桶（WebStorm / IntelliJ IDEA〔含 CE〕/ PyCharm〔含 CE〕/ GoLand / CLion / PhpStorm / RubyMine / Rider / DataGrip / Fleet）、Android Studio 等
 - **在终端运行命令**（`用 XX 运行 YY`）—— 一键在**执行终端**里于当前目录运行 AI CLI 等命令（预置 `claude` / `codex`，可自定义增删）
 - **新建文件** —— 子菜单选模板（空白 / Markdown / 文本 / Shell / JSON），弹**命名面板**输入文件名（预选基名、保留扩展名；重名自动加序号、`.sh` 自动加可执行位），创建后在 Finder 中选中
 - **内置盘 + 外置磁盘**都生效
@@ -37,7 +37,7 @@
 两种方式，读写同一份配置：
 
 - **图形界面**：打开 EasyContext，勾选要显示的 App、调整菜单图标风格等。
-- **手改配置文件**：`~/.easy-context/config.json`，修改即时生效（扩展按文件修改时间智能重读）。
+- **手改配置文件**：`~/.easy-context/config.json`，修改即时生效——扩展按文件修改时间智能重读；宿主设置窗在切回（App 重新激活）时也会自动重读外部改动。
 
 配置文件结构：
 
@@ -59,7 +59,8 @@
 ```
 
 - 终端 / 编辑器的 `enabled` 控制**是否在右键菜单显示**；`custom: true` 为用户自行添加的 App。
-- 启动时会自动并入新检测到的内置 App、去重并排序（内置在前、自定义在后），并保留你的开关与自定义项。
+- 启动时、以及每次切回设置窗（App 重新激活）时，都会自动并入新检测到的内置 App、去重并排序（内置在前、自定义在后），并保留你的开关与自定义项——运行期新装的内置 App 切回设置窗即出现，**无需重启**。
+- 设置列表只展示**已安装**的 App；卸载后条目仍保留在配置里（开关状态不丢、重装自动回来），只是不在列表显示。
 
 ### 在终端运行命令
 
