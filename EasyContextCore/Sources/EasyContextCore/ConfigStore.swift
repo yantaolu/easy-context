@@ -33,6 +33,21 @@ public struct ConfigStore {
         FileManager.default.fileExists(atPath: fileURL.path)
     }
 
+    /// 文件指纹（修改时间 + 大小），用于识别 config.json 是否被外部改过。
+    /// 文件不存在时为 nil。save 用 .atomic 写盘（换 inode，mtime 必变）→ 足以判定变更。
+    public struct FileToken: Equatable {
+        public let mtime: Date
+        public let size: Int
+    }
+
+    public func fileToken() -> FileToken? {
+        guard let attrs = try? FileManager.default.attributesOfItem(atPath: fileURL.path),
+              let mtime = attrs[.modificationDate] as? Date,
+              let size = attrs[.size] as? Int
+        else { return nil }
+        return FileToken(mtime: mtime, size: size)
+    }
+
     /// 加载结果，区分「文件缺失」与「文件损坏」，供宿主避免用默认值覆盖损坏文件。
     public enum LoadOutcome: Equatable {
         case ok(Settings)
