@@ -64,7 +64,7 @@ final class SettingsStore: ObservableObject {
         let bundleId = Self.extensionBundleId
         Task.detached(priority: .utility) { [weak self] in
             let enabled = SettingsStore.queryExtensionEnabled(bundleId)
-            await MainActor.run { self?.extensionEnabled = enabled }
+            await MainActor.run { [weak self] in self?.extensionEnabled = enabled }
         }
     }
 
