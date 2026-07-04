@@ -13,6 +13,9 @@ private enum RowSelection: Hashable {
 }
 
 struct ContentView: View {
+    /// 设置窗固定尺寸（高 = 800 × 0.618），AppDelegate 建窗时引用同一常量。
+    static let preferredSize = CGSize(width: 800, height: 494)
+
     @StateObject private var store = SettingsStore()
     @State private var selection: RowSelection?
     @FocusState private var focusedCommand: String? // 命令输入框焦点键（"name-<id>"/"cmd-<id>"）
@@ -24,6 +27,7 @@ struct ContentView: View {
     var body: some View {
         VStack(spacing: 0) {
             if store.configCorrupt { corruptBanner }
+            if store.saveFailed { saveFailedBanner }
             if !store.extensionEnabled { extensionBanner }
             HStack(spacing: 0) {
                 leftColumn
@@ -32,7 +36,7 @@ struct ContentView: View {
             }
             .frame(maxHeight: .infinity)
         }
-        .frame(width: 800, height: 494) // 高 = 800 × 0.618
+        .frame(width: Self.preferredSize.width, height: Self.preferredSize.height)
     }
 
     // MARK: - 左列：菜单项 / 菜单图标 / 编辑器
@@ -135,12 +139,6 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 6) {
             sectionTitle("Custom Commands")
             defaultTerminalPicker
-            if TerminalLaunch.externalExecUnreliable.contains(store.resolvedDefaultTerminal) {
-                Text("⚠ Running commands externally in this terminal may prompt for confirmation and open extra windows. Use Terminal / iTerm instead.")
-                    .font(.caption)
-                    .foregroundStyle(.orange)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
             List(selection: commandSelBinding) {
                 ForEach(store.settings.commands) { cmd in
                     commandRow(cmd)
@@ -302,6 +300,20 @@ struct ContentView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .background(Color.red.opacity(0.85))
+        .foregroundStyle(.white)
+    }
+
+    // 写盘失败（磁盘满/权限等）：更改只在内存里，提示用户并允许重试。
+    private var saveFailedBanner: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "externaldrive.badge.exclamationmark")
+            Text("Settings can't be written to disk. Changes apply to this session only.")
+            Spacer()
+            Button("Retry") { store.persist() }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(Color.orange.opacity(0.9))
         .foregroundStyle(.white)
     }
 

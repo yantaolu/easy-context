@@ -85,15 +85,38 @@ final class SettingsTests: XCTestCase {
         XCTAssertEqual(result.first?.name, "Installed Terminal")
     }
 
-    func test_menuApps_filtersEnabledAndInstalled() {
-        let list = [
-            AppEntry(bundleId: "a", name: "A", enabled: true),
-            AppEntry(bundleId: "b", name: "B", enabled: false),
-            AppEntry(bundleId: "c", name: "C", enabled: true),
-        ]
-        let installed: Set<String> = ["a", "b"] // c 未安装
-        let result = Settings().menuApps(list, isInstalled: { installed.contains($0) })
-        XCTAssertEqual(result.map(\.bundleId), ["a"]) // 仅 a（启用且已安装）
+    // 逐条容错：数组里单条损坏（缺必填键/类型错）只丢该条，不连带丢弃整个数组——
+    // 防手改配置时一处笔误静默清空全部条目。
+    func test_decode_lossyArrays_skipBadEntriesKeepGood() throws {
+        let json = """
+        {
+          "terminals": [
+            { "bundleId": "com.apple.Terminal", "enabled": false },
+            { "name": "缺 bundleId" },
+            "不是对象",
+            { "bundleId": "com.googlecode.iterm2" }
+          ],
+          "commands": [
+            { "name": "Claude", "command": "claude" },
+            { "name": "缺 command 字段" },
+            { "name": "Codex", "command": "codex", "enabled": false }
+          ]
+        }
+        """
+        let s = try JSONDecoder().decode(Settings.self, from: Data(json.utf8))
+        XCTAssertEqual(s.terminals.map(\.bundleId),
+                       ["com.apple.Terminal", "com.googlecode.iterm2"])
+        XCTAssertFalse(s.terminals[0].enabled) // 好条目的状态原样保留
+        XCTAssertEqual(s.commands.map(\.name), ["Claude", "Codex"])
+        XCTAssertFalse(s.commands[1].enabled)
+    }
+
+    // 整个字段类型不对（不是数组）→ 维持原回退语义：terminals 空、commands 用预置。
+    func test_decode_nonArrayField_fallsBack() throws {
+        let s = try JSONDecoder().decode(Settings.self,
+                                         from: Data(#"{ "terminals": 5, "commands": "x" }"#.utf8))
+        XCTAssertEqual(s.terminals, [])
+        XCTAssertEqual(s.commands.map(\.name), ["Claude", "Codex"])
     }
 
     func test_normalizeCommandNames_trimsFillsEmptyAndDeduplicates() {

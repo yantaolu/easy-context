@@ -26,8 +26,13 @@ enum CommandLauncher {
         var settings = configStore.load() // 权威当前配置
         settings.normalizeCommandNames(defaultName: String(localized: "Command"))
         // 安全③：命令必须在用户配置里且启用（按唯一名称查，不执行 URL 里的任意命令串）。
+        // 查不到多半是「菜单弹出后命令被改名/禁用」的竞态——给提示而非静默。
         guard let entry = settings.commands.first(where: { $0.name == cmdName && $0.enabled })
-        else { return }
+        else {
+            notify(String(localized: "Cannot Run"),
+                   String(localized: "This command was renamed or disabled. Reopen the right-click menu and try again."))
+            return
+        }
         // 终端必须有模板（内置或用户覆盖）。
         guard let template = TerminalLaunch.template(for: term, overrides: settings.terminalTemplates)
         else {
@@ -48,14 +53,47 @@ enum CommandLauncher {
         env["EC_CMD"] = command
         env["EC_SHELL"] = loginShell() // `-e` 型模板据此走登录 shell 取全 PATH
         process.environment = env
+        // run() 成功只代表 /bin/sh 起来了；osascript/open 的失败（最典型：自动化权限
+        // 被用户拒过一次 → 此后永远静默无反应）只体现在退出码/stderr，必须检查并提示。
+        let stderrPipe = Pipe()
+        process.standardError = stderrPipe
+        process.terminationHandler = { p in
+            guard p.terminationStatus != 0 else { return }
+            let data = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+            let stderr = (String(data: data, encoding: .utf8) ?? "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            Task { @MainActor in reportRunFailure(stderr: stderr) }
+        }
         do { try process.run() } catch { notify(String(localized: "Run Failed"), error.localizedDescription) }
+    }
+
+    /// 区分「自动化权限被拒」（osascript -1743）与一般失败：前者给出跳系统设置的引导。
+    @MainActor
+    private static func reportRunFailure(stderr: String) {
+        if stderr.contains("-1743") || stderr.localizedCaseInsensitiveContains("not authorized") {
+            let alert = NSAlert()
+            alert.messageText = String(localized: "Automation Permission Required")
+            alert.informativeText = String(localized: "macOS is blocking Easy Context from controlling the terminal. Enable Easy Context in System Settings → Privacy & Security → Automation, then try again.")
+            alert.addButton(withTitle: String(localized: "Open System Settings"))
+            alert.addButton(withTitle: String(localized: "OK"))
+            NSApp.activate(ignoringOtherApps: true)
+            if alert.runModal() == .alertFirstButtonReturn,
+               let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation") {
+                NSWorkspace.shared.open(url)
+            }
+            return
+        }
+        notify(String(localized: "Run Failed"),
+               stderr.isEmpty ? String(localized: "The command exited with an error.") : stderr)
     }
 
     /// 用户登录 shell（GUI 进程环境里 SHELL 常缺失，故从 passwd 取），兜底 /bin/zsh。
     private static func loginShell() -> String {
         if let pw = getpwuid(getuid()), let sh = pw.pointee.pw_shell {
             let path = String(cString: sh)
-            if !path.isEmpty { return path }
+            // csh/tcsh 不支持 -lic 组合参数（-l 必须单独出现）→ 回退 zsh 保证命令能跑。
+            let base = (path as NSString).lastPathComponent
+            if !path.isEmpty, base != "csh", base != "tcsh" { return path }
         }
         return "/bin/zsh"
     }

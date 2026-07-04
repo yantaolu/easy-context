@@ -8,13 +8,18 @@ final class SettingsStore: ObservableObject {
     @Published var settings: Settings
     @Published var extensionEnabled: Bool = true // 先假定已启用，避免闪现横幅
     @Published var configCorrupt: Bool = false    // 配置损坏（已备份、用默认）→ 顶部横幅提示
+    @Published var saveFailed: Bool = false       // persist() 写盘失败 → 顶部横幅提示
 
     private let store = ConfigStore()
     private static let extensionBundleId = "com.luyantao.easycontext.finder"
     private var activeObserver: NSObjectProtocol?
+    private var terminateObserver: NSObjectProtocol?
     private var lastToken: ConfigStore.FileToken?       // 上次读/写时的 config.json 指纹（识别外部改动）
     private var lastInstallSignature: Set<String> = []  // 上次的已安装条目集合（识别条目装/卸）
-    private var installedSnapshot: InstalledAppSnapshot
+    // 首轮探测在后台跑，就绪前为 nil → isInstalled 乐观视为已安装（配置里的条目
+    // 绝大多数确实装着），列表立即可见、快照就绪后校正——避免首窗卡顿或闪空。
+    private var installedSnapshot: InstalledAppSnapshot?
+    private var iconCache: [String: NSImage] = [:]
     private var lastValidCommandNames: [String: String] = [:]
     private static var defaultCommandName: String { String(localized: "Command") }
 
@@ -32,12 +37,6 @@ final class SettingsStore: ObservableObject {
         }
         var s = original
         s.normalizeCommandNames(defaultName: Self.defaultCommandName)
-        // 启动即 reconcile：并入已安装的内置 App、去重、排序，保留用户选择与自定义项。
-        let snapshot = InstalledAppSnapshot.capture(bundleIds: Self.probeBundleIds(settings: s))
-        s.reconcile(installedTerminals: snapshot.knownApps(from: KnownApps.terminals),
-                    installedEditors: snapshot.knownApps(from: KnownApps.editors))
-        s.refreshInstalledNames(using: snapshot)
-        self.installedSnapshot = snapshot
         self.settings = s
         self.lastValidCommandNames = Self.commandNameMap(from: s.commands)
         // 内容没变就不重写，避免无谓 bump mtime（否则扩展端缓存会被迫重载一次）。
@@ -45,7 +44,6 @@ final class SettingsStore: ObservableObject {
         if outcome != .corrupt, s != original || !store.hasStored() { try? store.save(s) }
         // 记录基线：文件指纹用于识别 config.json 的外部改动，安装签名用于识别条目装/卸。
         lastToken = store.fileToken()
-        lastInstallSignature = signature(snapshot: snapshot)
         // 注：IPC token 生成与模板参考文件写出已移到 AppDelegate（无论是否显示设置窗都要跑）。
 
         refreshExtensionState()
@@ -58,10 +56,19 @@ final class SettingsStore: ObservableObject {
                 await self?.refreshAppList()
             }
         }
+        // ⌘Q 兜底：命令名只在失焦/回车落盘，改名后直接退出会丢——willTerminate 时
+        // 静默 flush。此后没有 runloop，须同步执行（通知在主线程送达，assumeIsolated 成立）。
+        terminateObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.flushCommandsSilently() }
+        }
+        // 首轮安装态探测 + reconcile（几十次 LaunchServices 查询）放后台，避免首窗卡顿。
+        Task { await self.refreshAppList() }
     }
 
     deinit {
         if let activeObserver { NotificationCenter.default.removeObserver(activeObserver) }
+        if let terminateObserver { NotificationCenter.default.removeObserver(terminateObserver) }
     }
 
     var configPath: String { store.path }
@@ -116,6 +123,8 @@ final class SettingsStore: ObservableObject {
         let probe = probeBundleIds
         let snapshot = await Task.detached { InstalledAppSnapshot.capture(bundleIds: probe) }.value
         installedSnapshot = snapshot
+
+        iconCache.removeAll() // 快照更新 → App 可能装/卸/搬家，图标缓存作废
 
         var s = settings
         s.reconcile(installedTerminals: snapshot.knownApps(from: KnownApps.terminals),
@@ -195,13 +204,16 @@ final class SettingsStore: ObservableObject {
     }
 
     func isInstalled(_ entry: AppEntry) -> Bool {
-        installedSnapshot.isInstalled(entry.bundleId)
+        installedSnapshot?.isInstalled(entry.bundleId) ?? true // 快照未就绪 → 乐观已安装
     }
 
     func icon(_ entry: AppEntry) -> NSImage? {
-        guard let url = installedSnapshot.info(for: entry.bundleId)?.url
-        else { return nil }
-        return NSWorkspace.shared.icon(forFile: url.path)
+        guard let info = installedSnapshot?.info(for: entry.bundleId) else { return nil }
+        let key = entry.bundleId + "|" + info.url.path
+        if let cached = iconCache[key] { return cached }
+        let icon = NSWorkspace.shared.icon(forFile: info.url.path)
+        iconCache[key] = icon
+        return icon
     }
 
     func setEnabled(_ entry: AppEntry, on: Bool, category: AppCategory) {
@@ -216,11 +228,13 @@ final class SettingsStore: ObservableObject {
         mutate(category) { $0.removeAll { $0.bundleId == entry.bundleId } }
     }
 
-    /// 从 .app 读 bundleId + 名称，作为自定义项追加（已存在则忽略），随后 reconcile 重排。
+    /// 从 .app 读 bundleId + 名称，作为自定义项追加（已存在则忽略）。
+    /// 不做同步 LaunchServices 查询：名称直接从所选 .app 读、快照原地并入（刚选中的
+    /// App 必然已安装），排序 / custom 标记 / 安装签名交给后台 refreshAppList 统一校正。
     func addCustomApp(at url: URL, category: AppCategory) {
         guard let bundleId = Bundle(url: url)?.bundleIdentifier else { return }
-        let name = InstalledAppSnapshot.capture(bundleIds: [bundleId]).info(for: bundleId)?.displayName
-            ?? url.deletingPathExtension().lastPathComponent
+        let name = InstalledAppSnapshot.displayName(
+            for: url, fallback: url.deletingPathExtension().lastPathComponent)
         let entry = AppEntry(bundleId: bundleId, name: name, custom: true, enabled: true)
         switch category {
         case .terminal:
@@ -232,12 +246,10 @@ final class SettingsStore: ObservableObject {
                 settings.editors.append(entry)
             }
         }
-        let snapshot = InstalledAppSnapshot.capture(bundleIds: probeBundleIds)
-        installedSnapshot = snapshot
-        settings.reconcile(installedTerminals: snapshot.knownApps(from: KnownApps.terminals),
-                           installedEditors: snapshot.knownApps(from: KnownApps.editors))
-        settings.refreshInstalledNames(using: snapshot)
+        installedSnapshot = installedSnapshot?.adding(
+            InstalledAppInfo(bundleId: bundleId, url: url, displayName: name))
         persist()
+        Task { await refreshAppList() }
     }
 
     // MARK: - 自定义命令
@@ -278,6 +290,15 @@ final class SettingsStore: ObservableObject {
         saveTask?.cancel()
         saveTask = nil
         guard validateCommandNames() else { return }
+        persist()
+    }
+
+    /// 退出前兜底落盘（willTerminate 后不再有 runloop，也不该弹模态窗）：
+    /// 非法名静默还原为上次合法值后照常落盘。
+    private func flushCommandsSilently() {
+        saveTask?.cancel()
+        saveTask = nil
+        _ = validateCommandNames(interactive: false)
         persist()
     }
 
@@ -322,7 +343,12 @@ final class SettingsStore: ObservableObject {
     }
 
     func persist() {
-        guard (try? store.save(settings)) != nil else { return }   // 写盘失败：保持原状
+        guard (try? store.save(settings)) != nil else {
+            // 写盘失败（磁盘满/权限等）：内存保持新状态，横幅提示「仅本次会话生效」。
+            if !saveFailed { saveFailed = true }
+            return
+        }
+        if saveFailed { saveFailed = false }
         lastValidCommandNames = Self.commandNameMap(from: settings.commands)
         lastToken = store.fileToken()   // 记住自身写盘的指纹，避免 reloadIfChanged 把它误判为外部改动
         // 损坏状态下用户主动改动会写出一份合法配置 → 撤下损坏横幅（原文件仍留在 .bak）。
@@ -337,19 +363,25 @@ final class SettingsStore: ObservableObject {
         persist()
     }
 
-    private func validateCommandNames() -> Bool {
+    /// interactive=false（退出兜底）：不弹窗，非法名还原上次合法值后继续，恒返回 true。
+    private func validateCommandNames(interactive: Bool = true) -> Bool {
         var seen: Set<String> = []
         for i in settings.commands.indices {
-            let trimmed = settings.commands[i].name.trimmingCharacters(in: .whitespacesAndNewlines)
-            if trimmed.isEmpty {
+            var trimmed = settings.commands[i].name.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty || seen.contains(trimmed) {
                 restoreCommandName(at: i)
-                alertInvalidCommandName(String(localized: "Command name cannot be empty."))
-                return false
-            }
-            if seen.contains(trimmed) {
-                restoreCommandName(at: i)
-                alertInvalidCommandName(String(localized: "Command name already exists. Please choose a different name."))
-                return false
+                if interactive {
+                    alertInvalidCommandName(trimmed.isEmpty
+                        ? String(localized: "Command name cannot be empty.")
+                        : String(localized: "Command name already exists. Please choose a different name."))
+                    return false
+                }
+                trimmed = settings.commands[i].name.trimmingCharacters(in: .whitespacesAndNewlines)
+                if trimmed.isEmpty || seen.contains(trimmed) {
+                    // 还原值也被本轮更早的条目占用 → 生成不冲突的默认名。
+                    trimmed = Self.uniqueCommandName(in: settings.commands,
+                                                     excluding: settings.commands[i].id)
+                }
             }
             seen.insert(trimmed)
             settings.commands[i].name = trimmed

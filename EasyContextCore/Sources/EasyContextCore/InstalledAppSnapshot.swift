@@ -57,7 +57,14 @@ public struct InstalledAppSnapshot: Sendable {
         return copy
     }
 
-    private static func displayName(for url: URL, fallback: String) -> String {
+    /// 并入一条已知安装的 App（如用户刚在面板里选中的 .app）——无需 LaunchServices 查询。
+    public func adding(_ info: InstalledAppInfo) -> InstalledAppSnapshot {
+        var copy = apps
+        copy[info.bundleId] = info
+        return InstalledAppSnapshot(apps: copy)
+    }
+
+    public static func displayName(for url: URL, fallback: String) -> String {
         let fromFileManager = (FileManager.default.displayName(atPath: url.path) as NSString).deletingPathExtension
         if !fromFileManager.isEmpty { return fromFileManager }
         let bundle = Bundle(url: url)

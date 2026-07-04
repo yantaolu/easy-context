@@ -24,7 +24,7 @@ public struct CommandEntry: Codable, Equatable, Sendable, Identifiable {
         id = (decodedId?.isEmpty == false ? decodedId! : UUID().uuidString)
         name = try c.decode(String.self, forKey: .name)
         command = try c.decode(String.self, forKey: .command)
-        enabled = (try? c.decodeIfPresent(Bool.self, forKey: .enabled) ?? true) ?? true
+        enabled = c.value(.enabled, default: true)
     }
 }
 
@@ -36,16 +36,15 @@ public struct CommandEntry: Codable, Equatable, Sendable, Identifiable {
 ///
 /// PATH 说明：GUI 启动的进程只有精简 PATH（无 ~/.local/bin 等），`-e` 型终端
 /// 直接 exec 会找不到 claude/codex。故这类模板通过用户登录 shell 运行命令
-/// `$EC_SHELL -lic {cmd}`（-l 登录 + -i 交互 → source .zprofile/.zshrc → PATH 齐全），
-/// 与 Terminal.app 的 `do script` 行为一致。$EC_SHELL 由宿主注入（用户登录 shell）。
+/// `"$EC_SHELL" -lic {cmd}`（-l 登录 + -i 交互 → source .zprofile/.zshrc → PATH 齐全），
+/// 与 Terminal.app 的 `do script` 行为一致。$EC_SHELL 由宿主注入（用户登录 shell，
+/// csh/tcsh 不支持 -lic 组合参数，宿主端已回退 zsh）。
 public enum TerminalLaunch {
     public static let systemTerminalBundleId = "com.apple.Terminal"
 
-    /// 从外部运行命令表现不可靠的终端（UI 据此给提示）。目前为空——
-    /// Ghostty 曾因 `-e` 安全确认+双开不可靠，现改用 AppleScript（1.3.0+）已解决。
-    public static let externalExecUnreliable: Set<String> = []
-
     /// 内置默认模板（bundleId -> 模板）。AppleScript 类直接用 system attribute 读环境。
+    /// GUI 型终端用 `open -nb <bundleId>` 按 bundleId 启动（与全项目的 App 标识体系
+    /// 一致，App 被重命名也不失效）。
     public static let builtinTemplates: [String: String] = [
         // Ghostty 1.3.0+ 支持 AppleScript：用 input text 把命令打进交互 shell（非 -e
         // 执行）→ 免「Allow execute」弹框、单窗口、PATH 正确。值走环境变量 EC_DIR/EC_CMD。
@@ -62,11 +61,11 @@ public enum TerminalLaunch {
             + "\"cd \" & quoted form of (system attribute \"EC_DIR\") & \" && \" "
             + "& (system attribute \"EC_CMD\")'",
         "net.kovidgoyal.kitty":
-            "open -na kitty --args --directory {dir} $EC_SHELL -lic {cmd}",
+            "open -nb net.kovidgoyal.kitty --args --directory {dir} \"$EC_SHELL\" -lic {cmd}",
         "com.github.wez.wezterm":
-            "open -na WezTerm --args start --cwd {dir} -- $EC_SHELL -lic {cmd}",
+            "open -nb com.github.wez.wezterm --args start --cwd {dir} -- \"$EC_SHELL\" -lic {cmd}",
         "org.alacritty":
-            "open -na Alacritty --args --working-directory {dir} -e $EC_SHELL -lic {cmd}",
+            "open -nb org.alacritty --args --working-directory {dir} -e \"$EC_SHELL\" -lic {cmd}",
         "com.apple.Terminal":
             "osascript -e 'tell application \"Terminal\" to do script "
             + "\"cd \" & quoted form of (system attribute \"EC_DIR\") & \" && \" "

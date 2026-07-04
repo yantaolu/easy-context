@@ -126,7 +126,9 @@ public struct ConfigStore {
         return t.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    /// 读，缺失则生成并以 0600 写入。供非沙盒宿主用。
+    /// 读，缺失则生成并以 0600 写入。宿主启动时调用；扩展在发 IPC URL 前也调用
+    /// （扩展的 entitlement 可写 ~/.easy-context），消除「宿主从未运行 → token 缺失
+    /// → 首次点击静默失败」。两端并发首建时后写者胜，至多失败一次后即一致。
     @discardableResult
     public func ensureIPCToken() -> String {
         let existing = readIPCToken()
@@ -134,9 +136,9 @@ public struct ConfigStore {
         let token = UUID().uuidString
         let dir = fileURL.deletingLastPathComponent()
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        try? token.write(to: ipcTokenURL, atomically: true, encoding: .utf8)
-        try? FileManager.default.setAttributes([.posixPermissions: 0o600],
-                                               ofItemAtPath: ipcTokenURL.path)
+        // 创建即 0600，避免「先写后 chmod」之间的可读窗口。
+        FileManager.default.createFile(atPath: ipcTokenURL.path, contents: Data(token.utf8),
+                                       attributes: [.posixPermissions: 0o600])
         return token
     }
 

@@ -10,9 +10,9 @@ class FinderSyncExtension: FIFinderSync {
     private var openableTerminalCount = 0 // openableApps 前 N 个是终端，其余是编辑器
     private var runnableCommands: [CommandEntry] = []
     private var commandTerm: String = ""
-    // 本次菜单对应的目标 URL 快照（按 menuKind 定），动作回调用它、不在点击时重解析，
-    // 避免「容器右键却命中残留选中项」及构建↔点击间目标漂移。
-    private var menuTargetURL: URL?
+    // 本次菜单对应的目标 URL 快照（按 menuKind 定，多选时含全部选中项），动作回调
+    // 用它、不在点击时重解析，避免「容器右键却命中残留选中项」及构建↔点击间目标漂移。
+    private var menuTargetURLs: [URL] = []
 
     // 缓存（扩展进程常驻，跨多次右键存活，避免每次重读/重查/重渲染）。
     // 注意：menu(for:) 在 XPC 工作线程回调、volumesChanged 在主线程，两者会并发
@@ -70,26 +70,37 @@ class FinderSyncExtension: FIFinderSync {
     // MARK: - 目标 URL
 
     // 按 menuKind 定目标：容器菜单（空白处右键）优先容器本身，避免命中残留选中项；
-    // 条目菜单优先选中项。
-    private func resolveTarget(for menuKind: FIMenuKind) -> URL? {
+    // 条目菜单取全部选中项（FinderSync 拿不到「鼠标落点是哪一项」；右键点选中集外
+    // 的项时 Finder 会自动把选中变成它一个，故这里天然是"点哪对哪"或"整个选中集"）。
+    private func resolveTargets(for menuKind: FIMenuKind) -> [URL] {
         let c = FIFinderSyncController.default()
         switch menuKind {
         case .contextualMenuForContainer:
-            return c.targetedURL() ?? c.selectedItemURLs()?.first
+            if let target = c.targetedURL() { return [target] }
+            return c.selectedItemURLs() ?? []
         default:
-            return c.selectedItemURLs()?.first ?? c.targetedURL()
+            if let selected = c.selectedItemURLs(), !selected.isEmpty { return selected }
+            return c.targetedURL().map { [$0] } ?? []
         }
     }
 
     // 动作回调读的是构建菜单时定下的快照，而非重新解析当前 Finder 状态。
-    private func snapshotURL() -> URL? {
+    private func snapshotURLs() -> [URL] {
         cacheLock.lock(); defer { cacheLock.unlock() }
-        return menuTargetURL
+        return menuTargetURLs
     }
 
-    private func targetDirectory() -> URL? {
-        guard let url = snapshotURL() else { return nil }
-        return TargetDirectoryResolver().directory(for: url)
+    // 快照对应的目录集合：文件→父目录，去重、保持顺序（普通视图下多选同目录 → 1 个；
+    // 搜索结果等跨目录多选才会出现多个）。
+    private func targetDirectories() -> [URL] {
+        let resolver = TargetDirectoryResolver()
+        var seen = Set<String>()
+        var dirs: [URL] = []
+        for url in snapshotURLs() {
+            let dir = resolver.directory(for: url)
+            if seen.insert(dir.path).inserted { dirs.append(dir) }
+        }
+        return dirs
     }
 
     // MARK: - 菜单构建
@@ -99,8 +110,9 @@ class FinderSyncExtension: FIFinderSync {
     override func menu(for menuKind: FIMenuKind) -> NSMenu? {
         guard menuKind == .contextualMenuForItems
                 || menuKind == .contextualMenuForContainer else { return nil }
-        guard let target = resolveTarget(for: menuKind) else { return nil }
-        cacheLock.lock(); menuTargetURL = target; cacheLock.unlock()
+        let targets = resolveTargets(for: menuKind)
+        guard !targets.isEmpty else { return nil }
+        cacheLock.lock(); menuTargetURLs = targets; cacheLock.unlock()
 
         let config = currentSettings()
         let appSnapshot = currentAppSnapshot(for: config)
@@ -402,13 +414,16 @@ class FinderSyncExtension: FIFinderSync {
     // MARK: - 动作
 
     @objc private func copyFullPath(_ sender: AnyObject?) {
-        guard let url = snapshotURL() else { return }
-        writeToPasteboard(url.path)
+        let urls = snapshotURLs()
+        guard !urls.isEmpty else { return }
+        writeToPasteboard(urls.map(\.path).joined(separator: "\n"))
     }
 
     @objc private func copyRelativePath(_ sender: AnyObject?) {
-        guard let url = snapshotURL() else { return }
-        writeToPasteboard(RelativePathResolver().relativePath(for: url))
+        let urls = snapshotURLs()
+        guard !urls.isEmpty else { return }
+        let resolver = RelativePathResolver()
+        writeToPasteboard(urls.map { resolver.relativePath(for: $0) }.joined(separator: "\n"))
     }
 
     @objc private func openWithApp(_ sender: AnyObject?) {
@@ -420,11 +435,12 @@ class FinderSyncExtension: FIFinderSync {
         guard item.tag >= 0, item.tag < apps.count,
               let url = freshAppURL(apps[item.tag].bundleId)
         else { return }
-        // 终端只能对目录（文件→父目录）；编辑器打开右键对象本身（文件就开文件）。
+        // 终端只能对目录（文件→父目录，多选去重）；编辑器打开右键对象本身（多选全开）。
         let isTerminal = item.tag < terminalCount
-        guard let openTarget = isTerminal ? targetDirectory() : snapshotURL() else { return }
+        let targets = isTerminal ? targetDirectories() : snapshotURLs()
+        guard !targets.isEmpty else { return }
         // 沙盒下不能 spawn /usr/bin/open，改用 LaunchServices。
-        NSWorkspace.shared.open([openTarget], withApplicationAt: url,
+        NSWorkspace.shared.open(targets, withApplicationAt: url,
                                 configuration: NSWorkspace.OpenConfiguration(),
                                 completionHandler: nil)
     }
@@ -437,7 +453,7 @@ class FinderSyncExtension: FIFinderSync {
         let term = commandTerm
         cacheLock.unlock()
         guard item.tag >= 0, item.tag < cmds.count, !term.isEmpty,
-              let dir = targetDirectory() else { return }
+              let dir = targetDirectories().first else { return }
         var comps = URLComponents()
         comps.scheme = "easycontext"
         comps.host = "run"
@@ -445,7 +461,8 @@ class FinderSyncExtension: FIFinderSync {
             URLQueryItem(name: "cmd", value: cmds[item.tag].name),
             URLQueryItem(name: "dir", value: dir.path),
             URLQueryItem(name: "term", value: term),
-            URLQueryItem(name: "t", value: ConfigStore().readIPCToken()), // 宿主据此验真
+            // ensure：token 缺失（宿主从未运行/被清理）时由扩展补建，避免首次点击静默失败。
+            URLQueryItem(name: "t", value: ConfigStore().ensureIPCToken()), // 宿主据此验真
         ]
         guard let url = comps.url else { return }
         NSWorkspace.shared.open(url)
@@ -455,14 +472,14 @@ class FinderSyncExtension: FIFinderSync {
     @objc private func newFileFromTemplate(_ sender: AnyObject?) {
         guard let item = sender as? NSMenuItem,
               item.tag >= 0, item.tag < FileTemplate.allCases.count,
-              let dir = targetDirectory() else { return }
+              let dir = targetDirectories().first else { return }
         var comps = URLComponents()
         comps.scheme = "easycontext"
         comps.host = "newfile"
         comps.queryItems = [
             URLQueryItem(name: "dir", value: dir.path),
             URLQueryItem(name: "template", value: FileTemplate.allCases[item.tag].rawValue),
-            URLQueryItem(name: "t", value: ConfigStore().readIPCToken()),
+            URLQueryItem(name: "t", value: ConfigStore().ensureIPCToken()),
         ]
         guard let url = comps.url else { return }
         NSWorkspace.shared.open(url)

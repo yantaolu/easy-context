@@ -17,6 +17,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private var settingsWindow: NSWindow?
     private var launchedForURL = false
+    private static let settingsFrameName = "SettingsWindow"
+
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        // 在 will 阶段注册 GURL 处理器：URL 冷启动的 Apple Event 保证在
+        // didFinishLaunching 之前送达 → 后者可同步判断是否要开设置窗，
+        // 不再用 DispatchQueue.main.async 赌 open(urls:) 先到的时序。
+        NSAppleEventManager.shared().setEventHandler(
+            self, andSelector: #selector(handleGetURL(_:withReply:)),
+            forEventClass: AEEventClass(kInternetEventClass),
+            andEventID: AEEventID(kAEGetURL))
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory) // 后台代理：无 Dock、不自动显示窗口
@@ -26,16 +37,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         store.ensureIPCToken()
         store.writeTemplatesReference(builtin: TerminalLaunch.builtinTemplates)
         // 冷启动若不是为处理 URL（用户双击打开）→ 显示设置窗。
-        // async 让 open(urls:) 先到（URL 冷启动时它在启动序列里送达）。
-        DispatchQueue.main.async { [weak self] in
-            guard let self, !self.launchedForURL else { return }
-            self.showSettings()
-        }
+        if !launchedForURL { showSettings() }
     }
 
-    func application(_ application: NSApplication, open urls: [URL]) {
+    // 全部 URL 送达（冷启动/运行中）都走这里；注册了 GURL 处理器后
+    // AppKit 不再回调 application(_:open:)。
+    @objc private func handleGetURL(_ event: NSAppleEventDescriptor,
+                                    withReply reply: NSAppleEventDescriptor) {
         launchedForURL = true
-        for url in urls { handle(url) }
+        guard let str = event.paramDescriptor(forKeyword: AEKeyword(keyDirectObject))?.stringValue,
+              let url = URL(string: str) else { return }
+        handle(url)
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
@@ -59,7 +71,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         NSApp.setActivationPolicy(.regular) // 打开设置时露出 Dock 图标
         if settingsWindow == nil {
             let win = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 800, height: 494),
+                contentRect: NSRect(origin: .zero, size: ContentView.preferredSize),
                 styleMask: [.titled, .closable, .miniaturizable],
                 backing: .buffered, defer: false)
             win.title = "Easy Context"
@@ -67,8 +79,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             win.isReleasedWhenClosed = false
             win.delegate = self
             settingsWindow = win
+            // 恢复上次位置；只有首次运行（无保存位置）才居中到鼠标所在屏。
+            if !win.setFrameUsingName(Self.settingsFrameName) { centerOnActiveScreen(win) }
+            win.setFrameAutosaveName(Self.settingsFrameName)
         }
-        if let win = settingsWindow { centerOnActiveScreen(win) }
         settingsWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
@@ -108,10 +122,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         fileMenu.addItem(withTitle: String(localized: "Close Window"),
                          action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
         fileItem.submenu = fileMenu
-        // 编辑菜单：让命名面板输入框支持 复制/粘贴/全选 等快捷键。
+        // 编辑菜单：让命名面板输入框支持 撤销/复制/粘贴/全选 等快捷键。
         let editItem = NSMenuItem()
         mainMenu.addItem(editItem)
         let editMenu = NSMenu(title: String(localized: "Edit"))
+        // undo:/redo: 无编译期符号，走响应链到字段编辑器的 undoManager。
+        editMenu.addItem(withTitle: String(localized: "Undo"), action: Selector(("undo:")), keyEquivalent: "z")
+        editMenu.addItem(withTitle: String(localized: "Redo"), action: Selector(("redo:")), keyEquivalent: "Z")
+        editMenu.addItem(.separator())
         editMenu.addItem(withTitle: String(localized: "Cut"), action: #selector(NSText.cut(_:)), keyEquivalent: "x")
         editMenu.addItem(withTitle: String(localized: "Copy"), action: #selector(NSText.copy(_:)), keyEquivalent: "c")
         editMenu.addItem(withTitle: String(localized: "Paste"), action: #selector(NSText.paste(_:)), keyEquivalent: "v")

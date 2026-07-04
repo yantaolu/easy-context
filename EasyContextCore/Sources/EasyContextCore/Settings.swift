@@ -19,9 +19,9 @@ public struct AppEntry: Codable, Equatable, Sendable, Identifiable {
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         bundleId = try c.decode(String.self, forKey: .bundleId)
-        name = (try? c.decodeIfPresent(String.self, forKey: .name) ?? "") ?? ""
-        custom = (try? c.decodeIfPresent(Bool.self, forKey: .custom) ?? false) ?? false
-        enabled = (try? c.decodeIfPresent(Bool.self, forKey: .enabled) ?? true) ?? true
+        name = c.value(.name, default: "")
+        custom = c.value(.custom, default: false)
+        enabled = c.value(.enabled, default: true)
     }
 }
 
@@ -76,9 +76,9 @@ public struct Settings: Codable, Equatable, Sendable {
         public init(from decoder: Decoder) throws {
             let c = try decoder.container(keyedBy: CodingKeys.self)
             let d = Items()
-            copyFullPath = (try? c.decodeIfPresent(Bool.self, forKey: .copyFullPath) ?? d.copyFullPath) ?? d.copyFullPath
-            copyRelativePath = (try? c.decodeIfPresent(Bool.self, forKey: .copyRelativePath) ?? d.copyRelativePath) ?? d.copyRelativePath
-            newFile = (try? c.decodeIfPresent(Bool.self, forKey: .newFile) ?? d.newFile) ?? d.newFile
+            copyFullPath = c.value(.copyFullPath, default: d.copyFullPath)
+            copyRelativePath = c.value(.copyRelativePath, default: d.copyRelativePath)
+            newFile = c.value(.newFile, default: d.newFile)
         }
     }
 
@@ -96,22 +96,45 @@ public struct Settings: Codable, Equatable, Sendable {
 
         public init(from decoder: Decoder) throws {
             let c = try decoder.container(keyedBy: CodingKeys.self)
-            let d = Appearance()
-            appIconStyle = (try? c.decodeIfPresent(AppIconStyle.self, forKey: .appIconStyle) ?? d.appIconStyle) ?? d.appIconStyle
+            appIconStyle = c.value(.appIconStyle, default: Appearance().appIconStyle)
         }
     }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         let d = Settings()
-        version = (try? c.decodeIfPresent(Int.self, forKey: .version) ?? d.version) ?? d.version
-        items = (try? c.decodeIfPresent(Items.self, forKey: .items) ?? d.items) ?? d.items
-        terminals = (try? c.decodeIfPresent([AppEntry].self, forKey: .terminals) ?? []) ?? []
-        editors = (try? c.decodeIfPresent([AppEntry].self, forKey: .editors) ?? []) ?? []
-        commands = (try? c.decodeIfPresent([CommandEntry].self, forKey: .commands) ?? d.commands) ?? d.commands
+        version = c.value(.version, default: d.version) // 预留字段：暂无按版本迁移的逻辑
+        items = c.value(.items, default: d.items)
+        terminals = Self.lossyList(c, .terminals) ?? []
+        editors = Self.lossyList(c, .editors) ?? []
+        commands = Self.lossyList(c, .commands) ?? d.commands
         defaultTerminal = (try? c.decodeIfPresent(String.self, forKey: .defaultTerminal)) ?? nil
-        terminalTemplates = (try? c.decodeIfPresent([String: String].self, forKey: .terminalTemplates) ?? [:]) ?? [:]
-        appearance = (try? c.decodeIfPresent(Appearance.self, forKey: .appearance) ?? d.appearance) ?? d.appearance
+        terminalTemplates = c.value(.terminalTemplates, default: [:])
+        appearance = c.value(.appearance, default: d.appearance)
+    }
+
+    /// 数组字段逐条容错解码：单条损坏只丢该条，不连带丢弃整个数组——防止手改
+    /// 配置时一处笔误静默清空全部条目（enabled 状态、自定义项）。
+    /// 键缺失或值不是数组时返回 nil，由调用方决定默认值。
+    private static func lossyList<T: Decodable, K: CodingKey>(
+        _ c: KeyedDecodingContainer<K>, _ key: K) -> [T]? {
+        guard let raw = (try? c.decodeIfPresent([FailableEntry<T>].self, forKey: key)) ?? nil
+        else { return nil }
+        return raw.compactMap { $0.value }
+    }
+}
+
+/// 解码永不失败的包装：条目损坏时 value 为 nil（配合 lossyList 做逐条容错）。
+private struct FailableEntry<T: Decodable>: Decodable {
+    let value: T?
+    init(from decoder: Decoder) throws { value = try? T(from: decoder) }
+}
+
+extension KeyedDecodingContainer {
+    /// 键缺失、显式 null、或值类型不符 → 回退默认值。
+    /// （`try?` 覆盖含 `??` 的整个右侧表达式，故需两级 `??` 分别兜「解码抛错」与「键缺失」。）
+    func value<T: Decodable>(_ key: Key, default d: T) -> T {
+        (try? decodeIfPresent(T.self, forKey: key) ?? d) ?? d
     }
 }
 
@@ -162,11 +185,6 @@ extension Settings {
             .sorted { (builtinIndex[$0.bundleId] ?? .max) < (builtinIndex[$1.bundleId] ?? .max) }
         let customs = entries.filter { $0.custom } // 保留插入顺序
         return builtins + customs
-    }
-
-    /// 扩展端：要在菜单显示的条目（启用且当前已安装），按列表顺序。
-    public func menuApps(_ list: [AppEntry], isInstalled: (String) -> Bool) -> [AppEntry] {
-        list.filter { $0.enabled && isInstalled($0.bundleId) }
     }
 
     /// 迁移/防御旧配置：命令名作为执行协议的唯一键，必须非空且不重复；

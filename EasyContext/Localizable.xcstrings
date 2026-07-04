@@ -1,442 +1,242 @@
 {
   "sourceLanguage": "en",
   "strings": {
-    "Hide Easy Context": {
+    "Add": {
       "localizations": {
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "隱藏 Easy Context"
+            "value": "新增"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Easy Context を隠す"
+            "value": "追加"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Easy Context ausblenden"
+            "value": "Hinzufügen"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Masquer Easy Context"
+            "value": "Ajouter"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ocultar Easy Context"
+            "value": "Añadir"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "隐藏 Easy Context"
+            "value": "添加"
           }
         }
       }
     },
-    "Quit Easy Context": {
+    "Add Anyway": {
       "localizations": {
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "結束 Easy Context"
+            "value": "仍要新增"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Easy Context を終了"
+            "value": "追加する"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Easy Context beenden"
+            "value": "Trotzdem hinzufügen"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Quitter Easy Context"
+            "value": "Ajouter quand même"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Salir de Easy Context"
+            "value": "Añadir de todos modos"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "退出 Easy Context"
+            "value": "仍然添加"
           }
         }
       }
     },
-    "File": {
+    "Add command": {
       "localizations": {
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "檔案"
+            "value": "新增指令"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ファイル"
+            "value": "コマンドを追加"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ablage"
+            "value": "Befehl hinzufügen"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fichier"
+            "value": "Ajouter une commande"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Archivo"
+            "value": "Añadir comando"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "文件"
+            "value": "新增命令"
           }
         }
       }
     },
-    "Close Window": {
+    "Add custom app": {
       "localizations": {
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "關閉視窗"
+            "value": "新增自訂 App"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ウインドウを閉じる"
+            "value": "カスタム App を追加"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fenster schließen"
+            "value": "Eigene App hinzufügen"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fermer la fenêtre"
+            "value": "Ajouter une app personnalisée"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cerrar ventana"
+            "value": "Añadir app personalizada"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "关闭窗口"
+            "value": "添加自定义 App"
           }
         }
       }
     },
-    "Edit": {
+    "App Icon": {
       "localizations": {
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "編輯"
+            "value": "應用程式圖示"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "編集"
+            "value": "アプリアイコン"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bearbeiten"
+            "value": "App-Symbol"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Édition"
+            "value": "Icône de l'app"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Edición"
+            "value": "Icono de la app"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "编辑"
+            "value": "应用图标"
           }
         }
       }
     },
-    "Cut": {
+    "Automation Permission Required": {
       "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "需要自动化权限"
+          }
+        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "剪下"
+            "value": "需要自動化權限"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "カット"
+            "value": "オートメーションの許可が必要です"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ausschneiden"
+            "value": "Automatisierungsberechtigung erforderlich"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Couper"
+            "value": "Autorisation d'automatisation requise"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cortar"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "剪切"
-          }
-        }
-      }
-    },
-    "Copy": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "拷貝"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "コピー"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kopieren"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Copier"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Copiar"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "拷贝"
-          }
-        }
-      }
-    },
-    "Paste": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "貼上"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ペースト"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Einsetzen"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Coller"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pegar"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "粘贴"
-          }
-        }
-      }
-    },
-    "Select All": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "全選"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "すべてを選択"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Alles auswählen"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tout sélectionner"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Seleccionar todo"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "全选"
-          }
-        }
-      }
-    },
-    "Enter file name:": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "輸入檔案名稱："
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ファイル名を入力："
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dateiname eingeben:"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Saisir le nom du fichier :"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Introduce el nombre del archivo:"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "输入文件名："
-          }
-        }
-      }
-    },
-    "New File": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "新增檔案"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "新規ファイル"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Neue Datei"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nouveau fichier"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nuevo archivo"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "新建文件"
+            "value": "Se requiere permiso de automatización"
           }
         }
       }
@@ -481,46 +281,6 @@
         }
       }
     },
-    "Create": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "建立"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "作成"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Erstellen"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Créer"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Crear"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "创建"
-          }
-        }
-      }
-    },
     "Cannot Run": {
       "localizations": {
         "zh-Hant": {
@@ -561,282 +321,322 @@
         }
       }
     },
-    "“%@” has no launch template configured. Please add one in EasyContext settings.": {
+    "Close Window": {
       "localizations": {
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "「%@」尚未設定啟動範本，請在 EasyContext 設定中為它填寫範本。"
+            "value": "關閉視窗"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "「%@」に起動テンプレートが設定されていません。EasyContext の設定でテンプレートを入力してください。"
+            "value": "ウインドウを閉じる"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Für „%@“ ist keine Startvorlage konfiguriert. Bitte lege in den EasyContext-Einstellungen eine an."
+            "value": "Fenster schließen"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aucun modèle de lancement n'est configuré pour « %@ ». Ajoutez-en un dans les réglages d'EasyContext."
+            "value": "Fermer la fenêtre"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "«%@» no tiene una plantilla de inicio configurada. Añádela en los ajustes de EasyContext."
+            "value": "Cerrar ventana"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "“%@” 未配置启动模板，请在 EasyContext 设置里为它填写模板。"
+            "value": "关闭窗口"
           }
         }
       }
     },
-    "Run Failed": {
+    "Color": {
       "localizations": {
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "執行失敗"
+            "value": "彩色"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "実行に失敗しました"
+            "value": "カラー"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ausführung fehlgeschlagen"
+            "value": "Farbig"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Échec de l'exécution"
+            "value": "Couleur"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Error al ejecutar"
+            "value": "Color"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "运行失败"
+            "value": "彩色"
           }
         }
       }
     },
-    "Failed to Create File": {
+    "Command": {
       "localizations": {
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "新增檔案失敗"
+            "value": "指令"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ファイルの作成に失敗しました"
+            "value": "コマンド"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Datei konnte nicht erstellt werden"
+            "value": "Befehl"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Échec de la création du fichier"
+            "value": "Commande"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Error al crear el archivo"
+            "value": "Comando"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "新建文件失败"
+            "value": "命令"
           }
         }
       }
     },
-    "Could not create a file in this folder.": {
+    "Command name already exists. Please choose a different name.": {
       "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "命令名称已存在。请选择其他名称。"
+          }
+        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "無法在該目錄建立檔案。"
+            "value": "命令名稱已存在。請選擇其他名稱。"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "このフォルダにファイルを作成できませんでした。"
+            "value": "同じコマンド名がすでにあります。別の名前を選んでください。"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "In diesem Ordner konnte keine Datei erstellt werden."
+            "value": "Der Befehlsname ist bereits vorhanden. Wähle einen anderen Namen."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Impossible de créer un fichier dans ce dossier."
+            "value": "Ce nom de commande existe déjà. Choisissez un autre nom."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "No se pudo crear un archivo en esta carpeta."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无法在该目录创建文件。"
+            "value": "El nombre del comando ya existe. Elige otro nombre."
           }
         }
       }
     },
-    "Editors shown in menu": {
+    "Command name cannot be empty.": {
       "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "命令名称不能为空。"
+          }
+        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "選單顯示的編輯器"
+            "value": "命令名稱不能為空。"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "メニューに表示するエディタ"
+            "value": "コマンド名は空にできません。"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Im Menü angezeigte Editoren"
+            "value": "Der Befehlsname darf nicht leer sein."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Éditeurs affichés dans le menu"
+            "value": "Le nom de la commande ne peut pas être vide."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Editores mostrados en el menú"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "菜单显示的编辑器"
+            "value": "El nombre del comando no puede estar vacío."
           }
         }
       }
     },
-    "Terminals shown in menu": {
+    "Command, e.g. claude": {
       "localizations": {
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "選單顯示的終端機"
+            "value": "指令，例如 claude"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "メニューに表示するターミナル"
+            "value": "コマンド（例：claude）"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Im Menü angezeigte Terminals"
+            "value": "Befehl, z. B. claude"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Terminaux affichés dans le menu"
+            "value": "Commande, p. ex. claude"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Terminales mostrados en el menú"
+            "value": "Comando, p. ej. claude"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "菜单显示的终端"
+            "value": "命令，如 claude"
           }
         }
       }
     },
-    "Menu Items": {
+    "Config file is corrupted. It was backed up as config.json.bak; using default settings.": {
       "localizations": {
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "選單項目"
+            "value": "設定檔已損毀，已備份為 config.json.bak，目前使用預設設定"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "メニュー項目"
+            "value": "設定ファイルが破損しています。config.json.bak としてバックアップし、デフォルト設定を使用中です。"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Menüeinträge"
+            "value": "Konfigurationsdatei ist beschädigt. Sie wurde als config.json.bak gesichert; Standardeinstellungen werden verwendet."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Éléments du menu"
+            "value": "Le fichier de configuration est corrompu. Il a été sauvegardé sous config.json.bak ; réglages par défaut utilisés."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Elementos del menú"
+            "value": "El archivo de configuración está dañado. Se guardó como config.json.bak; se usan los ajustes predeterminados."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "菜单项"
+            "value": "配置文件损坏，已备份为 config.json.bak，当前使用默认设置"
+          }
+        }
+      }
+    },
+    "Copy": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拷貝"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コピー"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kopieren"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copier"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copiar"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拷贝"
           }
         }
       }
@@ -921,522 +721,82 @@
         }
       }
     },
-    "App Icon": {
+    "Could not create a file in this folder.": {
       "localizations": {
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "應用程式圖示"
+            "value": "無法在該目錄建立檔案。"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "アプリアイコン"
+            "value": "このフォルダにファイルを作成できませんでした。"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "App-Symbol"
+            "value": "In diesem Ordner konnte keine Datei erstellt werden."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Icône de l'app"
+            "value": "Impossible de créer un fichier dans ce dossier."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Icono de la app"
+            "value": "No se pudo crear un archivo en esta carpeta."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "应用图标"
+            "value": "无法在该目录创建文件。"
           }
         }
       }
     },
-    "Monochrome": {
+    "Create": {
       "localizations": {
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "黑白"
+            "value": "建立"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "モノクロ"
+            "value": "作成"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Schwarzweiß"
+            "value": "Erstellen"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Monochrome"
+            "value": "Créer"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Monocromo"
+            "value": "Crear"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "黑白"
-          }
-        }
-      }
-    },
-    "Color": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "彩色"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "カラー"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Farbig"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Couleur"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Color"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "彩色"
-          }
-        }
-      }
-    },
-    "Other": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "其他"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "その他"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sonstiges"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Autre"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Otros"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "其他"
-          }
-        }
-      }
-    },
-    "Open Config Folder": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "開啟設定資料夾"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "設定フォルダを開く"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Konfigurationsordner öffnen"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ouvrir le dossier de configuration"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Abrir carpeta de configuración"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "打开配置目录"
-          }
-        }
-      }
-    },
-    "Finder Extension Settings": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Finder 擴充功能設定"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Finder 機能拡張の設定"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Finder-Erweiterungseinstellungen"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Réglages de l'extension Finder"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ajustes de la extensión del Finder"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "访达扩展设置"
-          }
-        }
-      }
-    },
-    "Custom Commands": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "自訂指令"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "カスタムコマンド"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eigene Befehle"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Commandes personnalisées"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Comandos personalizados"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "自定义命令"
-          }
-        }
-      }
-    },
-    "⚠ Running commands externally in this terminal may prompt for confirmation and open extra windows. Use Terminal / iTerm instead.": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "⚠ 此終端機從外部執行指令會跳出確認且可能開啟多個視窗，建議改用 Terminal / iTerm"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "⚠ このターミナルで外部からコマンドを実行すると確認が表示され、複数のウインドウが開くことがあります。Terminal / iTerm の使用をおすすめします。"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "⚠ Wenn Befehle extern in diesem Terminal ausgeführt werden, erscheint eine Bestätigung und es öffnen sich ggf. mehrere Fenster. Verwende stattdessen Terminal / iTerm."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "⚠ L'exécution externe de commandes dans ce terminal peut demander une confirmation et ouvrir plusieurs fenêtres. Utilisez plutôt Terminal / iTerm."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "⚠ Ejecutar comandos externamente en este terminal puede pedir confirmación y abrir varias ventanas. Usa Terminal / iTerm en su lugar."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "⚠ 该终端从外部运行命令会弹确认且可能多开窗口，建议改用 Terminal / iTerm"
-          }
-        }
-      }
-    },
-    "Run in terminal": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "執行終端機"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "実行ターミナル"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ausführungsterminal"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Terminal d'exécution"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Terminal de ejecución"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "执行终端"
-          }
-        }
-      }
-    },
-    "Name": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "名稱"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "名前"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Name"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nom"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nombre"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "名称"
-          }
-        }
-      }
-    },
-    "Command, e.g. claude": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "指令，例如 claude"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "コマンド（例：claude）"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Befehl, z. B. claude"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Commande, p. ex. claude"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Comando, p. ej. claude"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "命令，如 claude"
-          }
-        }
-      }
-    },
-    "Add command": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "新增指令"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "コマンドを追加"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Befehl hinzufügen"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ajouter une commande"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Añadir comando"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "新增命令"
-          }
-        }
-      }
-    },
-    "Delete selected command": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "刪除所選指令"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "選択したコマンドを削除"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ausgewählten Befehl löschen"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Supprimer la commande sélectionnée"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eliminar el comando seleccionado"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "删除选中的命令"
+            "value": "创建"
           }
         }
       }
@@ -1481,162 +841,202 @@
         }
       }
     },
-    "Add custom app": {
+    "Custom Commands": {
       "localizations": {
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "新增自訂 App"
+            "value": "自訂指令"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "カスタム App を追加"
+            "value": "カスタムコマンド"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Eigene App hinzufügen"
+            "value": "Eigene Befehle"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ajouter une app personnalisée"
+            "value": "Commandes personnalisées"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Añadir app personalizada"
+            "value": "Comandos personalizados"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "添加自定义 App"
+            "value": "自定义命令"
           }
         }
       }
     },
-    "Remove selected custom item (built-in items can't be removed)": {
+    "Cut": {
       "localizations": {
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "移除所選自訂項目（內建項目無法移除）"
+            "value": "剪下"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "選択したカスタム項目を削除（内蔵項目は削除不可）"
+            "value": "カット"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ausgewählten eigenen Eintrag entfernen (integrierte Einträge lassen sich nicht entfernen)"
+            "value": "Ausschneiden"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Retirer l'élément personnalisé sélectionné (les éléments intégrés ne peuvent pas être retirés)"
+            "value": "Couper"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Quitar el elemento personalizado seleccionado (los integrados no se pueden quitar)"
+            "value": "Cortar"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "移除选中的自定义项（内置项不可删）"
+            "value": "剪切"
           }
         }
       }
     },
-    "Config file is corrupted. It was backed up as config.json.bak; using default settings.": {
+    "Delete selected command": {
       "localizations": {
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "設定檔已損毀，已備份為 config.json.bak，目前使用預設設定"
+            "value": "刪除所選指令"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "設定ファイルが破損しています。config.json.bak としてバックアップし、デフォルト設定を使用中です。"
+            "value": "選択したコマンドを削除"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Konfigurationsdatei ist beschädigt. Sie wurde als config.json.bak gesichert; Standardeinstellungen werden verwendet."
+            "value": "Ausgewählten Befehl löschen"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Le fichier de configuration est corrompu. Il a été sauvegardé sous config.json.bak ; réglages par défaut utilisés."
+            "value": "Supprimer la commande sélectionnée"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "El archivo de configuración está dañado. Se guardó como config.json.bak; se usan los ajustes predeterminados."
+            "value": "Eliminar el comando seleccionado"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "配置文件损坏，已备份为 config.json.bak，当前使用默认设置"
+            "value": "删除选中的命令"
           }
         }
       }
     },
-    "The Finder extension isn't enabled yet, so the right-click menu won't appear.": {
+    "Edit": {
       "localizations": {
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "Finder 擴充功能尚未啟用，右鍵選單不會出現"
+            "value": "編輯"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Finder 機能拡張がまだ有効になっていないため、右クリックメニューは表示されません。"
+            "value": "編集"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Die Finder-Erweiterung ist noch nicht aktiviert, daher erscheint das Kontextmenü nicht."
+            "value": "Bearbeiten"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "L'extension Finder n'est pas encore activée, le menu contextuel n'apparaîtra pas."
+            "value": "Édition"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "La extensión del Finder aún no está activada, por lo que el menú contextual no aparecerá."
+            "value": "Edición"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "访达扩展尚未启用，右键菜单不会出现"
+            "value": "编辑"
+          }
+        }
+      }
+    },
+    "Editors shown in menu": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選單顯示的編輯器"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メニューに表示するエディタ"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Im Menü angezeigte Editoren"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Éditeurs affichés dans le menu"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Editores mostrados en el menú"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "菜单显示的编辑器"
           }
         }
       }
@@ -1681,242 +1081,202 @@
         }
       }
     },
-    "Re-check": {
+    "Enter file name:": {
       "localizations": {
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "重新偵測"
+            "value": "輸入檔案名稱："
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "再検出"
+            "value": "ファイル名を入力："
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Erneut prüfen"
+            "value": "Dateiname eingeben:"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Revérifier"
+            "value": "Saisir le nom du fichier :"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Volver a comprobar"
+            "value": "Introduce el nombre del archivo:"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "重新检测"
+            "value": "输入文件名："
           }
         }
       }
     },
-    "Add": {
+    "Failed to Create File": {
       "localizations": {
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "新增"
+            "value": "新增檔案失敗"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "追加"
+            "value": "ファイルの作成に失敗しました"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hinzufügen"
+            "value": "Datei konnte nicht erstellt werden"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ajouter"
+            "value": "Échec de la création du fichier"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Añadir"
+            "value": "Error al crear el archivo"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "添加"
+            "value": "新建文件失败"
           }
         }
       }
     },
-    "“%@” may not support opening folders": {
+    "File": {
       "localizations": {
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "「%@」可能不支援以目錄方式開啟"
+            "value": "檔案"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "「%@」はフォルダを開くことに対応していない可能性があります"
+            "value": "ファイル"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "„%@“ unterstützt möglicherweise kein Öffnen von Ordnern"
+            "value": "Ablage"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "« %@ » ne prend peut-être pas en charge l'ouverture de dossiers"
+            "value": "Fichier"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "«%@» podría no admitir la apertura de carpetas"
+            "value": "Archivo"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "“%@” 可能不支持以目录方式打开"
+            "value": "文件"
           }
         }
       }
     },
-    "This app doesn't declare that it can open folders, so clicking it from the right-click menu may not open the directory. Add it anyway?": {
+    "Finder Extension Settings": {
       "localizations": {
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "此應用程式未宣告可開啟資料夾，從右鍵選單點按它時可能無法正常開啟資料夾。仍要新增嗎？"
+            "value": "Finder 擴充功能設定"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "この App はフォルダを開けると宣言していないため、右クリックメニューから選んでもディレクトリを開けないことがあります。追加しますか？"
+            "value": "Finder 機能拡張の設定"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Diese App gibt nicht an, dass sie Ordner öffnen kann. Beim Klick im Kontextmenü wird der Ordner möglicherweise nicht geöffnet. Trotzdem hinzufügen?"
+            "value": "Finder-Erweiterungseinstellungen"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cette app ne déclare pas pouvoir ouvrir des dossiers ; en cliquant depuis le menu contextuel, le dossier pourrait ne pas s'ouvrir. L'ajouter quand même ?"
+            "value": "Réglages de l'extension Finder"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Esta app no declara que pueda abrir carpetas, así que al hacer clic desde el menú contextual puede que no abra el directorio. ¿Añadirla de todos modos?"
+            "value": "Ajustes de la extensión del Finder"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "该应用未声明可打开文件夹，从右键菜单点击它时可能无法正常打开目录。仍要添加吗？"
+            "value": "访达扩展设置"
           }
         }
       }
     },
-    "Add Anyway": {
+    "Hide Easy Context": {
       "localizations": {
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "仍要新增"
+            "value": "隱藏 Easy Context"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "追加する"
+            "value": "Easy Context を隠す"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Trotzdem hinzufügen"
+            "value": "Easy Context ausblenden"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ajouter quand même"
+            "value": "Masquer Easy Context"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Añadir de todos modos"
+            "value": "Ocultar Easy Context"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "仍然添加"
-          }
-        }
-      }
-    },
-    "Command": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "指令"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "コマンド"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Befehl"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Commande"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Comando"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "命令"
+            "value": "隐藏 Easy Context"
           }
         }
       }
@@ -1961,82 +1321,1082 @@
         }
       }
     },
-    "Command name cannot be empty.": {
+    "Menu Items": {
       "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "命令名称不能为空。"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "命令名稱不能為空。"
+            "value": "選單項目"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "コマンド名は空にできません。"
+            "value": "メニュー項目"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Der Befehlsname darf nicht leer sein."
+            "value": "Menüeinträge"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Le nom de la commande ne peut pas être vide."
+            "value": "Éléments du menu"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "El nombre del comando no puede estar vacío."
+            "value": "Elementos del menú"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "菜单项"
           }
         }
       }
     },
-    "Command name already exists. Please choose a different name.": {
+    "Monochrome": {
       "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "命令名称已存在。请选择其他名称。"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "命令名稱已存在。請選擇其他名稱。"
+            "value": "黑白"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "同じコマンド名がすでにあります。別の名前を選んでください。"
+            "value": "モノクロ"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Der Befehlsname ist bereits vorhanden. Wähle einen anderen Namen."
+            "value": "Schwarzweiß"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ce nom de commande existe déjà. Choisissez un autre nom."
+            "value": "Monochrome"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "El nombre del comando ya existe. Elige otro nombre."
+            "value": "Monocromo"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "黑白"
+          }
+        }
+      }
+    },
+    "Name": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名稱"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名前"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nom"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nombre"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名称"
+          }
+        }
+      }
+    },
+    "New File": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新增檔案"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新規ファイル"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue Datei"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nouveau fichier"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nuevo archivo"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新建文件"
+          }
+        }
+      }
+    },
+    "OK": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "好"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "好"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aceptar"
+          }
+        }
+      }
+    },
+    "Open Config Folder": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開啟設定資料夾"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定フォルダを開く"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Konfigurationsordner öffnen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvrir le dossier de configuration"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir carpeta de configuración"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开配置目录"
+          }
+        }
+      }
+    },
+    "Open System Settings": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开系统设置"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打開系統設定"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "システム設定を開く"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Systemeinstellungen öffnen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvrir Réglages Système"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir Ajustes del Sistema"
+          }
+        }
+      }
+    },
+    "Other": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "其他"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "その他"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonstiges"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Autre"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otros"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "其他"
+          }
+        }
+      }
+    },
+    "Paste": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "貼上"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ペースト"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einsetzen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coller"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pegar"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "粘贴"
+          }
+        }
+      }
+    },
+    "Quit Easy Context": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "結束 Easy Context"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Easy Context を終了"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Easy Context beenden"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quitter Easy Context"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salir de Easy Context"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "退出 Easy Context"
+          }
+        }
+      }
+    },
+    "Re-check": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新偵測"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再検出"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erneut prüfen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Revérifier"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Volver a comprobar"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新检测"
+          }
+        }
+      }
+    },
+    "Redo": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重做"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重做"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "やり直す"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wiederholen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rétablir"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rehacer"
+          }
+        }
+      }
+    },
+    "Remove selected custom item (built-in items can't be removed)": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除所選自訂項目（內建項目無法移除）"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択したカスタム項目を削除（内蔵項目は削除不可）"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausgewählten eigenen Eintrag entfernen (integrierte Einträge lassen sich nicht entfernen)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retirer l'élément personnalisé sélectionné (les éléments intégrés ne peuvent pas être retirés)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quitar el elemento personalizado seleccionado (los integrados no se pueden quitar)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除选中的自定义项（内置项不可删）"
+          }
+        }
+      }
+    },
+    "Retry": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重试"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重試"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再試行"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erneut versuchen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réessayer"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reintentar"
+          }
+        }
+      }
+    },
+    "Run Failed": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "執行失敗"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "実行に失敗しました"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausführung fehlgeschlagen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Échec de l'exécution"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Error al ejecutar"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "运行失败"
+          }
+        }
+      }
+    },
+    "Run in terminal": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "執行終端機"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "実行ターミナル"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausführungsterminal"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terminal d'exécution"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terminal de ejecución"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "执行终端"
+          }
+        }
+      }
+    },
+    "Select All": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全選"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてを選択"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alles auswählen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tout sélectionner"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seleccionar todo"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全选"
+          }
+        }
+      }
+    },
+    "Settings can't be written to disk. Changes apply to this session only.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设置无法写入磁盘，更改仅本次运行期间生效。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定無法寫入磁碟，變更僅在本次執行期間生效。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定をディスクに書き込めません。変更は今回の起動中のみ有効です。"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einstellungen können nicht auf die Festplatte geschrieben werden. Änderungen gelten nur für diese Sitzung."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible d'enregistrer les réglages sur le disque. Les modifications ne s'appliquent qu'à cette session."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pueden guardar los ajustes en el disco. Los cambios solo se aplican a esta sesión."
+          }
+        }
+      }
+    },
+    "Terminals shown in menu": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選單顯示的終端機"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メニューに表示するターミナル"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Im Menü angezeigte Terminals"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terminaux affichés dans le menu"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terminales mostrados en el menú"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "菜单显示的终端"
+          }
+        }
+      }
+    },
+    "The Finder extension isn't enabled yet, so the right-click menu won't appear.": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finder 擴充功能尚未啟用，右鍵選單不會出現"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finder 機能拡張がまだ有効になっていないため、右クリックメニューは表示されません。"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Finder-Erweiterung ist noch nicht aktiviert, daher erscheint das Kontextmenü nicht."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'extension Finder n'est pas encore activée, le menu contextuel n'apparaîtra pas."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La extensión del Finder aún no está activada, por lo que el menú contextual no aparecerá."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "访达扩展尚未启用，右键菜单不会出现"
+          }
+        }
+      }
+    },
+    "The command exited with an error.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "命令执行出错并退出。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "指令執行出錯並結束。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コマンドがエラーで終了しました。"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Befehl wurde mit einem Fehler beendet."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La commande s'est terminée avec une erreur."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El comando terminó con un error."
+          }
+        }
+      }
+    },
+    "This app doesn't declare that it can open folders, so clicking it from the right-click menu may not open the directory. Add it anyway?": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此應用程式未宣告可開啟資料夾，從右鍵選單點按它時可能無法正常開啟資料夾。仍要新增嗎？"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この App はフォルダを開けると宣言していないため、右クリックメニューから選んでもディレクトリを開けないことがあります。追加しますか？"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese App gibt nicht an, dass sie Ordner öffnen kann. Beim Klick im Kontextmenü wird der Ordner möglicherweise nicht geöffnet. Trotzdem hinzufügen?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette app ne déclare pas pouvoir ouvrir des dossiers ; en cliquant depuis le menu contextuel, le dossier pourrait ne pas s'ouvrir. L'ajouter quand même ?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta app no declara que pueda abrir carpetas, así que al hacer clic desde el menú contextual puede que no abra el directorio. ¿Añadirla de todos modos?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "该应用未声明可打开文件夹，从右键菜单点击它时可能无法正常打开目录。仍要添加吗？"
+          }
+        }
+      }
+    },
+    "This command was renamed or disabled. Reopen the right-click menu and try again.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "该命令已被重命名或停用。请重新打开右键菜单再试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "該指令已被重新命名或停用。請重新打開右鍵選單再試。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このコマンドは名前が変更されたか、無効になっています。右クリックメニューを開き直して、もう一度お試しください。"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieser Befehl wurde umbenannt oder deaktiviert. Öffnen Sie das Kontextmenü erneut und versuchen Sie es noch einmal."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette commande a été renommée ou désactivée. Rouvrez le menu contextuel et réessayez."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este comando fue renombrado o desactivado. Vuelve a abrir el menú contextual e inténtalo de nuevo."
+          }
+        }
+      }
+    },
+    "Undo": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "撤销"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "還原"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取り消す"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Widerrufen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annuler"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deshacer"
+          }
+        }
+      }
+    },
+    "macOS is blocking Easy Context from controlling the terminal. Enable Easy Context in System Settings → Privacy & Security → Automation, then try again.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS 正在阻止 Easy Context 控制终端。请在「系统设置 → 隐私与安全性 → 自动化」中允许 Easy Context，然后重试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS 正在阻止 Easy Context 控制終端機。請在「系統設定 → 隱私權與安全性 → 自動化」中允許 Easy Context，然後再試一次。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS が Easy Context によるターミナルの制御をブロックしています。「システム設定 → プライバシーとセキュリティ → オートメーション」で Easy Context を許可してから、もう一度お試しください。"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS blockiert die Steuerung des Terminals durch Easy Context. Erlauben Sie Easy Context unter „Systemeinstellungen → Datenschutz & Sicherheit → Automatisierung“ und versuchen Sie es erneut."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS empêche Easy Context de contrôler le terminal. Autorisez Easy Context dans Réglages Système → Confidentialité et sécurité → Automatisation, puis réessayez."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS está impidiendo que Easy Context controle el terminal. Permite Easy Context en Ajustes del Sistema → Privacidad y seguridad → Automatización y vuelve a intentarlo."
+          }
+        }
+      }
+    },
+    "“%@” has no launch template configured. Please add one in EasyContext settings.": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」尚未設定啟動範本，請在 EasyContext 設定中為它填寫範本。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」に起動テンプレートが設定されていません。EasyContext の設定でテンプレートを入力してください。"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für „%@“ ist keine Startvorlage konfiguriert. Bitte lege in den EasyContext-Einstellungen eine an."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun modèle de lancement n'est configuré pour « %@ ». Ajoutez-en un dans les réglages d'EasyContext."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "«%@» no tiene una plantilla de inicio configurada. Añádela en los ajustes de EasyContext."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” 未配置启动模板，请在 EasyContext 设置里为它填写模板。"
+          }
+        }
+      }
+    },
+    "“%@” may not support opening folders": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」可能不支援以目錄方式開啟"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」はフォルダを開くことに対応していない可能性があります"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ unterstützt möglicherweise kein Öffnen von Ordnern"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "« %@ » ne prend peut-être pas en charge l'ouverture de dossiers"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "«%@» podría no admitir la apertura de carpetas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” 可能不支持以目录方式打开"
           }
         }
       }

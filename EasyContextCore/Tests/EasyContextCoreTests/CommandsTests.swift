@@ -57,13 +57,15 @@ final class CommandsTests: XCTestCase {
         XCTAssertEqual(TerminalLaunch.render(t), t)
     }
 
-    // -e 型终端（kitty/WezTerm/Alacritty）通过登录 shell 运行命令，保证 GUI 下 PATH 齐全
+    // -e 型终端（kitty/WezTerm/Alacritty）通过登录 shell 运行命令，保证 GUI 下 PATH 齐全；
+    // 按 bundleId 启动（open -nb），App 被重命名也不失效；$EC_SHELL 加引号防路径含空格。
     func test_builtin_dashE_terminals_runViaLoginShell() {
         for id in ["net.kovidgoyal.kitty", "com.github.wez.wezterm", "org.alacritty"] {
             let t = TerminalLaunch.builtinTemplates[id]!
-            XCTAssertTrue(t.contains("$EC_SHELL -lic {cmd}"), "\(id) 应经 $EC_SHELL -lic 运行命令")
+            XCTAssertTrue(t.contains("open -nb \(id)"), "\(id) 应按 bundleId 启动")
+            XCTAssertTrue(t.contains("\"$EC_SHELL\" -lic {cmd}"), "\(id) 应经 $EC_SHELL -lic 运行命令")
             let r = TerminalLaunch.render(t)
-            XCTAssertTrue(r.contains("$EC_SHELL -lic \"$EC_CMD\""))
+            XCTAssertTrue(r.contains("\"$EC_SHELL\" -lic \"$EC_CMD\""))
             XCTAssertFalse(r.contains("{cmd}"))
         }
     }
