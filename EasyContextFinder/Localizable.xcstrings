@@ -1,0 +1,66 @@
+{
+  "sourceLanguage" : "zh-Hans",
+  "strings" : {
+    "复制路径" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Copy Path" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "複製路徑" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "パスをコピー" } },
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Pfad kopieren" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Copier le chemin" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Copiar ruta" } }
+      }
+    },
+    "复制相对路径" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Copy Relative Path" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "複製相對路徑" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "相対パスをコピー" } },
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Relativen Pfad kopieren" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Copier le chemin relatif" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Copiar ruta relativa" } }
+      }
+    },
+    "用 %@ 打开终端" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Open Terminal with %@" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "以 %@ 開啟終端機" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@ でターミナルを開く" } },
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Terminal mit %@ öffnen" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ouvrir le terminal avec %@" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Abrir terminal con %@" } }
+      }
+    },
+    "用 %@ 打开" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Open with %@" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "以 %@ 開啟" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@ で開く" } },
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Mit %@ öffnen" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ouvrir avec %@" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Abrir con %@" } }
+      }
+    },
+    "用 %@ 运行 %@" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Run %2$@ in %1$@" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "在 %1$@ 執行 %2$@" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "%1$@ で %2$@ を実行" } },
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "%2$@ in %1$@ ausführen" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Exécuter %2$@ dans %1$@" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Ejecutar %2$@ en %1$@" } }
+      }
+    },
+    "新建文件" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "New File" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "新增檔案" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "新規ファイル" } },
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Neue Datei" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Nouveau fichier" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Nuevo archivo" } }
+      }
+    }
+  },
+  "version" : "1.0"
+}

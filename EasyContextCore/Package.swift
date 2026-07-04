@@ -3,12 +3,13 @@ import PackageDescription
 
 let package = Package(
     name: "EasyContextCore",
+    defaultLocalization: "zh-Hans",
     platforms: [.macOS(.v13)],
     products: [
         .library(name: "EasyContextCore", targets: ["EasyContextCore"]),
     ],
     targets: [
-        .target(name: "EasyContextCore"),
+        .target(name: "EasyContextCore", resources: [.process("Localizable.xcstrings")]),
         .testTarget(name: "EasyContextCoreTests", dependencies: ["EasyContextCore"]),
     ]
 )

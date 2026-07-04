@@ -30,7 +30,8 @@ enum CommandLauncher {
         // 终端必须有模板（内置或用户覆盖）。
         guard let template = TerminalLaunch.template(for: term, overrides: settings.terminalTemplates)
         else {
-            notify("无法运行", "“\(term)” 未配置启动模板，请在 EasyContext 设置里为它填写模板。")
+            notify(String(localized: "无法运行"),
+                   String(localized: "“\(term)” 未配置启动模板，请在 EasyContext 设置里为它填写模板。"))
             return
         }
         run(command: entry.command, dir: dir, template: template)
@@ -46,7 +47,7 @@ enum CommandLauncher {
         env["EC_CMD"] = command
         env["EC_SHELL"] = loginShell() // `-e` 型模板据此走登录 shell 取全 PATH
         process.environment = env
-        do { try process.run() } catch { notify("运行失败", error.localizedDescription) }
+        do { try process.run() } catch { notify(String(localized: "运行失败"), error.localizedDescription) }
     }
 
     /// 用户登录 shell（GUI 进程环境里 SHELL 常缺失，故从 passwd 取），兜底 /bin/zsh。

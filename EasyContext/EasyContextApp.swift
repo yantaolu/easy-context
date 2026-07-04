@@ -95,27 +95,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let appItem = NSMenuItem()
         mainMenu.addItem(appItem)
         let appMenu = NSMenu()
-        appMenu.addItem(withTitle: "隐藏 Easy Context",
+        appMenu.addItem(withTitle: String(localized: "隐藏 Easy Context"),
                         action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: "退出 Easy Context",
+        appMenu.addItem(withTitle: String(localized: "退出 Easy Context"),
                         action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appItem.submenu = appMenu
         // 文件菜单：提供标准「关闭窗口 ⌘W」（走响应链到当前 key 窗口）。
         let fileItem = NSMenuItem()
         mainMenu.addItem(fileItem)
-        let fileMenu = NSMenu(title: "文件")
-        fileMenu.addItem(withTitle: "关闭窗口",
+        let fileMenu = NSMenu(title: String(localized: "文件"))
+        fileMenu.addItem(withTitle: String(localized: "关闭窗口"),
                          action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
         fileItem.submenu = fileMenu
         // 编辑菜单：让命名面板输入框支持 复制/粘贴/全选 等快捷键。
         let editItem = NSMenuItem()
         mainMenu.addItem(editItem)
-        let editMenu = NSMenu(title: "编辑")
-        editMenu.addItem(withTitle: "剪切", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
-        editMenu.addItem(withTitle: "拷贝", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
-        editMenu.addItem(withTitle: "粘贴", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
-        editMenu.addItem(withTitle: "全选", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        let editMenu = NSMenu(title: String(localized: "编辑"))
+        editMenu.addItem(withTitle: String(localized: "剪切"), action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        editMenu.addItem(withTitle: String(localized: "拷贝"), action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        editMenu.addItem(withTitle: String(localized: "粘贴"), action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        editMenu.addItem(withTitle: String(localized: "全选"), action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
         editItem.submenu = editMenu
         NSApp.mainMenu = mainMenu
     }

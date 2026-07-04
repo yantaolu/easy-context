@@ -8,6 +8,7 @@
 name: EasyContext
 options:
   bundleIdPrefix: com.luyantao.easycontext
+  developmentLanguage: zh-Hans
   deploymentTarget:
     macOS: "13.0"
   createIntermediateGroups: true
@@ -43,6 +44,14 @@ targets:
       path: EasyContext/Info.plist
       properties:
         CFBundleDisplayName: Easy Context
+        CFBundleLocalizations:
+          - zh-Hans
+          - en
+          - zh-Hant
+          - ja
+          - de
+          - fr
+          - es
         LSMinimumSystemVersion: "13.0"
         LSUIElement: true
         CFBundleURLTypes:
@@ -65,6 +74,14 @@ targets:
       path: EasyContextFinder/Info.plist
       properties:
         CFBundleDisplayName: EasyContextFinder
+        CFBundleLocalizations:
+          - zh-Hans
+          - en
+          - zh-Hant
+          - ja
+          - de
+          - fr
+          - es
         NSExtension:
           NSExtensionPointIdentifier: com.apple.FinderSync
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).FinderSyncExtension

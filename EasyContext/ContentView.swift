@@ -78,7 +78,7 @@ struct ContentView: View {
         }
     }
 
-    private func menuRow(_ title: String,
+    private func menuRow(_ title: LocalizedStringKey,
                          _ keyPath: WritableKeyPath<CoreSettings.Items, Bool>) -> some View {
         itemToggle(title, keyPath)
             .listRowSeparator(.hidden)
@@ -226,7 +226,7 @@ struct ContentView: View {
 
     // 原生 List：自带选中高亮 + 点空白取消 + 统一 padding。
     // fixedThreeRows=true → 固定 3 行高（≤3 不滚动、>3 滚动）；否则撑满剩余。
-    private func appColumn(_ title: String, category: AppCategory,
+    private func appColumn(_ title: LocalizedStringKey, category: AppCategory,
                            fixedThreeRows: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             sectionTitle(title)
@@ -324,7 +324,7 @@ struct ContentView: View {
         .foregroundStyle(.white)
     }
 
-    private func sectionTitle(_ text: String) -> some View {
+    private func sectionTitle(_ text: LocalizedStringKey) -> some View {
         Text(text).font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
     }
 
@@ -353,7 +353,7 @@ struct ContentView: View {
         panel.directoryURL = URL(fileURLWithPath: "/Applications")
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
-        panel.prompt = "添加"
+        panel.prompt = String(localized: "添加")
         guard panel.runModal() == .OK, let url = panel.url else { return }
         if store.appSupportsOpeningFolder(url) {
             store.addCustomApp(at: url, category: category)
@@ -366,10 +366,10 @@ struct ContentView: View {
     private func promptUnsupported(_ appURL: URL, _ category: AppCategory) {
         let name = appURL.deletingPathExtension().lastPathComponent
         let alert = NSAlert()
-        alert.messageText = "“\(name)” 可能不支持以目录方式打开"
-        alert.informativeText = "该应用未声明可打开文件夹，从右键菜单点击它时可能无法正常打开目录。仍要添加吗？"
-        alert.addButton(withTitle: "仍然添加")
-        alert.addButton(withTitle: "取消")
+        alert.messageText = String(localized: "“\(name)” 可能不支持以目录方式打开")
+        alert.informativeText = String(localized: "该应用未声明可打开文件夹，从右键菜单点击它时可能无法正常打开目录。仍要添加吗？")
+        alert.addButton(withTitle: String(localized: "仍然添加"))
+        alert.addButton(withTitle: String(localized: "取消"))
         if alert.runModal() == .alertFirstButtonReturn {
             store.addCustomApp(at: appURL, category: category)
         }
@@ -422,7 +422,7 @@ struct ContentView: View {
             set: { newValue in selection = newValue.map { .command($0) } })
     }
 
-    private func itemToggle(_ title: String,
+    private func itemToggle(_ title: LocalizedStringKey,
                             _ keyPath: WritableKeyPath<CoreSettings.Items, Bool>) -> some View {
         HStack {
             Text(title)

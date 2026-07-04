@@ -2,7 +2,7 @@ import Foundation
 
 /// 按模板在目录里创建文件的纯逻辑（宿主与扩展共用）。
 public enum NewFileMaker {
-    public static let defaultBaseName = "未命名"
+    public static var defaultBaseName: String { String(localized: "未命名", bundle: .module) }
 
     /// 在 dir 下按模板创建文件：
     /// - requestedName：用户输入的完整文件名（含扩展名）；空则用模板默认名。

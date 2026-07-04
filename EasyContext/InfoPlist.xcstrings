@@ -1,0 +1,16 @@
+{
+  "sourceLanguage" : "zh-Hans",
+  "strings" : {
+    "NSAppleEventsUsageDescription" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Used to run commands (such as claude / codex) in the terminal you choose." } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "用於在你選擇的終端機中執行指令（例如 claude / codex）。" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "選択したターミナルでコマンド（claude / codex など）を実行するために使用します。" } },
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Wird verwendet, um Befehle (z. B. claude / codex) im gewählten Terminal auszuführen." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Utilisé pour exécuter des commandes (comme claude / codex) dans le terminal de votre choix." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Se usa para ejecutar comandos (como claude / codex) en la terminal que elijas." } }
+      }
+    }
+  },
+  "version" : "1.0"
+}
