@@ -19,7 +19,7 @@ final class NewFileMakerTests: XCTestCase {
     func test_create_emptyName_usesTemplateDefault() throws {
         let dir = try tempDir()
         let url = NewFileMaker.create(template: .markdown, in: dir, requestedName: "   ")
-        XCTAssertEqual(url?.lastPathComponent, "未命名.md")
+        XCTAssertEqual(url?.lastPathComponent, FileTemplate.markdown.defaultFileName)
     }
 
     func test_create_appendsExtensionFromBareBase() throws {

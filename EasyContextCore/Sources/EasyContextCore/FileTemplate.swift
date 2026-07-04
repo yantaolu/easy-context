@@ -28,7 +28,7 @@ public enum FileTemplate: String, CaseIterable, Codable, Sendable {
     public var displayName: String {
         switch self {
         case .markdown: return String(localized: "Markdown (.md)", bundle: .module)
-        case .text:     return String(localized: "文本 (.txt)", bundle: .module)
+        case .text:     return String(localized: "Text (.txt)", bundle: .module)
         case .shell:    return String(localized: "Shell (.sh)", bundle: .module)
         case .json:     return String(localized: "JSON (.json)", bundle: .module)
         }
@@ -36,6 +36,6 @@ public enum FileTemplate: String, CaseIterable, Codable, Sendable {
 
     /// 命名面板预填的默认完整文件名（如「未命名.md」）。
     public var defaultFileName: String {
-        String(localized: "未命名", bundle: .module) + "." + fileExtension
+        String(localized: "Untitled", bundle: .module) + "." + fileExtension
     }
 }

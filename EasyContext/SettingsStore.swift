@@ -233,7 +233,7 @@ final class SettingsStore: ObservableObject {
 
     /// 追加一条新命令（默认启用），名称自动去重。结构性改动 → 立即写盘。
     func addCommand() {
-        let base = String(localized: "命令")
+        let base = String(localized: "Command")
         var name = base
         var n = 1
         while settings.commands.contains(where: { $0.name == name }) {

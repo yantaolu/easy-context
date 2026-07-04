@@ -1,14 +1,8 @@
 {
-  "sourceLanguage": "zh-Hans",
+  "sourceLanguage": "en",
   "strings": {
-    "隐藏 Easy Context": {
+    "Hide Easy Context": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hide Easy Context"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -38,17 +32,17 @@
             "state": "translated",
             "value": "Ocultar Easy Context"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隐藏 Easy Context"
+          }
         }
       }
     },
-    "退出 Easy Context": {
+    "Quit Easy Context": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Quit Easy Context"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -78,17 +72,17 @@
             "state": "translated",
             "value": "Salir de Easy Context"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "退出 Easy Context"
+          }
         }
       }
     },
-    "文件": {
+    "File": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "File"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -118,17 +112,17 @@
             "state": "translated",
             "value": "Archivo"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文件"
+          }
         }
       }
     },
-    "关闭窗口": {
+    "Close Window": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Close Window"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -158,17 +152,17 @@
             "state": "translated",
             "value": "Cerrar ventana"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关闭窗口"
+          }
         }
       }
     },
-    "编辑": {
+    "Edit": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Edit"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -198,17 +192,17 @@
             "state": "translated",
             "value": "Edición"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "编辑"
+          }
         }
       }
     },
-    "剪切": {
+    "Cut": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cut"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -238,17 +232,17 @@
             "state": "translated",
             "value": "Cortar"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "剪切"
+          }
         }
       }
     },
-    "拷贝": {
+    "Copy": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Copy"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -278,17 +272,17 @@
             "state": "translated",
             "value": "Copiar"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拷贝"
+          }
         }
       }
     },
-    "粘贴": {
+    "Paste": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Paste"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -318,17 +312,17 @@
             "state": "translated",
             "value": "Pegar"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "粘贴"
+          }
         }
       }
     },
-    "全选": {
+    "Select All": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Select All"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -358,17 +352,17 @@
             "state": "translated",
             "value": "Seleccionar todo"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全选"
+          }
         }
       }
     },
-    "输入文件名：": {
+    "Enter file name:": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enter file name:"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -398,17 +392,17 @@
             "state": "translated",
             "value": "Introduce el nombre del archivo:"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "输入文件名："
+          }
         }
       }
     },
-    "新建文件": {
+    "New File": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "New File"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -438,17 +432,17 @@
             "state": "translated",
             "value": "Nuevo archivo"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新建文件"
+          }
         }
       }
     },
-    "取消": {
+    "Cancel": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cancel"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -478,17 +472,17 @@
             "state": "translated",
             "value": "Cancelar"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取消"
+          }
         }
       }
     },
-    "创建": {
+    "Create": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Create"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -518,17 +512,17 @@
             "state": "translated",
             "value": "Crear"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "创建"
+          }
         }
       }
     },
-    "无法运行": {
+    "Cannot Run": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cannot Run"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -558,17 +552,17 @@
             "state": "translated",
             "value": "No se puede ejecutar"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法运行"
+          }
         }
       }
     },
-    "“%@” 未配置启动模板，请在 EasyContext 设置里为它填写模板。": {
+    "“%@” has no launch template configured. Please add one in EasyContext settings.": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "“%@” has no launch template configured. Please add one in EasyContext settings."
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -598,17 +592,17 @@
             "state": "translated",
             "value": "«%@» no tiene una plantilla de inicio configurada. Añádela en los ajustes de EasyContext."
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” 未配置启动模板，请在 EasyContext 设置里为它填写模板。"
+          }
         }
       }
     },
-    "运行失败": {
+    "Run Failed": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Run Failed"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -638,17 +632,17 @@
             "state": "translated",
             "value": "Error al ejecutar"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "运行失败"
+          }
         }
       }
     },
-    "新建文件失败": {
+    "Failed to Create File": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Failed to Create File"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -678,17 +672,17 @@
             "state": "translated",
             "value": "Error al crear el archivo"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新建文件失败"
+          }
         }
       }
     },
-    "无法在该目录创建文件。": {
+    "Could not create a file in this folder.": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Could not create a file in this folder."
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -718,17 +712,17 @@
             "state": "translated",
             "value": "No se pudo crear un archivo en esta carpeta."
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法在该目录创建文件。"
+          }
         }
       }
     },
-    "菜单显示的编辑器": {
+    "Editors shown in menu": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Editors shown in menu"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -758,17 +752,17 @@
             "state": "translated",
             "value": "Editores mostrados en el menú"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "菜单显示的编辑器"
+          }
         }
       }
     },
-    "菜单显示的终端": {
+    "Terminals shown in menu": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Terminals shown in menu"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -798,17 +792,17 @@
             "state": "translated",
             "value": "Terminales mostrados en el menú"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "菜单显示的终端"
+          }
         }
       }
     },
-    "菜单项": {
+    "Menu Items": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Menu Items"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -838,17 +832,17 @@
             "state": "translated",
             "value": "Elementos del menú"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "菜单项"
+          }
         }
       }
     },
-    "复制路径": {
+    "Copy Path": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Copy Path"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -878,17 +872,17 @@
             "state": "translated",
             "value": "Copiar ruta"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "复制路径"
+          }
         }
       }
     },
-    "复制相对路径": {
+    "Copy Relative Path": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Copy Relative Path"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -918,17 +912,17 @@
             "state": "translated",
             "value": "Copiar ruta relativa"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "复制相对路径"
+          }
         }
       }
     },
-    "应用图标": {
+    "App Icon": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "App Icon"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -958,17 +952,17 @@
             "state": "translated",
             "value": "Icono de la app"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "应用图标"
+          }
         }
       }
     },
-    "黑白": {
+    "Monochrome": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Monochrome"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -998,17 +992,17 @@
             "state": "translated",
             "value": "Monocromo"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "黑白"
+          }
         }
       }
     },
-    "彩色": {
+    "Color": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Color"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -1038,17 +1032,17 @@
             "state": "translated",
             "value": "Color"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "彩色"
+          }
         }
       }
     },
-    "其他": {
+    "Other": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Other"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -1078,21 +1072,21 @@
             "state": "translated",
             "value": "Otros"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "其他"
+          }
         }
       }
     },
-    "打开配置目录": {
+    "Open Config Folder": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Open Config Folder"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "開啟設定目錄"
+            "value": "開啟設定資料夾"
           }
         },
         "ja": {
@@ -1118,17 +1112,17 @@
             "state": "translated",
             "value": "Abrir carpeta de configuración"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开配置目录"
+          }
         }
       }
     },
-    "访达扩展设置": {
+    "Finder Extension Settings": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Finder Extension Settings"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -1158,17 +1152,17 @@
             "state": "translated",
             "value": "Ajustes de la extensión del Finder"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "访达扩展设置"
+          }
         }
       }
     },
-    "自定义命令": {
+    "Custom Commands": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Custom Commands"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -1198,17 +1192,17 @@
             "state": "translated",
             "value": "Comandos personalizados"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自定义命令"
+          }
         }
       }
     },
-    "⚠ 该终端从外部运行命令会弹确认且可能多开窗口，建议改用 Terminal / iTerm": {
+    "⚠ Running commands externally in this terminal may prompt for confirmation and open extra windows. Use Terminal / iTerm instead.": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "⚠ Running commands externally in this terminal may prompt for confirmation and open extra windows. Use Terminal / iTerm instead."
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -1236,19 +1230,19 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "⚠ Ejecutar comandos externamente en esta terminal puede pedir confirmación y abrir varias ventanas. Usa Terminal / iTerm en su lugar."
+            "value": "⚠ Ejecutar comandos externamente en este terminal puede pedir confirmación y abrir varias ventanas. Usa Terminal / iTerm en su lugar."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⚠ 该终端从外部运行命令会弹确认且可能多开窗口，建议改用 Terminal / iTerm"
           }
         }
       }
     },
-    "执行终端": {
+    "Run in terminal": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Run in terminal"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -1278,17 +1272,17 @@
             "state": "translated",
             "value": "Terminal de ejecución"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "执行终端"
+          }
         }
       }
     },
-    "名称": {
+    "Name": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Name"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -1318,17 +1312,17 @@
             "state": "translated",
             "value": "Nombre"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名称"
+          }
         }
       }
     },
-    "命令，如 claude": {
+    "Command, e.g. claude": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Command, e.g. claude"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -1358,17 +1352,17 @@
             "state": "translated",
             "value": "Comando, p. ej. claude"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "命令，如 claude"
+          }
         }
       }
     },
-    "新增命令": {
+    "Add command": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add command"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -1398,17 +1392,17 @@
             "state": "translated",
             "value": "Añadir comando"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新增命令"
+          }
         }
       }
     },
-    "删除选中的命令": {
+    "Delete selected command": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Delete selected command"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -1438,17 +1432,17 @@
             "state": "translated",
             "value": "Eliminar el comando seleccionado"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除选中的命令"
+          }
         }
       }
     },
-    "自定义": {
+    "Custom": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Custom"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -1470,7 +1464,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Perso"
+            "value": "Personnalisé"
           }
         },
         "es": {
@@ -1478,17 +1472,17 @@
             "state": "translated",
             "value": "Personalizado"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自定义"
+          }
         }
       }
     },
-    "添加自定义 App": {
+    "Add custom app": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add custom app"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -1510,7 +1504,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ajouter une app perso"
+            "value": "Ajouter une app personnalisée"
           }
         },
         "es": {
@@ -1518,17 +1512,17 @@
             "state": "translated",
             "value": "Añadir app personalizada"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加自定义 App"
+          }
         }
       }
     },
-    "移除选中的自定义项（内置项不可删）": {
+    "Remove selected custom item (built-in items can't be removed)": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Remove selected custom item (built-in items can't be removed)"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -1544,13 +1538,13 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ausgewähltes eigenes Objekt entfernen (integrierte lassen sich nicht entfernen)"
+            "value": "Ausgewählten eigenen Eintrag entfernen (integrierte Einträge lassen sich nicht entfernen)"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Retirer l'élément perso sélectionné (les éléments intégrés ne peuvent pas être retirés)"
+            "value": "Retirer l'élément personnalisé sélectionné (les éléments intégrés ne peuvent pas être retirés)"
           }
         },
         "es": {
@@ -1558,17 +1552,17 @@
             "state": "translated",
             "value": "Quitar el elemento personalizado seleccionado (los integrados no se pueden quitar)"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除选中的自定义项（内置项不可删）"
+          }
         }
       }
     },
-    "配置文件损坏，已备份为 config.json.bak，当前使用默认设置": {
+    "Config file is corrupted. It was backed up as config.json.bak; using default settings.": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Config file is corrupted. It was backed up as config.json.bak; using default settings."
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -1598,17 +1592,17 @@
             "state": "translated",
             "value": "El archivo de configuración está dañado. Se guardó como config.json.bak; se usan los ajustes predeterminados."
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配置文件损坏，已备份为 config.json.bak，当前使用默认设置"
+          }
         }
       }
     },
-    "访达扩展尚未启用，右键菜单不会出现": {
+    "The Finder extension isn't enabled yet, so the right-click menu won't appear.": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The Finder extension isn't enabled yet, so the right-click menu won't appear."
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -1624,13 +1618,13 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Die Finder-Erweiterung ist noch nicht aktiviert, daher erscheint das Rechtsklick-Menü nicht."
+            "value": "Die Finder-Erweiterung ist noch nicht aktiviert, daher erscheint das Kontextmenü nicht."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "L'extension Finder n'est pas encore activée, le menu clic droit n'apparaîtra pas."
+            "value": "L'extension Finder n'est pas encore activée, le menu contextuel n'apparaîtra pas."
           }
         },
         "es": {
@@ -1638,17 +1632,17 @@
             "state": "translated",
             "value": "La extensión del Finder aún no está activada, por lo que el menú contextual no aparecerá."
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "访达扩展尚未启用，右键菜单不会出现"
+          }
         }
       }
     },
-    "去启用": {
+    "Enable": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enable"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -1678,17 +1672,17 @@
             "state": "translated",
             "value": "Activar"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "去启用"
+          }
         }
       }
     },
-    "重新检测": {
+    "Re-check": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Re-check"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -1718,17 +1712,17 @@
             "state": "translated",
             "value": "Volver a comprobar"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新检测"
+          }
         }
       }
     },
-    "添加": {
+    "Add": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -1758,17 +1752,17 @@
             "state": "translated",
             "value": "Añadir"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加"
+          }
         }
       }
     },
-    "“%@” 可能不支持以目录方式打开": {
+    "“%@” may not support opening folders": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "“%@” may not support opening folders"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -1798,21 +1792,21 @@
             "state": "translated",
             "value": "«%@» podría no admitir la apertura de carpetas"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” 可能不支持以目录方式打开"
+          }
         }
       }
     },
-    "该应用未声明可打开文件夹，从右键菜单点击它时可能无法正常打开目录。仍要添加吗？": {
+    "This app doesn't declare that it can open folders, so clicking it from the right-click menu may not open the directory. Add it anyway?": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This app doesn't declare that it can open folders, so clicking it from the right-click menu may not open the directory. Add it anyway?"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "此應用程式未宣告可開啟資料夾，從右鍵選單點按它時可能無法正常開啟目錄。仍要新增嗎？"
+            "value": "此應用程式未宣告可開啟資料夾，從右鍵選單點按它時可能無法正常開啟資料夾。仍要新增嗎？"
           }
         },
         "ja": {
@@ -1824,13 +1818,13 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Diese App gibt nicht an, dass sie Ordner öffnen kann. Beim Klick aus dem Rechtsklick-Menü wird das Verzeichnis möglicherweise nicht geöffnet. Trotzdem hinzufügen?"
+            "value": "Diese App gibt nicht an, dass sie Ordner öffnen kann. Beim Klick im Kontextmenü wird der Ordner möglicherweise nicht geöffnet. Trotzdem hinzufügen?"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cette app ne déclare pas pouvoir ouvrir des dossiers ; en cliquant depuis le menu clic droit, le répertoire pourrait ne pas s'ouvrir. L'ajouter quand même ?"
+            "value": "Cette app ne déclare pas pouvoir ouvrir des dossiers ; en cliquant depuis le menu contextuel, le dossier pourrait ne pas s'ouvrir. L'ajouter quand même ?"
           }
         },
         "es": {
@@ -1838,17 +1832,17 @@
             "state": "translated",
             "value": "Esta app no declara que pueda abrir carpetas, así que al hacer clic desde el menú contextual puede que no abra el directorio. ¿Añadirla de todos modos?"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "该应用未声明可打开文件夹，从右键菜单点击它时可能无法正常打开目录。仍要添加吗？"
+          }
         }
       }
     },
-    "仍然添加": {
+    "Add Anyway": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add Anyway"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -1878,17 +1872,17 @@
             "state": "translated",
             "value": "Añadir de todos modos"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仍然添加"
+          }
         }
       }
     },
-    "命令": {
+    "Command": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Command"
-          }
-        },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
@@ -1917,6 +1911,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Comando"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "命令"
           }
         }
       }

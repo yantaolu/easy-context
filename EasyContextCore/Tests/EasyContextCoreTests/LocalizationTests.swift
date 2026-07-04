@@ -6,7 +6,7 @@ import Foundation
 /// 不依赖 String Catalog 的编译产物——SwiftPM 命令行不编译 .xcstrings，
 /// 只有 Xcode 构建会。实际渲染由 App/扩展的 Xcode 构建 + 实机切语言验证。
 final class LocalizationTests: XCTestCase {
-    private let targetLangs = ["en", "zh-Hant", "ja", "de", "fr", "es"] // zh-Hans 是源语言，免翻
+    private let targetLangs = ["zh-Hans", "zh-Hant", "ja", "de", "fr", "es"] // en 是源语言，免翻
     // 品牌名 key：各语言与源相同，localizations 故意留空、回退源值。
     private let brandKeys: Set<String> = ["Markdown (.md)", "Shell (.sh)", "JSON (.json)"]
 
@@ -22,19 +22,19 @@ final class LocalizationTests: XCTestCase {
         return try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
     }
 
-    func testCatalogSourceLanguageIsSimplifiedChinese() throws {
+    func testCatalogSourceLanguageIsEnglish() throws {
         let json = try loadCatalog()
-        XCTAssertEqual(json["sourceLanguage"] as? String, "zh-Hans")
+        XCTAssertEqual(json["sourceLanguage"] as? String, "en")
     }
 
     func testRequiredCoreKeysPresent() throws {
         let strings = try XCTUnwrap(try loadCatalog()["strings"] as? [String: Any])
-        for key in ["未命名", "文本 (.txt)", "Markdown (.md)", "Shell (.sh)", "JSON (.json)"] {
+        for key in ["Untitled", "Text (.txt)", "Markdown (.md)", "Shell (.sh)", "JSON (.json)"] {
             XCTAssertNotNil(strings[key], "catalog 缺 key：\(key)")
         }
     }
 
-    func testEveryNonBrandKeyHasAllSixTranslations() throws {
+    func testEveryNonBrandKeyHasAllSixNonEnglishTranslations() throws {
         let strings = try XCTUnwrap(try loadCatalog()["strings"] as? [String: Any])
         for (key, entry) in strings where !brandKeys.contains(key) {
             let locs = ((entry as? [String: Any])?["localizations"] as? [String: Any]) ?? [:]

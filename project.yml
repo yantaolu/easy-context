@@ -8,7 +8,7 @@
 name: EasyContext
 options:
   bundleIdPrefix: com.luyantao.easycontext
-  developmentLanguage: zh-Hans
+  developmentLanguage: en
   deploymentTarget:
     macOS: "13.0"
   createIntermediateGroups: true
@@ -45,8 +45,8 @@ targets:
       properties:
         CFBundleDisplayName: Easy Context
         CFBundleLocalizations:
-          - zh-Hans
           - en
+          - zh-Hans
           - zh-Hant
           - ja
           - de
@@ -57,7 +57,7 @@ targets:
         CFBundleURLTypes:
           - CFBundleURLName: com.luyantao.easycontext
             CFBundleURLSchemes: [easycontext]
-        NSAppleEventsUsageDescription: "用于在你选择的终端里运行命令（如 claude / codex）。"
+        NSAppleEventsUsageDescription: "Used to run commands (such as claude / codex) in the terminal you choose."
   EasyContextFinder:
     type: app-extension
     platform: macOS
@@ -75,8 +75,8 @@ targets:
       properties:
         CFBundleDisplayName: EasyContextFinder
         CFBundleLocalizations:
-          - zh-Hans
           - en
+          - zh-Hans
           - zh-Hant
           - ja
           - de

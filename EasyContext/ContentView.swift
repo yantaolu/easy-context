@@ -43,7 +43,7 @@ struct ContentView: View {
             rowDivider
             sectionBox(iconSection)
             rowDivider
-            sectionBox(appColumn("菜单显示的编辑器", category: .editor), fill: true)
+            sectionBox(appColumn("Editors shown in menu", category: .editor), fill: true)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
@@ -52,7 +52,7 @@ struct ContentView: View {
 
     private var rightColumn: some View {
         VStack(spacing: 0) {
-            sectionBox(appColumn("菜单显示的终端", category: .terminal, fixedThreeRows: true))
+            sectionBox(appColumn("Terminals shown in menu", category: .terminal, fixedThreeRows: true))
             rowDivider
             sectionBox(commandColumn, fill: true)
             rowDivider
@@ -63,12 +63,12 @@ struct ContentView: View {
 
     private var menuItemsSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            sectionTitle("菜单项")
+            sectionTitle("Menu Items")
             // 也用原生 List（不可选中），与右列「终端」List 同机制→开关精确对齐。
             List {
-                menuRow("复制路径", \.copyFullPath)
-                menuRow("复制相对路径", \.copyRelativePath)
-                menuRow("新建文件", \.newFile)
+                menuRow("Copy Path", \.copyFullPath)
+                menuRow("Copy Relative Path", \.copyRelativePath)
+                menuRow("New File", \.newFile)
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
@@ -87,13 +87,13 @@ struct ContentView: View {
 
     private var iconSection: some View {
         HStack(spacing: 8) {
-            sectionTitle("应用图标")
+            sectionTitle("App Icon")
             Spacer()
             Picker("", selection: Binding(
                 get: { store.settings.appearance.appIconStyle },
                 set: { store.settings.appearance.appIconStyle = $0; store.persist() })) {
-                Text("黑白").tag(CoreSettings.AppIconStyle.monochrome)
-                Text("彩色").tag(CoreSettings.AppIconStyle.color)
+                Text("Monochrome").tag(CoreSettings.AppIconStyle.monochrome)
+                Text("Color").tag(CoreSettings.AppIconStyle.color)
             }
             .labelsHidden()
             .fixedSize()
@@ -103,11 +103,11 @@ struct ContentView: View {
     // 单行：标题左，两个 link 按钮右对齐。
     private var otherSection: some View {
         HStack(spacing: 8) {
-            sectionTitle("其他")
+            sectionTitle("Other")
             Spacer()
-            Button("打开配置目录") { openConfigDirectory() }
+            Button("Open Config Folder") { openConfigDirectory() }
                 .buttonStyle(.link)
-            Button("访达扩展设置") { openExtensionSettings() }
+            Button("Finder Extension Settings") { openExtensionSettings() }
                 .buttonStyle(.link)
                 .padding(.leading, 12)
         }
@@ -133,10 +133,10 @@ struct ContentView: View {
 
     private var commandColumn: some View {
         VStack(alignment: .leading, spacing: 6) {
-            sectionTitle("自定义命令")
+            sectionTitle("Custom Commands")
             defaultTerminalPicker
             if TerminalLaunch.externalExecUnreliable.contains(store.resolvedDefaultTerminal) {
-                Text("⚠ 该终端从外部运行命令会弹确认且可能多开窗口，建议改用 Terminal / iTerm")
+                Text("⚠ Running commands externally in this terminal may prompt for confirmation and open extra windows. Use Terminal / iTerm instead.")
                     .font(.caption)
                     .foregroundStyle(.orange)
                     .fixedSize(horizontal: false, vertical: true)
@@ -160,7 +160,7 @@ struct ContentView: View {
 
     private var defaultTerminalPicker: some View {
         HStack(spacing: 8) {
-            Text("执行终端").font(.callout).foregroundStyle(.secondary)
+            Text("Run in terminal").font(.callout).foregroundStyle(.secondary)
             Spacer()
             // 始终是下拉框（选项永不为空，无已安装时只列系统 Terminal）→ 不抖动。
             // 选项 = 全部已安装终端，与「菜单显示」开关无关。
@@ -180,14 +180,14 @@ struct ContentView: View {
     private func commandRow(_ cmd: CommandEntry) -> some View {
         let id = cmd.id
         return HStack(spacing: 8) {
-            TextField("名称", text: Binding(
+            TextField("Name", text: Binding(
                 get: { store.command(id)?.name ?? "" },
                 set: { store.updateCommandName(id: id, $0) }))
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 96)
                 .focused($focusedCommand, equals: "name-\(id)")
                 .onSubmit { store.flushCommands() }
-            TextField("命令，如 claude", text: Binding(
+            TextField("Command, e.g. claude", text: Binding(
                 get: { store.command(id)?.command ?? "" },
                 set: { store.updateCommandString(id: id, $0) }))
                 .textFieldStyle(.roundedBorder)
@@ -201,12 +201,12 @@ struct ContentView: View {
             Button { store.addCommand() } label: {
                 Image(systemName: "plus").frame(width: 22, height: 18)
             }
-            .help("新增命令")
+            .help("Add command")
             Button { removeSelectedCommand() } label: {
                 Image(systemName: "minus").frame(width: 22, height: 18)
             }
             .disabled(selectedCommandId == nil)
-            .help("删除选中的命令")
+            .help("Delete selected command")
             Spacer()
         }
         .buttonStyle(.borderless)
@@ -263,7 +263,7 @@ struct ContentView: View {
             }
             Text(entry.name)
             if entry.custom {
-                Text("自定义").font(.caption).foregroundStyle(.tertiary)
+                Text("Custom").font(.caption).foregroundStyle(.tertiary)
             }
             Spacer()
             Toggle("", isOn: enabledBinding(entry, category))
@@ -280,12 +280,12 @@ struct ContentView: View {
             Button { pickApp(category) } label: {
                 Image(systemName: "plus").frame(width: 22, height: 18)
             }
-            .help("添加自定义 App")
+            .help("Add custom app")
             Button { removeSelected(category) } label: {
                 Image(systemName: "minus").frame(width: 22, height: 18)
             }
             .disabled(!canRemoveSelected(category))
-            .help("移除选中的自定义项（内置项不可删）")
+            .help("Remove selected custom item (built-in items can't be removed)")
             Spacer()
         }
         .buttonStyle(.borderless)
@@ -295,9 +295,9 @@ struct ContentView: View {
     private var corruptBanner: some View {
         HStack(spacing: 10) {
             Image(systemName: "exclamationmark.octagon.fill")
-            Text("配置文件损坏，已备份为 config.json.bak，当前使用默认设置")
+            Text("Config file is corrupted. It was backed up as config.json.bak; using default settings.")
             Spacer()
-            Button("打开配置目录") { openConfigDirectory() }
+            Button("Open Config Folder") { openConfigDirectory() }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
@@ -308,15 +308,15 @@ struct ContentView: View {
     private var extensionBanner: some View {
         HStack(spacing: 10) {
             Image(systemName: "exclamationmark.triangle.fill")
-            Text("访达扩展尚未启用，右键菜单不会出现")
+            Text("The Finder extension isn't enabled yet, so the right-click menu won't appear.")
             Spacer()
-            Button("去启用") { store.openExtensionSettings() }
+            Button("Enable") { store.openExtensionSettings() }
             Button {
                 store.refreshExtensionState()
             } label: {
                 Image(systemName: "arrow.clockwise")
             }
-            .help("重新检测")
+            .help("Re-check")
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
@@ -353,7 +353,7 @@ struct ContentView: View {
         panel.directoryURL = URL(fileURLWithPath: "/Applications")
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
-        panel.prompt = String(localized: "添加")
+        panel.prompt = String(localized: "Add")
         guard panel.runModal() == .OK, let url = panel.url else { return }
         if store.appSupportsOpeningFolder(url) {
             store.addCustomApp(at: url, category: category)
@@ -366,10 +366,10 @@ struct ContentView: View {
     private func promptUnsupported(_ appURL: URL, _ category: AppCategory) {
         let name = appURL.deletingPathExtension().lastPathComponent
         let alert = NSAlert()
-        alert.messageText = String(localized: "“\(name)” 可能不支持以目录方式打开")
-        alert.informativeText = String(localized: "该应用未声明可打开文件夹，从右键菜单点击它时可能无法正常打开目录。仍要添加吗？")
-        alert.addButton(withTitle: String(localized: "仍然添加"))
-        alert.addButton(withTitle: String(localized: "取消"))
+        alert.messageText = String(localized: "“\(name)” may not support opening folders")
+        alert.informativeText = String(localized: "This app doesn't declare that it can open folders, so clicking it from the right-click menu may not open the directory. Add it anyway?")
+        alert.addButton(withTitle: String(localized: "Add Anyway"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
         if alert.runModal() == .alertFirstButtonReturn {
             store.addCustomApp(at: appURL, category: category)
         }

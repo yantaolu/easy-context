@@ -26,8 +26,8 @@ enum NewFileLauncher {
         let dirURL = URL(fileURLWithPath: dir, isDirectory: true)
         guard let created = NewFileMaker.create(template: template, in: dirURL, requestedName: name) else {
             let a = NSAlert()
-            a.messageText = String(localized: "新建文件失败")
-            a.informativeText = String(localized: "无法在该目录创建文件。")
+            a.messageText = String(localized: "Failed to Create File")
+            a.informativeText = String(localized: "Could not create a file in this folder.")
             NSApp.activate(ignoringOtherApps: true)
             a.runModal()
             return

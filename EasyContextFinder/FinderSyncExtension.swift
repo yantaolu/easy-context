@@ -101,11 +101,11 @@ class FinderSyncExtension: FIFinderSync {
         let menu = NSMenu(title: "")
 
         if config.items.copyFullPath {
-            addItem(to: menu, title: String(localized: "复制路径"), action: #selector(copyFullPath(_:)),
+            addItem(to: menu, title: String(localized: "Copy Path"), action: #selector(copyFullPath(_:)),
                     image: symbolImage("doc.on.doc", dark: dark))
         }
         if config.items.copyRelativePath {
-            addItem(to: menu, title: String(localized: "复制相对路径"), action: #selector(copyRelativePath(_:)),
+            addItem(to: menu, title: String(localized: "Copy Relative Path"), action: #selector(copyRelativePath(_:)),
                     image: symbolImage("doc.on.clipboard", dark: dark))
         }
 
@@ -117,13 +117,13 @@ class FinderSyncExtension: FIFinderSync {
         cacheLock.unlock()
 
         for (idx, app) in terminals.enumerated() {
-            let item = addItem(to: menu, title: String(localized: "用 \(app.name) 打开终端"),
+            let item = addItem(to: menu, title: String(localized: "Open Terminal with \(app.name)"),
                                action: #selector(openWithApp(_:)),
                                image: appIcon(app.bundleId, style: iconStyle) ?? symbolImage("terminal", dark: dark))
             item.tag = idx
         }
         for (offset, app) in editors.enumerated() {
-            let item = addItem(to: menu, title: String(localized: "用 \(app.name) 打开"),
+            let item = addItem(to: menu, title: String(localized: "Open with \(app.name)"),
                                action: #selector(openWithApp(_:)),
                                image: appIcon(app.bundleId, style: iconStyle)
                                    ?? symbolImage("chevron.left.forwardslash.chevron.right", dark: dark))
@@ -144,7 +144,7 @@ class FinderSyncExtension: FIFinderSync {
             cacheLock.unlock()
             let termIcon = appIcon(termId, style: iconStyle) ?? symbolImage("terminal", dark: dark)
             for (idx, cmd) in enabledCmds.enumerated() {
-                let item = addItem(to: menu, title: String(localized: "用 \(termName) 运行 \(cmd.name)"),
+                let item = addItem(to: menu, title: String(localized: "Run \(cmd.name) in \(termName)"),
                                    action: #selector(openWithCommand(_:)), image: termIcon)
                 item.tag = idx
             }
@@ -152,9 +152,9 @@ class FinderSyncExtension: FIFinderSync {
 
         guard config.items.newFile else { return menu }
         // 沙盒扩展不能弹模态窗：新建文件用子菜单选模板，点选后交宿主弹命名面板创建。
-        let newFileItem = NSMenuItem(title: String(localized: "新建文件"), action: nil, keyEquivalent: "")
+        let newFileItem = NSMenuItem(title: String(localized: "New File"), action: nil, keyEquivalent: "")
         newFileItem.image = symbolImage("doc.badge.plus", dark: dark)
-        let submenu = NSMenu(title: "新建文件")
+        let submenu = NSMenu(title: String(localized: "New File"))
         for (idx, template) in FileTemplate.allCases.enumerated() {
             let it = NSMenuItem(title: template.displayName,
                                 action: #selector(newFileFromTemplate(_:)), keyEquivalent: "")

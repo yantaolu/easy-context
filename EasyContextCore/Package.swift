@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "EasyContextCore",
-    defaultLocalization: "zh-Hans",
+    defaultLocalization: "en",
     platforms: [.macOS(.v13)],
     products: [
         .library(name: "EasyContextCore", targets: ["EasyContextCore"]),

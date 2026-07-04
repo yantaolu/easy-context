@@ -1,29 +1,95 @@
 {
-  "sourceLanguage" : "zh-Hans",
-  "strings" : {
-    "未命名" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Untitled" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "未命名" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "名称未設定" } },
-        "de" : { "stringUnit" : { "state" : "translated", "value" : "Unbenannt" } },
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Sans titre" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Sin título" } }
+  "sourceLanguage": "en",
+  "strings": {
+    "Untitled": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未命名"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名称未設定"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unbenannt"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sans titre"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin título"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未命名"
+          }
+        }
       }
     },
-    "文本 (.txt)" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Text (.txt)" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "文字 (.txt)" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "テキスト (.txt)" } },
-        "de" : { "stringUnit" : { "state" : "translated", "value" : "Text (.txt)" } },
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Texte (.txt)" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Texto (.txt)" } }
+    "Text (.txt)": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文字 (.txt)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テキスト (.txt)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text (.txt)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Texte (.txt)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Texto (.txt)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文本 (.txt)"
+          }
+        }
       }
     },
-    "Markdown (.md)" : { "localizations" : { } },
-    "Shell (.sh)" : { "localizations" : { } },
-    "JSON (.json)" : { "localizations" : { } }
+    "Markdown (.md)": {
+      "localizations": {}
+    },
+    "Shell (.sh)": {
+      "localizations": {}
+    },
+    "JSON (.json)": {
+      "localizations": {}
+    }
   },
-  "version" : "1.0"
+  "version": "1.0"
 }

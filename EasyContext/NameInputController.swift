@@ -21,7 +21,7 @@ private final class NameInputPanel: NSObject {
         self.prefill = prefill
         let content = NSView(frame: NSRect(x: 0, y: 0, width: 360, height: 116))
 
-        let label = NSTextField(labelWithString: String(localized: "输入文件名："))
+        let label = NSTextField(labelWithString: String(localized: "Enter file name:"))
         label.frame = NSRect(x: 20, y: 82, width: 320, height: 18)
         content.addSubview(label)
 
@@ -31,17 +31,17 @@ private final class NameInputPanel: NSObject {
 
         window = NSWindow(contentRect: content.frame,
                           styleMask: [.titled], backing: .buffered, defer: false)
-        window.title = String(localized: "新建文件")
+        window.title = String(localized: "New File")
         window.contentView = content
         super.init()
 
-        let cancel = NSButton(title: String(localized: "取消"), target: self, action: #selector(onCancel))
+        let cancel = NSButton(title: String(localized: "Cancel"), target: self, action: #selector(onCancel))
         cancel.frame = NSRect(x: 160, y: 12, width: 85, height: 28)
         cancel.bezelStyle = .rounded
         cancel.keyEquivalent = "\u{1b}" // Esc
         content.addSubview(cancel)
 
-        let create = NSButton(title: String(localized: "创建"), target: self, action: #selector(onCreate))
+        let create = NSButton(title: String(localized: "Create"), target: self, action: #selector(onCreate))
         create.frame = NSRect(x: 255, y: 12, width: 85, height: 28)
         create.bezelStyle = .rounded
         create.keyEquivalent = "\r" // 默认按钮，回车（含输入框内回车）触发
