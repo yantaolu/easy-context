@@ -5,7 +5,7 @@ import Foundation
 /// `id` 是稳定标识（UUID），与 `name` 解耦——改名不改 id，保证 SwiftUI 列表
 /// 身份稳定（编辑中的输入不丢）。URL/宿主查命令仍按 `name`（用户可见键）。
 public struct CommandEntry: Codable, Equatable, Sendable, Identifiable {
-    public let id: String
+    public var id: String
     public var name: String       // 显示名，也作 URL 里的引用键
     public var command: String    // 实际命令行
     public var enabled: Bool

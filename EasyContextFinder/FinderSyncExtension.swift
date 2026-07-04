@@ -249,7 +249,8 @@ class FinderSyncExtension: FIFinderSync {
         cacheLock.lock()
         if let settingsCache, settingsMTime == mtime { defer { cacheLock.unlock() }; return settingsCache }
         cacheLock.unlock()
-        let loaded = configStore.load() // 读盘+解码在锁外，避免阻塞主线程的 volumesChanged
+        var loaded = configStore.load() // 读盘+解码在锁外，避免阻塞主线程的 volumesChanged
+        loaded.normalizeCommandNames(defaultName: String(localized: "Command"))
         cacheLock.lock()
         settingsCache = loaded
         settingsMTime = mtime

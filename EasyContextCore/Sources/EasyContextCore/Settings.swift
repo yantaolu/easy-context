@@ -168,4 +168,35 @@ extension Settings {
     public func menuApps(_ list: [AppEntry], isInstalled: (String) -> Bool) -> [AppEntry] {
         list.filter { $0.enabled && isInstalled($0.bundleId) }
     }
+
+    /// 迁移/防御旧配置：命令名作为执行协议的唯一键，必须非空且不重复；
+    /// id 作为 UI 稳定身份，也必须非空且不重复。
+    /// 空名使用 defaultName；重复名称在原名后追加 2、3...，保留命令内容与顺序。
+    /// 空 id 或重复 id 的后续项会生成新 UUID；已有唯一 id 保持不变。
+    public mutating func normalizeCommandNames(defaultName: String) {
+        var usedNames: Set<String> = []
+        var usedIds: Set<String> = []
+        for i in commands.indices {
+            if commands[i].id.isEmpty || usedIds.contains(commands[i].id) {
+                commands[i].id = UUID().uuidString
+            }
+            usedIds.insert(commands[i].id)
+
+            let trimmed = commands[i].name.trimmingCharacters(in: .whitespacesAndNewlines)
+            let base = trimmed.isEmpty ? defaultName : trimmed
+            let unique = Self.uniqueName(base: base, used: usedNames)
+            commands[i].name = unique
+            usedNames.insert(unique)
+        }
+    }
+
+    private static func uniqueName(base: String, used: Set<String>) -> String {
+        var name = base
+        var n = 1
+        while used.contains(name) {
+            n += 1
+            name = "\(base)\(n)"
+        }
+        return name
+    }
 }

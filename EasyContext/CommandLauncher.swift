@@ -23,8 +23,9 @@ enum CommandLauncher {
         guard FileManager.default.fileExists(atPath: dir, isDirectory: &isDir), isDir.boolValue
         else { return }
 
-        let settings = configStore.load() // 权威当前配置
-        // 安全③：命令必须在用户配置里且启用（按名字查，不执行 URL 里的任意命令串）。
+        var settings = configStore.load() // 权威当前配置
+        settings.normalizeCommandNames(defaultName: String(localized: "Command"))
+        // 安全③：命令必须在用户配置里且启用（按唯一名称查，不执行 URL 里的任意命令串）。
         guard let entry = settings.commands.first(where: { $0.name == cmdName && $0.enabled })
         else { return }
         // 终端必须有模板（内置或用户覆盖）。

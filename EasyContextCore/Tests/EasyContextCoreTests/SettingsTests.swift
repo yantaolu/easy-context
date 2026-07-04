@@ -95,4 +95,24 @@ final class SettingsTests: XCTestCase {
         let result = Settings().menuApps(list, isInstalled: { installed.contains($0) })
         XCTAssertEqual(result.map(\.bundleId), ["a"]) // 仅 a（启用且已安装）
     }
+
+    func test_normalizeCommandNames_trimsFillsEmptyAndDeduplicates() {
+        var s = Settings(commands: [
+            CommandEntry(id: "keep-1", name: " Claude ", command: "claude"),
+            CommandEntry(id: "keep-2", name: "Claude", command: "claude --continue"),
+            CommandEntry(id: "", name: "   ", command: "codex"),
+            CommandEntry(id: "keep-2", name: "Command", command: "custom"),
+        ])
+        s.normalizeCommandNames(defaultName: "Command")
+        XCTAssertEqual(s.commands.map(\.name), ["Claude", "Claude2", "Command", "Command2"])
+        XCTAssertEqual(s.commands.map(\.command), ["claude", "claude --continue", "codex", "custom"])
+        XCTAssertEqual(s.commands[0].id, "keep-1")
+        XCTAssertEqual(s.commands[1].id, "keep-2")
+        XCTAssertFalse(s.commands[2].id.isEmpty)
+        XCTAssertNotEqual(s.commands[2].id, "keep-1")
+        XCTAssertNotEqual(s.commands[2].id, "keep-2")
+        XCTAssertFalse(s.commands[3].id.isEmpty)
+        XCTAssertNotEqual(s.commands[3].id, "keep-2")
+        XCTAssertEqual(Set(s.commands.map(\.id)).count, s.commands.count)
+    }
 }
