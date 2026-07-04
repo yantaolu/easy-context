@@ -18,4 +18,10 @@ final class AppDetectorTests: XCTestCase {
         XCTAssertTrue(KnownApps.terminals.allSatisfy { $0.category == .terminal })
         XCTAssertTrue(KnownApps.editors.allSatisfy { $0.category == .editor })
     }
+
+    func test_knownApps_includeOtty() {
+        XCTAssertTrue(KnownApps.terminals.contains {
+            $0.bundleId == "io.appmakes.otty" && $0.displayName == "Otty"
+        })
+    }
 }

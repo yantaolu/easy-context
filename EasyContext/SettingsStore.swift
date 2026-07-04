@@ -14,6 +14,7 @@ final class SettingsStore: ObservableObject {
     private var activeObserver: NSObjectProtocol?
     private var lastToken: ConfigStore.FileToken?       // 上次读/写时的 config.json 指纹（识别外部改动）
     private var lastInstallSignature: Set<String> = []  // 上次的已安装条目集合（识别条目装/卸）
+    private var installedSnapshot: InstalledAppSnapshot
 
     init() {
         // 区分「缺失」与「损坏」：损坏时备份原文件、用默认、且【不自动覆盖】原文件。
@@ -29,15 +30,18 @@ final class SettingsStore: ObservableObject {
         }
         var s = original
         // 启动即 reconcile：并入已安装的内置 App、去重、排序，保留用户选择与自定义项。
-        s.reconcile(installedTerminals: Self.installed(KnownApps.terminals),
-                    installedEditors: Self.installed(KnownApps.editors))
+        let snapshot = InstalledAppSnapshot.capture(bundleIds: Self.probeBundleIds(settings: s))
+        s.reconcile(installedTerminals: snapshot.knownApps(from: KnownApps.terminals),
+                    installedEditors: snapshot.knownApps(from: KnownApps.editors))
+        s.refreshInstalledNames(using: snapshot)
+        self.installedSnapshot = snapshot
         self.settings = s
         // 内容没变就不重写，避免无谓 bump mtime（否则扩展端缓存会被迫重载一次）。
         // 损坏时【不写】——避免默认值覆盖用户可修复的原文件（已备份到 .bak）。
         if outcome != .corrupt, s != original || !store.hasStored() { try? store.save(s) }
         // 记录基线：文件指纹用于识别 config.json 的外部改动，安装签名用于识别条目装/卸。
         lastToken = store.fileToken()
-        lastInstallSignature = installSignature()
+        lastInstallSignature = signature(snapshot: snapshot)
         // 注：IPC token 生成与模板参考文件写出已移到 AppDelegate（无论是否显示设置窗都要跑）。
 
         refreshExtensionState()
@@ -106,11 +110,13 @@ final class SettingsStore: ObservableObject {
         // 一次安装态快照，放离主线程——避免切前台时在主线程同步等 40+ 次 LaunchServices 查询
         // （与 refreshExtensionState 的后台化约定一致）。probe 须在挂起前于主线程取值。
         let probe = probeBundleIds
-        let installed = await Task.detached { Self.installedSet(of: probe) }.value
+        let snapshot = await Task.detached { InstalledAppSnapshot.capture(bundleIds: probe) }.value
+        installedSnapshot = snapshot
 
         var s = settings
-        s.reconcile(installedTerminals: KnownApps.terminals.filter { installed.contains($0.bundleId) },
-                    installedEditors:   KnownApps.editors.filter { installed.contains($0.bundleId) })
+        s.reconcile(installedTerminals: snapshot.knownApps(from: KnownApps.terminals),
+                    installedEditors:   snapshot.knownApps(from: KnownApps.editors))
+        s.refreshInstalledNames(using: snapshot)
         if s != settings {
             settings = s                       // @Published → 重渲染
             // 损坏时只更新内存，不覆盖用户那份已备份、可手动修复的原文件（与 init 一致）。
@@ -121,7 +127,7 @@ final class SettingsStore: ObservableObject {
         // 轴 B：条目安装态翻转 → 仅在真的变了、且本次尚未因 settings 变更而重渲染时，手动触发。
         // 注：probe 在挂起前取值，若这期间用户恰好新增自定义 App，其安装态本轮未探到、会被当
         // 未安装暂不显示，下次激活自愈——概率极低，可接受。
-        let sig = signature(installed: installed)
+        let sig = signature(snapshot: snapshot)
         if sig != lastInstallSignature {
             lastInstallSignature = sig
             if !published { objectWillChange.send() }
@@ -154,23 +160,17 @@ final class SettingsStore: ObservableObject {
 
     /// 需要探测安装态的全部 bundleId：内置名单 ∪ 当前条目（含自定义）。
     private var probeBundleIds: Set<String> {
+        Self.probeBundleIds(settings: settings)
+    }
+
+    private static func probeBundleIds(settings: Settings) -> Set<String> {
         Set(KnownApps.terminals.map(\.bundleId) + KnownApps.editors.map(\.bundleId)
             + settings.terminals.map(\.bundleId) + settings.editors.map(\.bundleId))
     }
 
     /// 已安装条目的 bundleId 集合——轴 B 的「安装态签名」，由一次安装态快照派生（不再各自查 LS）。
-    private func signature(installed: Set<String>) -> Set<String> {
-        Set((settings.terminals + settings.editors).map(\.bundleId).filter { installed.contains($0) })
-    }
-
-    /// init 冷启动时算一次签名基线（同步、主线程；一次性开销可接受）。
-    private func installSignature() -> Set<String> {
-        signature(installed: Self.installedSet(of: probeBundleIds))
-    }
-
-    /// 探测这批 bundleId 里哪些已安装。纯 LS 查询、不碰 actor 状态 → 可离主线程调用。
-    nonisolated private static func installedSet(of bundleIds: Set<String>) -> Set<String> {
-        bundleIds.filter { NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0) != nil }
+    private func signature(snapshot: InstalledAppSnapshot) -> Set<String> {
+        Set((settings.terminals + settings.editors).map(\.bundleId).filter { snapshot.isInstalled($0) })
     }
 
     func entries(_ category: AppCategory) -> [AppEntry] {
@@ -184,11 +184,11 @@ final class SettingsStore: ObservableObject {
     }
 
     func isInstalled(_ entry: AppEntry) -> Bool {
-        NSWorkspace.shared.urlForApplication(withBundleIdentifier: entry.bundleId) != nil
+        installedSnapshot.isInstalled(entry.bundleId)
     }
 
     func icon(_ entry: AppEntry) -> NSImage? {
-        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: entry.bundleId)
+        guard let url = installedSnapshot.info(for: entry.bundleId)?.url
         else { return nil }
         return NSWorkspace.shared.icon(forFile: url.path)
     }
@@ -208,7 +208,8 @@ final class SettingsStore: ObservableObject {
     /// 从 .app 读 bundleId + 名称，作为自定义项追加（已存在则忽略），随后 reconcile 重排。
     func addCustomApp(at url: URL, category: AppCategory) {
         guard let bundleId = Bundle(url: url)?.bundleIdentifier else { return }
-        let name = url.deletingPathExtension().lastPathComponent
+        let name = InstalledAppSnapshot.capture(bundleIds: [bundleId]).info(for: bundleId)?.displayName
+            ?? url.deletingPathExtension().lastPathComponent
         let entry = AppEntry(bundleId: bundleId, name: name, custom: true, enabled: true)
         switch category {
         case .terminal:
@@ -220,8 +221,11 @@ final class SettingsStore: ObservableObject {
                 settings.editors.append(entry)
             }
         }
-        settings.reconcile(installedTerminals: Self.installed(KnownApps.terminals),
-                           installedEditors: Self.installed(KnownApps.editors))
+        let snapshot = InstalledAppSnapshot.capture(bundleIds: probeBundleIds)
+        installedSnapshot = snapshot
+        settings.reconcile(installedTerminals: snapshot.knownApps(from: KnownApps.terminals),
+                           installedEditors: snapshot.knownApps(from: KnownApps.editors))
+        settings.refreshInstalledNames(using: snapshot)
         persist()
     }
 
@@ -325,9 +329,11 @@ final class SettingsStore: ObservableObject {
         persist()
     }
 
-    private static func installed(_ apps: [KnownApp]) -> [KnownApp] {
-        AppDetector(isInstalled: {
-            NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0) != nil
-        }).installed(from: apps)
+}
+
+private extension Settings {
+    mutating func refreshInstalledNames(using snapshot: InstalledAppSnapshot) {
+        terminals = terminals.map { snapshot.refreshedEntry($0) }
+        editors = editors.map { snapshot.refreshedEntry($0) }
     }
 }

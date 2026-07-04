@@ -74,6 +74,17 @@ final class SettingsTests: XCTestCase {
         XCTAssertEqual(result.map(\.bundleId), ["com.apple.Terminal"]) // 仍保留
     }
 
+    func test_reconcile_usesInstalledDisplayNameForBuiltin() {
+        let existing = [
+            AppEntry(bundleId: "com.apple.Terminal", name: "Old Terminal", custom: false, enabled: true),
+        ]
+        let installed = [
+            KnownApp(bundleId: "com.apple.Terminal", displayName: "Installed Terminal", category: .terminal),
+        ]
+        let result = Settings.reconcileList(existing, installed: installed, builtinOrder: KnownApps.terminals)
+        XCTAssertEqual(result.first?.name, "Installed Terminal")
+    }
+
     func test_menuApps_filtersEnabledAndInstalled() {
         let list = [
             AppEntry(bundleId: "a", name: "A", enabled: true),

@@ -26,6 +26,7 @@ public enum KnownApps {
         KnownApp(bundleId: "com.apple.Terminal", displayName: "Terminal", category: .terminal),
         KnownApp(bundleId: "com.googlecode.iterm2", displayName: "iTerm", category: .terminal),
         KnownApp(bundleId: "dev.warp.Warp-Stable", displayName: "Warp", category: .terminal),
+        KnownApp(bundleId: "io.appmakes.otty", displayName: "Otty", category: .terminal),
         KnownApp(bundleId: "com.mitchellh.ghostty", displayName: "Ghostty", category: .terminal),
         KnownApp(bundleId: "net.kovidgoyal.kitty", displayName: "kitty", category: .terminal),
         KnownApp(bundleId: "com.github.wez.wezterm", displayName: "WezTerm", category: .terminal),

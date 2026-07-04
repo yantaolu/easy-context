@@ -22,7 +22,11 @@ class FinderSyncExtension: FIFinderSync {
     private var settingsCache: Settings?
     private var settingsMTime: Date?
     private var urlCache: [String: URL] = [:]       // bundleId -> App URL（只缓存已安装）
-    private var imageCache: [String: NSImage] = [:] // "app:bid|style" / "sym:name|dark"
+    private var imageCache: [String: NSImage] = [:] // "app:bid|path|style" / "sym:name|dark"
+    private var appSnapshotCache: InstalledAppSnapshot?
+    private var appSnapshotBundleIds: Set<String> = []
+    private var appSnapshotTime: Date?
+    private let appSnapshotTTL: TimeInterval = 1
 
     override init() {
         super.init()
@@ -47,6 +51,9 @@ class FinderSyncExtension: FIFinderSync {
         cacheLock.lock()
         urlCache.removeAll()
         imageCache.removeAll()
+        appSnapshotCache = nil
+        appSnapshotBundleIds.removeAll()
+        appSnapshotTime = nil
         cacheLock.unlock()
     }
 
@@ -96,6 +103,7 @@ class FinderSyncExtension: FIFinderSync {
         cacheLock.lock(); menuTargetURL = target; cacheLock.unlock()
 
         let config = currentSettings()
+        let appSnapshot = currentAppSnapshot(for: config)
         let iconStyle = config.appearance.appIconStyle
         let dark = Self.isDarkMode()
         let menu = NSMenu(title: "")
@@ -109,8 +117,8 @@ class FinderSyncExtension: FIFinderSync {
                     image: symbolImage("doc.on.clipboard", dark: dark))
         }
 
-        let terminals = appsToShow(config.terminals, builtins: KnownApps.terminals)
-        let editors = appsToShow(config.editors, builtins: KnownApps.editors)
+        let terminals = appsToShow(config.terminals, builtins: KnownApps.terminals, snapshot: appSnapshot)
+        let editors = appsToShow(config.editors, builtins: KnownApps.editors, snapshot: appSnapshot)
         cacheLock.lock()
         openableApps = terminals + editors
         openableTerminalCount = terminals.count
@@ -119,13 +127,13 @@ class FinderSyncExtension: FIFinderSync {
         for (idx, app) in terminals.enumerated() {
             let item = addItem(to: menu, title: String(localized: "Open Terminal with \(app.name)"),
                                action: #selector(openWithApp(_:)),
-                               image: appIcon(app.bundleId, style: iconStyle) ?? symbolImage("terminal", dark: dark))
+                               image: appIcon(app.bundleId, style: iconStyle, snapshot: appSnapshot) ?? symbolImage("terminal", dark: dark))
             item.tag = idx
         }
         for (offset, app) in editors.enumerated() {
             let item = addItem(to: menu, title: String(localized: "Open with \(app.name)"),
                                action: #selector(openWithApp(_:)),
-                               image: appIcon(app.bundleId, style: iconStyle)
+                               image: appIcon(app.bundleId, style: iconStyle, snapshot: appSnapshot)
                                    ?? symbolImage("chevron.left.forwardslash.chevron.right", dark: dark))
             item.tag = terminals.count + offset
         }
@@ -134,7 +142,7 @@ class FinderSyncExtension: FIFinderSync {
         // 只要装了就能用；故从「已安装终端」解析（忽略启用状态）。
         let enabledCmds = config.commands.filter { $0.enabled }
         if !enabledCmds.isEmpty {
-            let installedTerms = installedTerminals(config.terminals)
+            let installedTerms = installedTerminals(config.terminals, snapshot: appSnapshot)
             let termId = TerminalLaunch.resolveDefaultTerminal(eligible: installedTerms,
                                                               preferred: config.defaultTerminal)
             let termName = terminalName(termId, eligible: installedTerms)
@@ -142,7 +150,7 @@ class FinderSyncExtension: FIFinderSync {
             runnableCommands = enabledCmds
             commandTerm = termId
             cacheLock.unlock()
-            let termIcon = appIcon(termId, style: iconStyle) ?? symbolImage("terminal", dark: dark)
+            let termIcon = appIcon(termId, style: iconStyle, snapshot: appSnapshot) ?? symbolImage("terminal", dark: dark)
             for (idx, cmd) in enabledCmds.enumerated() {
                 let item = addItem(to: menu, title: String(localized: "Run \(cmd.name) in \(termName)"),
                                    action: #selector(openWithCommand(_:)), image: termIcon)
@@ -170,29 +178,68 @@ class FinderSyncExtension: FIFinderSync {
 
     // 要在菜单显示的 App：按配置列表过滤启用且已安装的；列表为空（配置未初始化）
     // 时安全回退到检测到的内置 App。
-    private func appsToShow(_ list: [AppEntry], builtins: [KnownApp]) -> [AppEntry] {
+    private func appsToShow(_ list: [AppEntry], builtins: [KnownApp],
+                            snapshot: InstalledAppSnapshot) -> [AppEntry] {
         if list.isEmpty {
-            let detector = AppDetector(isInstalled: isInstalled)
-            return detector.installed(from: builtins)
+            return snapshot.knownApps(from: builtins)
                 .map { AppEntry(bundleId: $0.bundleId, name: $0.displayName) }
         }
-        return list.filter { $0.enabled && isInstalled($0.bundleId) }
+        return list
+            .filter { $0.enabled && snapshot.isInstalled($0.bundleId) }
+            .map { snapshot.refreshedEntry($0) }
     }
 
     // 已安装的终端（忽略「菜单显示」开关）；配置为空时回退到检测到的内置终端。
-    private func installedTerminals(_ list: [AppEntry]) -> [AppEntry] {
+    private func installedTerminals(_ list: [AppEntry], snapshot: InstalledAppSnapshot) -> [AppEntry] {
         if list.isEmpty {
-            let detector = AppDetector(isInstalled: isInstalled)
-            return detector.installed(from: KnownApps.terminals)
+            return snapshot.knownApps(from: KnownApps.terminals)
                 .map { AppEntry(bundleId: $0.bundleId, name: $0.displayName) }
         }
-        return list.filter { isInstalled($0.bundleId) }
+        return list
+            .filter { snapshot.isInstalled($0.bundleId) }
+            .map { snapshot.refreshedEntry($0) }
     }
 
     private func terminalName(_ bundleId: String, eligible: [AppEntry]) -> String {
         if let e = eligible.first(where: { $0.bundleId == bundleId }) { return e.name }
         if let k = KnownApps.terminals.first(where: { $0.bundleId == bundleId }) { return k.displayName }
         return bundleId
+    }
+
+    private func probeBundleIds(_ config: Settings) -> Set<String> {
+        var ids = Set<String>()
+        if config.terminals.isEmpty {
+            ids.formUnion(KnownApps.terminals.map(\.bundleId))
+        } else {
+            ids.formUnion(config.terminals.map(\.bundleId))
+        }
+        if config.editors.isEmpty {
+            ids.formUnion(KnownApps.editors.map(\.bundleId))
+        } else {
+            ids.formUnion(config.editors.filter(\.enabled).map(\.bundleId))
+        }
+        if let defaultTerminal = config.defaultTerminal { ids.insert(defaultTerminal) }
+        return ids
+    }
+
+    private func currentAppSnapshot(for config: Settings) -> InstalledAppSnapshot {
+        let bundleIds = probeBundleIds(config)
+        let now = Date()
+        cacheLock.lock()
+        if let appSnapshotCache, appSnapshotBundleIds == bundleIds,
+           let appSnapshotTime, now.timeIntervalSince(appSnapshotTime) < appSnapshotTTL {
+            defer { cacheLock.unlock() }
+            return appSnapshotCache
+        }
+        cacheLock.unlock()
+
+        let snapshot = InstalledAppSnapshot.capture(bundleIds: bundleIds)
+        cacheLock.lock()
+        appSnapshotCache = snapshot
+        appSnapshotBundleIds = bundleIds
+        appSnapshotTime = now
+        cacheLock.unlock()
+        return snapshot
     }
 
     // 配置按修改时间缓存：mtime 没变就用缓存，避免每次右键重读+解码；
@@ -214,7 +261,13 @@ class FinderSyncExtension: FIFinderSync {
     // 却因缓存了 nil 而一直不显示（未安装查询本身也很快）。
     private func appURL(_ bundleId: String) -> URL? {
         cacheLock.lock()
-        if let cached = urlCache[bundleId] { defer { cacheLock.unlock() }; return cached }
+        if let cached = urlCache[bundleId] {
+            if FileManager.default.fileExists(atPath: cached.path) {
+                defer { cacheLock.unlock() }
+                return cached
+            }
+            urlCache.removeValue(forKey: bundleId)
+        }
         cacheLock.unlock()
         let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId) // 锁外
         if let url {
@@ -223,7 +276,21 @@ class FinderSyncExtension: FIFinderSync {
         return url
     }
 
-    private func isInstalled(_ bundleId: String) -> Bool { appURL(bundleId) != nil }
+    private func freshAppURL(_ bundleId: String) -> URL? {
+        let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId)
+        cacheLock.lock()
+        if let url {
+            urlCache[bundleId] = url
+        } else {
+            urlCache.removeValue(forKey: bundleId)
+            imageCache = imageCache.filter { !$0.key.hasPrefix("app:\(bundleId)|") }
+            appSnapshotCache = nil
+            appSnapshotBundleIds.removeAll()
+            appSnapshotTime = nil
+        }
+        cacheLock.unlock()
+        return url
+    }
 
     @discardableResult
     private func addItem(to menu: NSMenu, title: String, action: Selector,
@@ -290,12 +357,13 @@ class FinderSyncExtension: FIFinderSync {
         UserDefaults.standard.string(forKey: "AppleInterfaceStyle")?.lowercased() == "dark"
     }
 
-    private func appIcon(_ bundleId: String, style: Settings.AppIconStyle) -> NSImage? {
-        let key = "app:\(bundleId)|\(style.rawValue)"
+    private func appIcon(_ bundleId: String, style: Settings.AppIconStyle,
+                         snapshot: InstalledAppSnapshot? = nil) -> NSImage? {
+        guard let url = snapshot?.info(for: bundleId)?.url ?? appURL(bundleId) else { return nil }   // appURL 自带锁，此处不嵌套
+        let key = "app:\(bundleId)|\(url.path)|\(style.rawValue)"
         cacheLock.lock()
         if let cached = imageCache[key] { defer { cacheLock.unlock() }; return cached }
         cacheLock.unlock()
-        guard let url = appURL(bundleId) else { return nil }   // appURL 自带锁，此处不嵌套
         let icon = NSWorkspace.shared.icon(forFile: url.path)  // 取图标 + 渲染都在锁外
         icon.size = Self.iconSize
         let result: NSImage
@@ -349,7 +417,7 @@ class FinderSyncExtension: FIFinderSync {
         let terminalCount = openableTerminalCount
         cacheLock.unlock()
         guard item.tag >= 0, item.tag < apps.count,
-              let url = appURL(apps[item.tag].bundleId)
+              let url = freshAppURL(apps[item.tag].bundleId)
         else { return }
         // 终端只能对目录（文件→父目录）；编辑器打开右键对象本身（文件就开文件）。
         let isTerminal = item.tag < terminalCount

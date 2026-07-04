@@ -142,10 +142,17 @@ extension Settings {
         let builtinIndex = Dictionary(
             builtinOrder.enumerated().map { ($1.bundleId, $0) },
             uniquingKeysWith: { first, _ in first }) // 防御：内置清单万一有重复 bundleId 不崩
+        let installedById = Dictionary(
+            installed.map { ($0.bundleId, $0) },
+            uniquingKeysWith: { first, _ in first })
         for id in order {
             if let idx = builtinIndex[id] {
                 byId[id]?.custom = false
-                byId[id]?.name = builtinOrder[idx].displayName // 名称以内置清单为准
+                if let installedName = installedById[id]?.displayName {
+                    byId[id]?.name = installedName
+                } else if byId[id]?.name.isEmpty != false {
+                    byId[id]?.name = builtinOrder[idx].displayName
+                }
             } else {
                 byId[id]?.custom = true
             }

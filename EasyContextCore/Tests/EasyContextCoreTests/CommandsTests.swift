@@ -78,6 +78,14 @@ final class CommandsTests: XCTestCase {
         XCTAssertEqual(TerminalLaunch.render(t), t)
     }
 
+    func test_builtin_otty_usesAppleScriptDoScript() {
+        let t = TerminalLaunch.builtinTemplates["io.appmakes.otty"]!
+        XCTAssertTrue(t.contains("tell application \"Otty\" to do script"))
+        XCTAssertTrue(t.contains("system attribute \"EC_DIR\""))
+        XCTAssertTrue(t.contains("system attribute \"EC_CMD\""))
+        XCTAssertEqual(TerminalLaunch.render(t), t)
+    }
+
     // MARK: 默认终端解析
     private func term(_ id: String) -> AppEntry { AppEntry(bundleId: id, name: id, custom: false, enabled: true) }
 

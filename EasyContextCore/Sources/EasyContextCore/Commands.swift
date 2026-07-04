@@ -57,6 +57,10 @@ public enum TerminalLaunch {
             + "-e 'input text (system attribute \"EC_CMD\") to (terminal 1 of selected tab of win)' "
             + "-e 'send key \"enter\" to (terminal 1 of selected tab of win)' "
             + "-e 'end tell'",
+        "io.appmakes.otty":
+            "osascript -e 'tell application \"Otty\" to do script "
+            + "\"cd \" & quoted form of (system attribute \"EC_DIR\") & \" && \" "
+            + "& (system attribute \"EC_CMD\")'",
         "net.kovidgoyal.kitty":
             "open -na kitty --args --directory {dir} $EC_SHELL -lic {cmd}",
         "com.github.wez.wezterm":
