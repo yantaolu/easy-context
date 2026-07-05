@@ -18,6 +18,7 @@ struct ContentView: View {
 
     @StateObject private var store = SettingsStore()
     @State private var selection: RowSelection?
+    @State private var showTemplateEditor = false
     @FocusState private var focusedCommand: String? // 命令输入框焦点键（"name-<id>"/"cmd-<id>"）
     // 统一行高（内容 18 + 上下 insets 各 5 = 28），左右两列开关据此对齐。
     private let listRowContentHeight: CGFloat = 18
@@ -37,6 +38,7 @@ struct ContentView: View {
             .frame(maxHeight: .infinity)
         }
         .frame(width: Self.preferredSize.width, height: Self.preferredSize.height)
+        .sheet(isPresented: $showTemplateEditor) { TemplateEditorView(store: store) }
     }
 
     // MARK: - 左列：菜单项 / 菜单图标 / 编辑器
@@ -178,6 +180,9 @@ struct ContentView: View {
             }
             .labelsHidden()
             .fixedSize()
+            // 模板编辑入口：给无内置模板的终端（Warp 等）配模板后即可出现在上面的下拉里。
+            Button("Templates…") { showTemplateEditor = true }
+                .buttonStyle(.link)
         }
         .padding(.bottom, 2)
     }

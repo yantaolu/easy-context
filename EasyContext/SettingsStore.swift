@@ -325,8 +325,33 @@ final class SettingsStore: ObservableObject {
     /// 可用作执行终端的终端（按配置顺序）：已安装且有启动模板（内置或用户覆盖），
     /// 与菜单显示开关无关。无模板的终端（如 Warp/Hyper）不进候选——选了也必然运行失败。
     var installedTerminals: [AppEntry] {
-        TerminalLaunch.launchable(settings.terminals.filter { isInstalled($0) },
-                                  overrides: settings.terminalTemplates)
+        TerminalLaunch.launchable(allInstalledTerminals, overrides: settings.terminalTemplates)
+    }
+
+    /// 全部已安装终端（不做模板过滤）——模板编辑器用，含尚无模板的终端。
+    var allInstalledTerminals: [AppEntry] {
+        settings.terminals.filter { isInstalled($0) }
+    }
+
+    // MARK: - 终端启动模板（编辑器）
+
+    /// 某终端当前生效的模板与来源（覆盖优先于内置）。
+    func templateInfo(for bundleId: String) -> (effective: String, isOverridden: Bool, hasBuiltin: Bool) {
+        let builtin = TerminalLaunch.builtinTemplates[bundleId]
+        let override = settings.terminalTemplates[bundleId]
+        return (override ?? builtin ?? "", override != nil, builtin != nil)
+    }
+
+    /// 写/清模板覆盖：空串或与内置相同 → 移除覆盖（回到内置/无模板）；否则写入。
+    /// 立即落盘——扩展菜单与执行终端候选随之更新。
+    func setTemplateOverride(_ template: String, for bundleId: String) {
+        let trimmed = template.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty || trimmed == TerminalLaunch.builtinTemplates[bundleId] {
+            settings.terminalTemplates.removeValue(forKey: bundleId)
+        } else {
+            settings.terminalTemplates[bundleId] = trimmed
+        }
+        persist()
     }
 
     /// 执行终端下拉的选项，永不为空：无已安装终端时回退系统 Terminal，

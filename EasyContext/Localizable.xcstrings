@@ -241,6 +241,46 @@
         }
       }
     },
+    "Built-in template": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "内置模板"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "內建範本"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "内蔵テンプレート"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Integrierte Vorlage"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modèle intégré"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plantilla integrada"
+          }
+        }
+      }
+    },
     "Can't Add “%@”": {
       "localizations": {
         "zh-Hans": {
@@ -881,6 +921,46 @@
         }
       }
     },
+    "Custom override": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自定义覆盖"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自訂覆寫"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カスタム上書き"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eigene Überschreibung"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remplacement personnalisé"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sustitución personalizada"
+          }
+        }
+      }
+    },
     "Cut": {
       "localizations": {
         "zh-Hant": {
@@ -957,6 +1037,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "删除选中的命令"
+          }
+        }
+      }
+    },
+    "Done": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完成"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完成"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完了"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fertig"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terminé"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listo"
           }
         }
       }
@@ -1441,6 +1561,46 @@
         }
       }
     },
+    "No template": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无模板"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無範本"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テンプレートなし"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Vorlage"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun modèle"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin plantilla"
+          }
+        }
+      }
+    },
     "OK": {
       "localizations": {
         "zh-Hans": {
@@ -1641,6 +1801,46 @@
         }
       }
     },
+    "Placeholders: {dir} = target directory, {cmd} = command; replaced with \"$EC_DIR\"/\"$EC_CMD\" at run time — don't add quotes. $EC_SHELL = the user's login shell.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "占位符：{dir}=目标目录、{cmd}=命令；执行时替换为 \"$EC_DIR\"/\"$EC_CMD\"，请勿自行加引号。$EC_SHELL 为用户登录 shell。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "佔位符：{dir}=目標目錄、{cmd}=指令；執行時替換為 \"$EC_DIR\"/\"$EC_CMD\"，請勿自行加引號。$EC_SHELL 為使用者登入 shell。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プレースホルダ：{dir}=対象ディレクトリ、{cmd}=コマンド。実行時に \"$EC_DIR\"/\"$EC_CMD\" に置換されるため、引用符を自分で付けないでください。$EC_SHELL はログインシェルです。"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Platzhalter: {dir} = Zielverzeichnis, {cmd} = Befehl; zur Laufzeit durch \"$EC_DIR\"/\"$EC_CMD\" ersetzt — keine eigenen Anführungszeichen hinzufügen. $EC_SHELL = Login-Shell des Benutzers."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Espaces réservés : {dir} = répertoire cible, {cmd} = commande ; remplacés à l'exécution par \"$EC_DIR\"/\"$EC_CMD\" — n'ajoutez pas de guillemets. $EC_SHELL = shell de connexion de l'utilisateur."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Marcadores: {dir} = directorio de destino, {cmd} = comando; se sustituyen en tiempo de ejecución por \"$EC_DIR\"/\"$EC_CMD\" — no añadas comillas. $EC_SHELL = shell de inicio de sesión del usuario."
+          }
+        }
+      }
+    },
     "Quit Easy Context": {
       "localizations": {
         "zh-Hant": {
@@ -1801,6 +2001,46 @@
         }
       }
     },
+    "Restore Default": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "恢复默认"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "回復預設"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デフォルトに戻す"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standard wiederherstellen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rétablir par défaut"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restaurar predeterminado"
+          }
+        }
+      }
+    },
     "Retry": {
       "localizations": {
         "zh-Hans": {
@@ -1921,6 +2161,46 @@
         }
       }
     },
+    "Save": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "儲存"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sichern"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrer"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guardar"
+          }
+        }
+      }
+    },
     "Select All": {
       "localizations": {
         "zh-Hant": {
@@ -1961,6 +2241,46 @@
         }
       }
     },
+    "Select a terminal to edit its launch template.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择一个终端以编辑其启动模板。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選擇一個終端機以編輯其啟動範本。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ターミナルを選択して起動テンプレートを編集します。"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wählen Sie ein Terminal aus, um seine Startvorlage zu bearbeiten."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sélectionnez un terminal pour modifier son modèle de lancement."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Selecciona un terminal para editar su plantilla de inicio."
+          }
+        }
+      }
+    },
     "Settings can't be written to disk. Changes apply to this session only.": {
       "localizations": {
         "zh-Hans": {
@@ -1997,6 +2317,126 @@
           "stringUnit": {
             "state": "translated",
             "value": "No se pueden guardar los ajustes en el disco. Los cambios solo se aplican a esta sesión."
+          }
+        }
+      }
+    },
+    "Templates…": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "模板…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "範本…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テンプレート…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorlagen…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modèles…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plantillas…"
+          }
+        }
+      }
+    },
+    "Terminal Launch Templates": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "终端启动模板"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "終端機啟動範本"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ターミナル起動テンプレート"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terminal-Startvorlagen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modèles de lancement du terminal"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plantillas de inicio del terminal"
+          }
+        }
+      }
+    },
+    "Terminals need a launch template to run commands. Terminals without one can't be used as the execution terminal until you add a template here.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "终端需要启动模板才能运行命令。没有模板的终端无法被选为执行终端，在这里为它添加模板即可启用。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "終端機需要啟動範本才能執行指令。沒有範本的終端機無法被選為執行終端機，在這裡為它新增範本即可啟用。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コマンドを実行するにはターミナルに起動テンプレートが必要です。テンプレートのないターミナルは、ここでテンプレートを追加するまで実行ターミナルとして使用できません。"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terminals benötigen eine Startvorlage, um Befehle auszuführen. Terminals ohne Vorlage können erst als Ausführungsterminal verwendet werden, wenn Sie hier eine hinzufügen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les terminaux ont besoin d'un modèle de lancement pour exécuter des commandes. Les terminaux sans modèle ne peuvent pas servir de terminal d'exécution tant que vous n'en ajoutez pas un ici."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los terminales necesitan una plantilla de inicio para ejecutar comandos. Los terminales sin plantilla no pueden usarse como terminal de ejecución hasta que añadas una aquí."
           }
         }
       }
