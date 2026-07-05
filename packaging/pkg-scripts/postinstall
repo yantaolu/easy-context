@@ -1,8 +1,12 @@
 #!/bin/bash
-# 安装完成【后】执行：以登录用户身份重启 EasyContext。
-# App 启动时会自动重新注册 FinderSync 扩展，因此无需手动开扩展。
+# 安装完成【后】执行：显式注册新版 FinderSync 扩展 → 启动宿主 → 重启访达。
 #
-# 注意：绝不能以 root 直接 open App——那样 getuid()==0，配置会读写到
+# 为什么要显式注册 + 重启访达：覆盖安装会使旧插件注册失效（pkd 里的 UUID
+# 指向已被替换的 bundle），若等系统自行重扫，可能拖到用户下次打开设置页
+# 才注册（实测出现过 19 分钟的「右键菜单消失」空窗）。pluginkit -a 立即
+# 注册新 appex，killall Finder 让访达立即挂接（访达会自动重启并恢复窗口）。
+#
+# 注意：绝不能以 root 直接执行——那样 getuid()==0，配置会读写到
 #       /var/root/.easy-context 而不是用户家目录，导致“配置不生效”。
 #       故用 launchctl asuser + sudo -u 切回登录用户。
 set +e
@@ -11,8 +15,14 @@ CONSOLE_USER="$(stat -f '%Su' /dev/console 2>/dev/null)"
 if [ -n "$CONSOLE_USER" ] && [ "$CONSOLE_USER" != "root" ]; then
   CONSOLE_UID="$(id -u "$CONSOLE_USER" 2>/dev/null)"
   if [ -n "$CONSOLE_UID" ]; then
-    launchctl asuser "$CONSOLE_UID" sudo -u "$CONSOLE_USER" \
-      /usr/bin/open "/Applications/EasyContext.app" 2>/dev/null
+    run_as_user() { launchctl asuser "$CONSOLE_UID" sudo -u "$CONSOLE_USER" "$@" 2>/dev/null; }
+    # 1) 立即注册新 appex（不等系统慢扫）
+    run_as_user /usr/bin/pluginkit -a \
+      "/Applications/EasyContext.app/Contents/PlugIns/EasyContextFinder.appex"
+    # 2) 启动宿主（生成 IPC token / 模板参考文件、注册 URL scheme）
+    run_as_user /usr/bin/open "/Applications/EasyContext.app"
+    # 3) 重启访达，立即挂接新版扩展
+    run_as_user /usr/bin/killall Finder
   fi
 fi
 
