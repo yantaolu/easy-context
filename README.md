@@ -13,7 +13,7 @@
 ## 功能
 
 - **复制完整路径** / **复制相对路径**（相对最近的 `.git` 仓库根，不在仓库内回退 `~`）
-- **用终端打开**当前目录 —— 自动识别 Terminal、iTerm、Warp、Ghostty、kitty、WezTerm、Alacritty、Hyper、Tabby、Rio、Wave、Termius
+- **用终端打开**当前目录 —— 自动识别 Terminal、iTerm、Warp、Otty、Ghostty、kitty、WezTerm、Alacritty、Hyper、Tabby、Rio、Wave、Termius
 - **用编辑器打开**当前目录 —— VS Code、VSCodium、Cursor、Trae、Devin（原 Windsurf）、CodeBuddy、Zed、Sublime Text、Nova、BBEdit、TextMate、MacVim、Emacs、Xcode、JetBrains 全家桶（WebStorm / IntelliJ IDEA〔含 CE〕/ PyCharm〔含 CE〕/ GoLand / CLion / PhpStorm / RubyMine / Rider / DataGrip / Fleet）、Android Studio 等
 - **在终端运行命令**（`用 XX 运行 YY`）—— 一键在**执行终端**里于当前目录运行 AI CLI 等命令（预置 `claude` / `codex`，可自定义增删）
 - **新建文件** —— 子菜单选模板（Markdown / 文本 / Shell / JSON），弹**命名面板**输入文件名（预选基名、保留扩展名；重名自动加序号、`.sh` 自动加可执行位），创建后在 Finder 中选中
@@ -53,7 +53,7 @@
   "commands": [                                     // 「用 XX 运行 YY」的命令
     { "id": "…uuid…", "name": "Claude", "command": "claude", "enabled": true }
   ],
-  "defaultTerminal": null,                          // 执行终端 bundleId；null=第一个已安装终端
+  "defaultTerminal": null,                          // 执行终端 bundleId；null=第一个可用终端
   "terminalTemplates": {},                          // 终端启动模板的“用户覆盖”，空=全用内置
   "appearance": { "appIconStyle": "monochrome" }    // monochrome | color
 }
@@ -66,10 +66,10 @@
 ### 在终端运行命令
 
 - 右键菜单出现 `用 <执行终端> 运行 <命令名>`（如 `用 Terminal 运行 Claude`），在**当前目录**打开终端并运行该命令。
-- **执行终端 ≠ 菜单显示**：执行终端是「命令在哪跑」，只看**装没装**，与「菜单显示的终端」开关无关；设置界面「执行终端」下拉列出全部已安装终端，`null` 时取第一个已安装终端（系统 Terminal 兜底）。
-- **PATH**：GUI 进程 PATH 精简，`-e` 型终端（kitty/WezTerm/Alacritty）经用户登录 shell `$EC_SHELL -lic <cmd>` 运行，确保能找到 `~/.local/bin` 等里的 `claude`/`codex`。Terminal/iTerm/Ghostty 用 AppleScript 把命令输入交互 shell，PATH 天然正确。
+- **执行终端 ≠ 菜单显示**：执行终端是「命令在哪跑」，与「菜单显示的终端」开关无关，条件是**已安装且有启动模板**——内置模板覆盖 Terminal / iTerm / Ghostty / Otty / kitty / WezTerm / Alacritty；其余（Warp、Hyper 等）需在 `terminalTemplates` 自行添加模板后才会进入候选。设置界面「执行终端」下拉即列出这些可用终端，`defaultTerminal` 为 `null` 时取第一个（系统 Terminal 兜底）。
+- **PATH**：GUI 进程 PATH 精简，`-e` 型终端（kitty/WezTerm/Alacritty）经用户登录 shell `$EC_SHELL -lic <cmd>` 运行，确保能找到 `~/.local/bin` 等里的 `claude`/`codex`。Terminal/iTerm/Ghostty/Otty 用 AppleScript 把命令输入交互 shell，PATH 天然正确。
 - **自定义启动模板**：`terminalTemplates` 只存**覆盖**（空 = 用内置）。想改某终端：参照配置目录里自动生成的 **`terminal-templates.reference.json`**（列出全部内置模板与 bundleId），把对应条目复制到 `terminalTemplates` 修改。占位符 `{dir}`/`{cmd}` 会替换为 `"$EC_DIR"`/`"$EC_CMD"`（值只走环境变量，勿自行加引号），可用 `$EC_SHELL`。
-- **Ghostty / Terminal / iTerm** 用 AppleScript 运行命令（把命令输入交互 shell，非 `-e` 执行）：单窗口、无「Allow execute」弹框、PATH 正确；仅**首次**需一次性授权「EasyContext 控制 <终端>」（macOS 自动化权限，同 Terminal/iTerm）。Ghostty 需 1.3.0+。
+- **Ghostty / Terminal / iTerm / Otty** 用 AppleScript 运行命令（把命令输入交互 shell，非 `-e` 执行）：单窗口、无「Allow execute」弹框、PATH 正确；仅**首次**需一次性授权「EasyContext 控制 <终端>」（macOS 自动化权限）。Ghostty 需 1.3.0+。
 
 ## 从源码构建
 
@@ -105,7 +105,7 @@ cd EasyContextCore && swift test
 - **`menu(for:)` 与菜单点击的动作回调运行在后台 XPC 工作线程，不是主线程**；而 `init()` 与 NSWorkspace 卷挂载/卸载通知在主线程。⚠️ 曾因误加 `assert(Thread.isMainThread)` 到 `menu(for:)`、错误假设它在主线程，导致每次右键扩展崩溃。由此衍生：
   - 跨「工作线程菜单构建」与「主线程卷通知」共享的缓存**必须加锁**（本项目用 `NSRecursiveLock`，临界区只读写缓存、把读盘/渲染等耗时操作放在锁外）。
   - 离屏图标绘制用 **bitmap-backed `NSGraphicsContext`**，不要用 `NSImage.lockFocus`（主线程取向的 API，在工作线程属未受支持路径，会偶发失败/崩溃）。
-  - 读系统深浅色用全局 **`AppleInterfaceStyle`**，不要用 `NSApp.effectiveAppearance`（主线程属性，工作线程取值不可靠）。
+  - 读系统深浅色：手动深浅色模式读全局 **`AppleInterfaceStyle`**（线程安全）；「自动切换」外观下该键不跟随时段翻转，需 `main.sync` 跳主线程读 `NSApp.effectiveAppearance`（主线程属性，工作线程直接取不可靠）。⚠️ 勿在持缓存锁时调用，否则与主线程等锁形成死锁环。
 - **扩展必须开启 App Sandbox**（pkd 拒绝非沙盒插件）；本地自用靠 `temporary-exception` entitlement 放行 `/Users//Volumes/` 等文件访问。
 - **菜单项的 `representedObject` 会在 XPC 往返中丢失**，故用 `tag` 索引应用列表。
 - **打开 App 用 `NSWorkspace.open`**（沙盒禁止 spawn 进程，不能用 `Process`/`open`）；**新建文件用子菜单**选模板、点选后交宿主弹命名面板创建（扩展弹模态 UI 会抛异常）。
@@ -116,4 +116,5 @@ cd EasyContextCore && swift test
 
 - **分发**：用 `.pkg`（`scripts/build-pkg.sh`）分发——安装出来的 App 不带 quarantine、无需手动清理，且 preinstall 会自动关掉正在运行的旧 App 与 FinderSync 扩展，重装不再报「正在使用中」。不签名的 pkg 首次打开仍需右键→打开放行一次；要做到「双击即装、全程零提示」，需 **Apple Developer ID 证书 + 公证（notarization）**（付费账号，详见 `scripts/build-pkg.sh` 顶部注释）。
 - 部分小众 AI 编辑器（PearAI / Void 等）暂无可靠 bundle id，未进内置清单，可用设置界面的 `+` 自行添加。
-- **在终端运行命令 / 新建文件**由宿主 App 处理（后台代理，无 Dock 图标；双击 App 才显示配置窗）：首次用 AppleScript 型终端（Terminal / iTerm / Ghostty）运行命令时，会弹一次性「控制终端」的自动化授权。
+- **在终端运行命令 / 新建文件**由宿主 App 处理（后台代理，无 Dock 图标；双击 App 才显示配置窗）：首次用 AppleScript 型终端（Terminal / iTerm / Ghostty / Otty）运行命令时，会弹一次性「控制终端」的自动化授权。
+- Warp、Hyper、Tabby、Rio、Wave、Termius 暂无内置启动模板：可在菜单里**打开目录**，但不能作为**执行终端**运行命令，除非在 `terminalTemplates` 自行添加模板。
