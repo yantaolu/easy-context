@@ -19,15 +19,20 @@ public struct RelativePathResolver {
     }
 
     /// 从 url 向上（含自身目录）查找第一个含 `.git`（目录或 gitlink 文件）的祖先。
+    ///
+    /// ⚠️ 用**纯路径字符串**向上走，不用 URL.deletingLastPathComponent：Finder 递给
+    /// 扩展的是 NSURL 桥接 URL，它在根目录上 deletingLastPathComponent 会追加 "../"
+    /// 而不是停在 "/"（路径 /../../.. 无限增长），「parent == current」永不成立 →
+    /// 死循环 + 内存爆涨。NSString.deletingLastPathComponent 是纯字符串操作，
+    /// "/" 的父仍是 "/"，必然收敛。
     public func gitRoot(for url: URL) -> URL? {
-        var current = url.standardizedFileURL
+        var current = url.standardizedFileURL.path
         while true {
-            if gitMarkerExists(current.appendingPathComponent(".git")) {
-                // Normalize via .path to strip trailing slash added by deletingLastPathComponent()
-                return URL(fileURLWithPath: current.path)
+            if gitMarkerExists(URL(fileURLWithPath: current).appendingPathComponent(".git")) {
+                return URL(fileURLWithPath: current)
             }
-            let parent = current.deletingLastPathComponent()
-            if parent.path == current.path { return nil } // 到文件系统根
+            let parent = (current as NSString).deletingLastPathComponent
+            if parent == current { return nil } // 到文件系统根（"/" 的父仍是 "/"）
             current = parent
         }
     }
@@ -39,7 +44,8 @@ public struct RelativePathResolver {
             return Self.relative(from: root, to: target)
         }
         let home = homeDirectory.standardizedFileURL
-        if target.path == home.path || target.path.hasPrefix(home.path + "/") {
+        if target.path == home.path { return "~" } // 家目录本身（如在 ~ 空白处右键）
+        if target.path.hasPrefix(home.path + "/") {
             return "~/" + Self.relative(from: home, to: target)
         }
         return target.path
