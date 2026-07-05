@@ -57,12 +57,22 @@ final class SettingsTests: XCTestCase {
         // Terminal 在内置清单里排在 iTerm 前 → 顺序 Terminal, iTerm, 然后自定义
         XCTAssertEqual(result.map(\.bundleId),
                        ["com.apple.Terminal", "com.googlecode.iterm2", "com.example.MyTerm"])
-        // 新增的 Terminal 默认 enabled
-        XCTAssertTrue(result[0].enabled)
+        // 增量并入（列表已有内容）的新条目默认关闭——新装 App 不静默挤进菜单
+        XCTAssertFalse(result[0].enabled)
         // iTerm 保留用户关闭状态
         XCTAssertFalse(result[1].enabled)
         // 自定义条目保留
         XCTAssertTrue(result[2].custom)
+    }
+
+    // 首次初始化（列表为空）：检测到的内置 App 全启用——开箱即用
+    func test_reconcile_firstRun_enablesAll() {
+        let installed = [
+            KnownApp(bundleId: "com.apple.Terminal", displayName: "Terminal", category: .terminal),
+            KnownApp(bundleId: "com.googlecode.iterm2", displayName: "iTerm", category: .terminal),
+        ]
+        let result = Settings.reconcileList([], installed: installed, builtinOrder: KnownApps.terminals)
+        XCTAssertEqual(result.map(\.enabled), [true, true])
     }
 
     func test_reconcile_keepsUninstalledBuiltin() {

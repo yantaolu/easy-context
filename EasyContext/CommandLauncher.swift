@@ -31,9 +31,10 @@ enum CommandLauncher {
 
         var settings = configStore.load() // 权威当前配置
         settings.normalizeCommandNames(defaultName: String(localized: "Command"))
-        // 安全③：命令必须在用户配置里且启用（按唯一名称查，不执行 URL 里的任意命令串）。
+        // 安全③：命令必须在用户配置里且可运行（不执行 URL 里的任意命令串）。
         // 查不到多半是「菜单弹出后命令被改名/禁用」的竞态——给提示而非静默。
-        guard let entry = settings.commands.first(where: { $0.name == cmdName && $0.enabled })
+        // isRunnable 与菜单显示同口径：禁用或命令串为空都拒绝（挡竞态/伪造 URL）。
+        guard let entry = settings.commands.first(where: { $0.name == cmdName }), entry.isRunnable
         else {
             notify(String(localized: "Cannot Run"),
                    String(localized: "This command was renamed or disabled. Reopen the right-click menu and try again."))
@@ -102,11 +103,10 @@ enum CommandLauncher {
 
     /// 用户登录 shell（GUI 进程环境里 SHELL 常缺失，故从 passwd 取），兜底 /bin/zsh。
     private static func loginShell() -> String {
-        if let pw = getpwuid(getuid()), let sh = pw.pointee.pw_shell {
-            let path = String(cString: sh)
+        if let path = ConfigStore.realUserField(\.pw_shell), !path.isEmpty {
             // csh/tcsh 不支持 -lic 组合参数（-l 必须单独出现）→ 回退 zsh 保证命令能跑。
             let base = (path as NSString).lastPathComponent
-            if !path.isEmpty, base != "csh", base != "tcsh" { return path }
+            if base != "csh", base != "tcsh" { return path }
         }
         return "/bin/zsh"
     }

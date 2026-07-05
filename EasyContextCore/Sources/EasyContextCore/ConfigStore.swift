@@ -21,10 +21,20 @@ public struct ConfigStore {
     }
 
     static func realHomeDirectory() -> String {
-        if let pw = getpwuid(getuid()), let dir = pw.pointee.pw_dir {
-            return String(cString: dir)
+        realUserField(\.pw_dir) ?? NSHomeDirectory()
+    }
+
+    /// 用可重入的 getpwuid_r 读用户数据库字段（扩展里可能在 XPC 工作线程与主线程
+    /// 并发调用；宿主用它取登录 shell）。pw_* 指针指向 buffer 内部，须在闭包内完成拷贝。
+    public static func realUserField(_ field: KeyPath<passwd, UnsafeMutablePointer<CChar>?>) -> String? {
+        var pwd = passwd()
+        var result: UnsafeMutablePointer<passwd>?
+        var buffer = [CChar](repeating: 0, count: 4096)
+        return buffer.withUnsafeMutableBufferPointer { buf -> String? in
+            guard getpwuid_r(getuid(), &pwd, buf.baseAddress, buf.count, &result) == 0,
+                  result != nil, let value = pwd[keyPath: field] else { return nil }
+            return String(cString: value)
         }
-        return NSHomeDirectory()
     }
 
     public var path: String { fileURL.path }

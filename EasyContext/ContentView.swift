@@ -368,10 +368,19 @@ struct ContentView: View {
         panel.prompt = String(localized: "Add")
         guard panel.runModal() == .OK, let url = panel.url else { return }
         if store.appSupportsOpeningFolder(url) {
-            store.addCustomApp(at: url, category: category)
+            if !store.addCustomApp(at: url, category: category) { promptAddFailed(url) }
         } else {
             promptUnsupported(url, category)
         }
+    }
+
+    // 读不出所选 .app 的 bundleId（包损坏/非标准包）：提示而非静默无反应。
+    private func promptAddFailed(_ appURL: URL) {
+        let name = appURL.deletingPathExtension().lastPathComponent
+        let alert = NSAlert()
+        alert.messageText = String(localized: "Can't Add “\(name)”")
+        alert.informativeText = String(localized: "The app's information could not be read, so it can't be added.")
+        alert.runModal()
     }
 
     // 该 App 未声明可打开目录：警告但允许用户仍然添加。
@@ -382,8 +391,9 @@ struct ContentView: View {
         alert.informativeText = String(localized: "This app doesn't declare that it can open folders, so clicking it from the right-click menu may not open the directory. Add it anyway?")
         alert.addButton(withTitle: String(localized: "Add Anyway"))
         alert.addButton(withTitle: String(localized: "Cancel"))
-        if alert.runModal() == .alertFirstButtonReturn {
-            store.addCustomApp(at: appURL, category: category)
+        if alert.runModal() == .alertFirstButtonReturn,
+           !store.addCustomApp(at: appURL, category: category) {
+            promptAddFailed(appURL)
         }
     }
 

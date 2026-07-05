@@ -15,10 +15,11 @@ class FinderSyncExtension: FIFinderSync {
     private var menuTargetURLs: [URL] = []
 
     // 缓存（扩展进程常驻，跨多次右键存活，避免每次重读/重查/重渲染）。
-    // 注意：menu(for:) 在 XPC 工作线程回调、volumesChanged 在主线程，两者会并发
-    // 访问下列缓存，故所有读写都要走 cacheLock（用递归锁以允许 appIcon→appURL 嵌套）。
+    // 注意：menu(for:) 在 XPC 工作线程回调、volumesChanged 等通知在主线程，两者会
+    // 并发访问下列缓存，故所有读写都要走 cacheLock。⚠️ 非递归锁：临界区内不得调用
+    // 其它加锁方法（当前所有加锁路径均无嵌套）。
     private let configStore = ConfigStore()
-    private let cacheLock = NSRecursiveLock()
+    private let cacheLock = NSLock()
     private var settingsCache: Settings?
     private var settingsMTime: Date?
     private var urlCache: [String: URL] = [:]       // bundleId -> App URL（只缓存已安装）
@@ -26,7 +27,8 @@ class FinderSyncExtension: FIFinderSync {
     private var appSnapshotCache: InstalledAppSnapshot?
     private var appSnapshotBundleIds: Set<String> = []
     private var appSnapshotTime: Date?
-    private let appSnapshotTTL: TimeInterval = 1
+    // App 启停/卷挂卸通知会主动失效快照，TTL 只兜「拖进废纸篓卸载」等无通知场景。
+    private let appSnapshotTTL: TimeInterval = 30
 
     override init() {
         super.init()
@@ -39,6 +41,12 @@ class FinderSyncExtension: FIFinderSync {
                        name: NSWorkspace.didUnmountNotification, object: nil)
         nc.addObserver(self, selector: #selector(volumesChanged),
                        name: NSWorkspace.didRenameVolumeNotification, object: nil)
+        // App 启动/退出常意味着新装/更新（首启），主动失效安装态快照——
+        // 让「刚装的 App 出现在菜单」不用等 TTL 过期。
+        nc.addObserver(self, selector: #selector(appsChanged),
+                       name: NSWorkspace.didLaunchApplicationNotification, object: nil)
+        nc.addObserver(self, selector: #selector(appsChanged),
+                       name: NSWorkspace.didTerminateApplicationNotification, object: nil)
     }
 
     deinit {
@@ -51,6 +59,15 @@ class FinderSyncExtension: FIFinderSync {
         cacheLock.lock()
         urlCache.removeAll()
         imageCache.removeAll()
+        appSnapshotCache = nil
+        appSnapshotBundleIds.removeAll()
+        appSnapshotTime = nil
+        cacheLock.unlock()
+    }
+
+    // App 启停 → 只失效安装态快照（App URL/图标不随启停变化，保留其缓存）。
+    @objc private func appsChanged(_ note: Notification) {
+        cacheLock.lock()
         appSnapshotCache = nil
         appSnapshotBundleIds.removeAll()
         appSnapshotTime = nil
@@ -154,7 +171,7 @@ class FinderSyncExtension: FIFinderSync {
         // 只要装了就能用；故从「已安装终端」解析（忽略启用状态），再过滤出有启动
         // 模板的（与宿主 SettingsStore.installedTerminals 同口径）——无模板的终端
         // 被解析为执行终端后点击必然失败。
-        let enabledCmds = config.commands.filter { $0.enabled }
+        let enabledCmds = config.commands.filter { $0.isRunnable } // 启用且命令串非空
         if !enabledCmds.isEmpty {
             let installedTerms = TerminalLaunch.launchable(
                 installedTerminals(config.terminals, snapshot: appSnapshot),
@@ -476,7 +493,7 @@ class FinderSyncExtension: FIFinderSync {
             URLQueryItem(name: "dir", value: dir.path),
             URLQueryItem(name: "term", value: term),
             // ensure：token 缺失（宿主从未运行/被清理）时由扩展补建，避免首次点击静默失败。
-            URLQueryItem(name: "t", value: ConfigStore().ensureIPCToken()), // 宿主据此验真
+            URLQueryItem(name: "t", value: configStore.ensureIPCToken()), // 宿主据此验真
         ]
         guard let url = comps.url else { return }
         NSWorkspace.shared.open(url)
@@ -493,7 +510,7 @@ class FinderSyncExtension: FIFinderSync {
         comps.queryItems = [
             URLQueryItem(name: "dir", value: dir.path),
             URLQueryItem(name: "template", value: FileTemplate.allCases[item.tag].rawValue),
-            URLQueryItem(name: "t", value: ConfigStore().ensureIPCToken()),
+            URLQueryItem(name: "t", value: configStore.ensureIPCToken()),
         ]
         guard let url = comps.url else { return }
         NSWorkspace.shared.open(url)

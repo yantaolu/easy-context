@@ -241,6 +241,46 @@
         }
       }
     },
+    "Can't Add “%@”": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法添加“%@”"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法新增「%@」"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”を追加できません"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ kann nicht hinzugefügt werden"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible d'ajouter « %@ »"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se puede añadir “%@”"
+          }
+        }
+      }
+    },
     "Cancel": {
       "localizations": {
         "zh-Hant": {
@@ -2157,6 +2197,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "访达扩展尚未启用，右键菜单不会出现"
+          }
+        }
+      }
+    },
+    "The app's information could not be read, so it can't be added.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法读取该应用的信息，无法添加。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法讀取該應用程式的資訊，無法新增。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アプリの情報を読み取れないため、追加できません。"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Informationen der App konnten nicht gelesen werden, daher kann sie nicht hinzugefügt werden."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les informations de l'app n'ont pas pu être lues, elle ne peut donc pas être ajoutée."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo leer la información de la app, por lo que no se puede añadir."
           }
         }
       }

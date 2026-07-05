@@ -157,9 +157,13 @@ extension Settings {
             byId[e.bundleId] = e
             order.append(e.bundleId)
         }
+        // 新并入条目的默认启用状态：首次初始化（列表为空）全启用——开箱即用；
+        // 增量并入（列表已有内容，说明用户已在管理菜单）默认关闭——新装 App 不再
+        // 以启用状态静默挤进右键菜单。
+        let newEntriesEnabled = existing.isEmpty
         for app in installed where byId[app.bundleId] == nil {
             byId[app.bundleId] = AppEntry(bundleId: app.bundleId, name: app.displayName,
-                                          custom: false, enabled: true)
+                                          custom: false, enabled: newEntriesEnabled)
             order.append(app.bundleId)
         }
         let builtinIndex = Dictionary(

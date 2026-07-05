@@ -44,9 +44,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     // AppKit 不再回调 application(_:open:)。
     @objc private func handleGetURL(_ event: NSAppleEventDescriptor,
                                     withReply reply: NSAppleEventDescriptor) {
-        launchedForURL = true
         guard let str = event.paramDescriptor(forKeyword: AEKeyword(keyDirectObject))?.stringValue,
               let url = URL(string: str) else { return }
+        // 只有可识别的动作 URL 才算「为处理 URL 而启动」；垃圾 URL 冷启动仍照常
+        // 显示设置窗，避免进程无窗静默驻留。须在此同步置位（didFinishLaunching
+        // 同步读取，handle 里的 Task 是异步的）。
+        if url.host == "run" || url.host == "newfile" { launchedForURL = true }
         handle(url)
     }
 

@@ -26,6 +26,12 @@ public struct CommandEntry: Codable, Equatable, Sendable, Identifiable {
         command = try c.decode(String.self, forKey: .command)
         enabled = c.value(.enabled, default: true)
     }
+
+    /// 可运行 = 启用且命令串非空。菜单显示与宿主执行共用此口径——
+    /// 新增命令默认 command 为空，落盘后不该出现在菜单里（点了必失败）。
+    public var isRunnable: Bool {
+        enabled && !command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
 }
 
 /// 终端启动模板与默认终端解析。

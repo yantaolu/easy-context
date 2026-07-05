@@ -8,9 +8,9 @@ public enum NewFileMaker {
     /// - requestedName：用户输入的完整文件名（含扩展名）；空则用模板默认名。
     /// - 只取其 lastPathComponent → 防路径穿越（`../x` 之类被削掉）。
     /// - 重名自动加序号，**永不覆盖**；模板决定初始内容与可执行位。
-    /// 返回创建的文件 URL，失败返回 nil。
+    /// 返回创建的文件 URL；失败抛出底层错误（权限被拒/只读卷/磁盘满……由调用方展示）。
     public static func create(template: FileTemplate, in dir: URL, requestedName: String,
-                              fileManager: FileManager = .default) -> URL? {
+                              fileManager: FileManager = .default) throws -> URL {
         let fm = fileManager
         let trimmed = requestedName.trimmingCharacters(in: .whitespacesAndNewlines)
         let raw = trimmed.isEmpty ? template.defaultFileName : trimmed
@@ -25,14 +25,10 @@ public enum NewFileMaker {
         })
         let finalName = resolver.uniqueName(base: base, ext: ext)
         let fileURL = dir.appendingPathComponent(finalName)
-        do {
-            try template.initialContent.write(to: fileURL, atomically: true, encoding: .utf8)
-            if template.isExecutable {
-                try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: fileURL.path)
-            }
-            return fileURL
-        } catch {
-            return nil
+        try template.initialContent.write(to: fileURL, atomically: true, encoding: .utf8)
+        if template.isExecutable {
+            try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: fileURL.path)
         }
+        return fileURL
     }
 }

@@ -4,11 +4,16 @@ import EasyContextCore
 
 /// 处理 easycontext://newfile?dir=&template=&t= —— 弹命名面板→建文件→在 Finder 选中。
 enum NewFileLauncher {
+    /// 命名面板显示期间到达的第二个 newfile URL 直接忽略，避免叠出嵌套模态面板
+    /// （runModal 期间主队列仍被 drain，Task 会照常进入本函数）。
+    @MainActor private static var isPrompting = false
+
     @MainActor
     static func handle(_ url: URL) {
         guard url.scheme == "easycontext", url.host == "newfile",
               let comps = URLComponents(url: url, resolvingAgainstBaseURL: false)
         else { return }
+        guard !isPrompting else { return }
         let q = comps.queryItems ?? []
         func value(_ name: String) -> String? { q.first { $0.name == name }?.value }
         guard let dir = value("dir"), let templateRaw = value("template") else { return }
@@ -31,17 +36,22 @@ enum NewFileLauncher {
         else { return }
         guard let template = FileTemplate(rawValue: templateRaw) else { return }
 
-        guard let name = NameInputController.prompt(prefill: template.defaultFileName) else { return }
+        isPrompting = true
+        let name = NameInputController.prompt(prefill: template.defaultFileName)
+        isPrompting = false
+        guard let name else { return }
         let dirURL = URL(fileURLWithPath: dir, isDirectory: true)
-        guard let created = NewFileMaker.create(template: template, in: dirURL, requestedName: name) else {
+        do {
+            let created = try NewFileMaker.create(template: template, in: dirURL, requestedName: name)
+            // 在 Finder 里选中新文件——无需自动化权限（NSWorkspace 标准 API）。
+            NSWorkspace.shared.activateFileViewerSelecting([created])
+        } catch {
             let a = NSAlert()
             a.messageText = String(localized: "Failed to Create File")
-            a.informativeText = String(localized: "Could not create a file in this folder.")
+            // 透传系统错误（权限被拒/只读卷/磁盘满……），NSError 消息自带本地化。
+            a.informativeText = error.localizedDescription
             NSApp.activate(ignoringOtherApps: true)
             a.runModal()
-            return
         }
-        // 在 Finder 里选中新文件——无需自动化权限（NSWorkspace 标准 API）。
-        NSWorkspace.shared.activateFileViewerSelecting([created])
     }
 }

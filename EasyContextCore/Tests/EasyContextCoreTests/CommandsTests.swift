@@ -88,6 +88,14 @@ final class CommandsTests: XCTestCase {
         XCTAssertEqual(TerminalLaunch.render(t), t)
     }
 
+    // MARK: 可运行判定（菜单显示与宿主执行共用口径）
+    func test_isRunnable_requiresEnabledAndNonEmptyCommand() {
+        XCTAssertTrue(CommandEntry(name: "A", command: "claude").isRunnable)
+        XCTAssertFalse(CommandEntry(name: "A", command: "").isRunnable)          // 新增未填
+        XCTAssertFalse(CommandEntry(name: "A", command: "  \n ").isRunnable)     // 纯空白
+        XCTAssertFalse(CommandEntry(name: "A", command: "claude", enabled: false).isRunnable)
+    }
+
     // MARK: 可执行终端过滤（launchable）
     func test_launchable_keepsOnlyTerminalsWithTemplate() {
         let list = [term("com.apple.Terminal"),        // 有内置模板

@@ -41,7 +41,10 @@ final class SettingsStore: ObservableObject {
         self.lastValidCommandNames = Self.commandNameMap(from: s.commands)
         // 内容没变就不重写，避免无谓 bump mtime（否则扩展端缓存会被迫重载一次）。
         // 损坏时【不写】——避免默认值覆盖用户可修复的原文件（已备份到 .bak）。
-        if outcome != .corrupt, s != original || !store.hasStored() { try? store.save(s) }
+        // 首次写盘失败同样亮 saveFailed 横幅（与后续 persist 失败同口径）。
+        if outcome != .corrupt, s != original || !store.hasStored() {
+            if (try? store.save(s)) == nil { saveFailed = true }
+        }
         // 记录基线：文件指纹用于识别 config.json 的外部改动，安装签名用于识别条目装/卸。
         lastToken = store.fileToken()
         // 注：IPC token 生成与模板参考文件写出已移到 AppDelegate（无论是否显示设置窗都要跑）。
@@ -90,9 +93,17 @@ final class SettingsStore: ObservableObject {
         let pipe = Pipe()
         process.standardOutput = pipe
         do { try process.run() } catch { return true }
+        // 5s 超时兜底：pluginkit 挂死时终止之，避免后台任务永久等待。
+        let killTimer = DispatchWorkItem { [weak process] in
+            if let process, process.isRunning { process.terminate() }
+        }
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 5, execute: killTimer)
         // 先读完管道再等退出，避免输出超管道缓冲时的死锁形态。
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
+        killTimer.cancel()
+        // 被超时终止 → 状态未知，乐观视为已启用（与 run 失败同口径，避免误吓用户）。
+        if process.terminationReason == .uncaughtSignal { return true }
         let out = (String(data: data, encoding: .utf8) ?? "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
         // 行首 '+' = 启用，'-' = 已注册未启用，空 = 未注册。
@@ -235,8 +246,10 @@ final class SettingsStore: ObservableObject {
     /// 从 .app 读 bundleId + 名称，作为自定义项追加（已存在则忽略）。
     /// 不做同步 LaunchServices 查询：名称直接从所选 .app 读、快照原地并入（刚选中的
     /// App 必然已安装），排序 / custom 标记 / 安装签名交给后台 refreshAppList 统一校正。
-    func addCustomApp(at url: URL, category: AppCategory) {
-        guard let bundleId = Bundle(url: url)?.bundleIdentifier else { return }
+    /// 返回是否成功（false = 读不出 bundleId，由 UI 提示）。
+    @discardableResult
+    func addCustomApp(at url: URL, category: AppCategory) -> Bool {
+        guard let bundleId = Bundle(url: url)?.bundleIdentifier else { return false }
         let name = InstalledAppSnapshot.displayName(
             for: url, fallback: url.deletingPathExtension().lastPathComponent)
         let entry = AppEntry(bundleId: bundleId, name: name, custom: true, enabled: true)
@@ -254,6 +267,7 @@ final class SettingsStore: ObservableObject {
             InstalledAppInfo(bundleId: bundleId, url: url, displayName: name))
         persist()
         Task { await refreshAppList() }
+        return true
     }
 
     // MARK: - 自定义命令
