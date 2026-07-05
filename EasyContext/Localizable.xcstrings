@@ -521,86 +521,6 @@
         }
       }
     },
-    "Command name already exists. Please choose a different name.": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "命令名称已存在。请选择其他名称。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "命令名稱已存在。請選擇其他名稱。"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "同じコマンド名がすでにあります。別の名前を選んでください。"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Der Befehlsname ist bereits vorhanden. Wähle einen anderen Namen."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ce nom de commande existe déjà. Choisissez un autre nom."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "El nombre del comando ya existe. Elige otro nombre."
-          }
-        }
-      }
-    },
-    "Command name cannot be empty.": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "命令名称不能为空。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "命令名稱不能為空。"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "コマンド名は空にできません。"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Der Befehlsname darf nicht leer sein."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Le nom de la commande ne peut pas être vide."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "El nombre del comando no puede estar vacío."
-          }
-        }
-      }
-    },
     "Command, e.g. claude": {
       "localizations": {
         "zh-Hant": {
@@ -1357,46 +1277,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "隐藏 Easy Context"
-          }
-        }
-      }
-    },
-    "Invalid Command Name": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "命令名称无效"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "命令名稱無效"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "コマンド名が無効です"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ungültiger Befehlsname"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nom de commande non valide"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nombre de comando no válido"
           }
         }
       }
@@ -2361,42 +2241,42 @@
         }
       }
     },
-    "This command was renamed or disabled. Reopen the right-click menu and try again.": {
+    "This command was removed or disabled. Reopen the right-click menu and try again.": {
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "该命令已被重命名或停用。请重新打开右键菜单再试。"
+            "value": "该命令已被删除或停用。请重新打开右键菜单再试。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "該指令已被重新命名或停用。請重新打開右鍵選單再試。"
+            "value": "該指令已被刪除或停用。請重新開啟右鍵選單再試。"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "このコマンドは名前が変更されたか、無効になっています。右クリックメニューを開き直して、もう一度お試しください。"
+            "value": "このコマンドは削除または無効化されています。右クリックメニューを開き直してもう一度お試しください。"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dieser Befehl wurde umbenannt oder deaktiviert. Öffnen Sie das Kontextmenü erneut und versuchen Sie es noch einmal."
+            "value": "Dieser Befehl wurde entfernt oder deaktiviert. Öffnen Sie das Kontextmenü erneut und versuchen Sie es noch einmal."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cette commande a été renommée ou désactivée. Rouvrez le menu contextuel et réessayez."
+            "value": "Cette commande a été supprimée ou désactivée. Rouvrez le menu contextuel et réessayez."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Este comando fue renombrado o desactivado. Vuelve a abrir el menú contextual e inténtalo de nuevo."
+            "value": "Este comando se ha eliminado o desactivado. Vuelve a abrir el menú contextual e inténtalo de nuevo."
           }
         }
       }

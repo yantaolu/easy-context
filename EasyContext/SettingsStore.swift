@@ -20,7 +20,6 @@ final class SettingsStore: ObservableObject {
     // 绝大多数确实装着），列表立即可见、快照就绪后校正——避免首窗卡顿或闪空。
     private var installedSnapshot: InstalledAppSnapshot?
     private var iconCache: [String: NSImage] = [:]
-    private var lastValidCommandNames: [String: String] = [:]
     private static var defaultCommandName: String { String(localized: "Command") }
 
     init() {
@@ -36,9 +35,8 @@ final class SettingsStore: ObservableObject {
             original = Settings()
         }
         var s = original
-        s.normalizeCommandNames(defaultName: Self.defaultCommandName)
+        s.normalizeCommands(defaultName: Self.defaultCommandName)
         self.settings = s
-        self.lastValidCommandNames = Self.commandNameMap(from: s.commands)
         // 内容没变就不重写，避免无谓 bump mtime（否则扩展端缓存会被迫重载一次）。
         // 损坏时【不写】——避免默认值覆盖用户可修复的原文件（已备份到 .bak）。
         // 首次写盘失败同样亮 saveFailed 横幅（与后续 persist 失败同口径）。
@@ -59,11 +57,11 @@ final class SettingsStore: ObservableObject {
                 await self?.refreshAppList()
             }
         }
-        // ⌘Q 兜底：命令名只在失焦/回车落盘，改名后直接退出会丢——willTerminate 时
-        // 静默 flush。此后没有 runloop，须同步执行（通知在主线程送达，assumeIsolated 成立）。
+        // ⌘Q 兜底：命令编辑只在失焦/回车落盘，改完直接退出会丢——willTerminate 时
+        // flush。此后没有 runloop，须同步执行（通知在主线程送达，assumeIsolated 成立）。
         terminateObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.flushCommandsSilently() }
+            MainActor.assumeIsolated { self?.flushCommands() }
         }
         // 首轮安装态探测 + reconcile（几十次 LaunchServices 查询）放后台，避免首窗卡顿。
         Task { await self.refreshAppList() }
@@ -172,11 +170,10 @@ final class SettingsStore: ObservableObject {
         switch store.loadOutcome() {
         case .ok(let rawLoaded):
             var loaded = rawLoaded
-            loaded.normalizeCommandNames(defaultName: Self.defaultCommandName)
+            loaded.normalizeCommands(defaultName: Self.defaultCommandName)
             var published = false
             if settings != loaded {
                 settings = loaded
-                lastValidCommandNames = Self.commandNameMap(from: loaded.commands)
                 published = true
             }
             if configCorrupt { configCorrupt = false; published = true }  // 用户把文件修好了 → 撤横幅
@@ -276,22 +273,21 @@ final class SettingsStore: ObservableObject {
         settings.commands.first { $0.id == id }
     }
 
-    /// 追加一条新命令（默认启用），名称自动去重。结构性改动 → 立即写盘。
+    /// 追加一条新命令（默认启用），起名自动避开已有名字（纯体验，不是强制唯一）。
+    /// 结构性改动 → 立即写盘。
     func addCommand() {
         let name = Self.uniqueCommandName(in: settings.commands)
         settings.commands.append(CommandEntry(name: name, command: "", enabled: true))
-        lastValidCommandNames = Self.commandNameMap(from: settings.commands)
         persist()
     }
 
     /// 结构性改动 → 立即写盘。
     func removeCommand(id: String) {
         settings.commands.removeAll { $0.id == id }
-        lastValidCommandNames.removeValue(forKey: id)
         persist()
     }
 
-    // 命令名编辑：先只改内存，失焦/回车时再校验并落盘，避免空名/重名被防抖写入配置。
+    // 命令名编辑：先只改内存，失焦/回车时落盘（名字是纯显示文本，无需校验唯一）。
     func updateCommandName(id: String, _ value: String) {
         guard let i = settings.commands.firstIndex(where: { $0.id == id }) else { return }
         settings.commands[i].name = value
@@ -304,19 +300,11 @@ final class SettingsStore: ObservableObject {
     }
 
     /// UI 在输入框失焦/回车时调用，立刻落盘（并取消挂起的防抖任务）。
+    /// normalize 只做 trim + 空名补默认名（执行按 id，名字不再强制唯一）。
     func flushCommands() {
         saveTask?.cancel()
         saveTask = nil
-        guard validateCommandNames() else { return }
-        persist()
-    }
-
-    /// 退出前兜底落盘（willTerminate 后不再有 runloop，也不该弹模态窗）：
-    /// 非法名静默还原为上次合法值后照常落盘。
-    private func flushCommandsSilently() {
-        saveTask?.cancel()
-        saveTask = nil
-        _ = validateCommandNames(interactive: false)
+        settings.normalizeCommands(defaultName: Self.defaultCommandName)
         persist()
     }
 
@@ -369,7 +357,6 @@ final class SettingsStore: ObservableObject {
             return
         }
         if saveFailed { saveFailed = false }
-        lastValidCommandNames = Self.commandNameMap(from: settings.commands)
         lastToken = store.fileToken()   // 记住自身写盘的指纹，避免 reloadIfChanged 把它误判为外部改动
         // 损坏状态下用户主动改动会写出一份合法配置 → 撤下损坏横幅（原文件仍留在 .bak）。
         if configCorrupt { configCorrupt = false }
@@ -383,66 +370,17 @@ final class SettingsStore: ObservableObject {
         persist()
     }
 
-    /// interactive=false（退出兜底）：不弹窗，非法名还原上次合法值后继续，恒返回 true。
-    private func validateCommandNames(interactive: Bool = true) -> Bool {
-        var seen: Set<String> = []
-        for i in settings.commands.indices {
-            var trimmed = settings.commands[i].name.trimmingCharacters(in: .whitespacesAndNewlines)
-            if trimmed.isEmpty || seen.contains(trimmed) {
-                restoreCommandName(at: i)
-                if interactive {
-                    alertInvalidCommandName(trimmed.isEmpty
-                        ? String(localized: "Command name cannot be empty.")
-                        : String(localized: "Command name already exists. Please choose a different name."))
-                    return false
-                }
-                trimmed = settings.commands[i].name.trimmingCharacters(in: .whitespacesAndNewlines)
-                if trimmed.isEmpty || seen.contains(trimmed) {
-                    // 还原值也被本轮更早的条目占用 → 生成不冲突的默认名。
-                    trimmed = Self.uniqueCommandName(in: settings.commands,
-                                                     excluding: settings.commands[i].id)
-                }
-            }
-            seen.insert(trimmed)
-            settings.commands[i].name = trimmed
-        }
-        return true
-    }
-
-    private func restoreCommandName(at index: Int) {
-        let id = settings.commands[index].id
-        settings.commands[index].name = lastValidCommandNames[id] ?? Self.uniqueCommandName(in: settings.commands, excluding: id)
-    }
-
-    private static func uniqueCommandName(in commands: [CommandEntry], excluding id: String? = nil) -> String {
-        uniqueCommandName(base: Self.defaultCommandName,
-                          used: Set(commands.compactMap {
-                              $0.id == id ? nil : $0.name.trimmingCharacters(in: .whitespacesAndNewlines)
-                          }))
-    }
-
-    private static func uniqueCommandName(base: String, used: Set<String>) -> String {
-        var name = base
+    /// 新命令的默认起名：避开已有名字（Command、Command2…）。纯体验，不是唯一性约束。
+    private static func uniqueCommandName(in commands: [CommandEntry]) -> String {
+        let used = Set(commands.map { $0.name.trimmingCharacters(in: .whitespacesAndNewlines) })
+        var name = defaultCommandName
         var n = 1
         while used.contains(name) {
             n += 1
-            name = "\(base)\(n)"
+            name = "\(defaultCommandName)\(n)"
         }
         return name
     }
-
-    private static func commandNameMap(from commands: [CommandEntry]) -> [String: String] {
-        Dictionary(commands.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
-    }
-
-    private func alertInvalidCommandName(_ message: String) {
-        let alert = NSAlert()
-        alert.messageText = String(localized: "Invalid Command Name")
-        alert.informativeText = message
-        NSApp.activate(ignoringOtherApps: true)
-        alert.runModal()
-    }
-
 }
 
 private extension Settings {

@@ -36,6 +36,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let store = ConfigStore()
         store.ensureIPCToken()
         store.writeTemplatesReference(builtin: TerminalLaunch.builtinTemplates)
+        // 固化命令 id：URL 按 id 引用命令，而解码会为缺失 id 随机回填——若不落盘，
+        // 扩展与宿主两进程各自回填出不同 id 导致查找失配。内容没变则不写。
+        if case .ok(let loaded) = store.loadOutcome() {
+            var s = loaded
+            s.normalizeCommands(defaultName: String(localized: "Command"))
+            if s != loaded { try? store.save(s) }
+        }
         // 冷启动若不是为处理 URL（用户双击打开）→ 显示设置窗。
         if !launchedForURL { showSettings() }
     }

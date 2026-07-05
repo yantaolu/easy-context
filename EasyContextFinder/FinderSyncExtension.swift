@@ -283,7 +283,7 @@ class FinderSyncExtension: FIFinderSync {
         if let settingsCache, settingsMTime == mtime { defer { cacheLock.unlock() }; return settingsCache }
         cacheLock.unlock()
         var loaded = configStore.load() // 读盘+解码在锁外，避免阻塞主线程的 volumesChanged
-        loaded.normalizeCommandNames(defaultName: String(localized: "Command"))
+        loaded.normalizeCommands(defaultName: String(localized: "Command"))
         cacheLock.lock()
         settingsCache = loaded
         settingsMTime = mtime
@@ -489,6 +489,9 @@ class FinderSyncExtension: FIFinderSync {
         comps.scheme = "easycontext"
         comps.host = "run"
         comps.queryItems = [
+            // id 是执行协议的键（改名不影响执行）；cmd=name 仅为升级期间
+            // 尚未重启的旧版宿主保留的回退，之后可移除。
+            URLQueryItem(name: "id", value: cmds[item.tag].id),
             URLQueryItem(name: "cmd", value: cmds[item.tag].name),
             URLQueryItem(name: "dir", value: dir.path),
             URLQueryItem(name: "term", value: term),

@@ -2,8 +2,10 @@ import Foundation
 
 /// 一条可在终端运行的命令（如 Claude → `claude`）。
 ///
-/// `id` 是稳定标识（UUID），与 `name` 解耦——改名不改 id，保证 SwiftUI 列表
-/// 身份稳定（编辑中的输入不丢）。URL/宿主查命令仍按 `name`（用户可见键）。
+/// `id` 是稳定标识（UUID）：既是 SwiftUI 列表身份，也是 easycontext:// URL
+/// 引用命令的执行协议键——改名不影响执行、不存在改名竞态。宿主启动时会把
+/// 解码回填的 id 写盘固化，保证扩展与宿主两端读到同一批 id。
+/// `name` 是纯显示文本，可重复、可随意改。
 public struct CommandEntry: Codable, Equatable, Sendable, Identifiable {
     public var id: String
     public var name: String       // 显示名，也作 URL 里的引用键

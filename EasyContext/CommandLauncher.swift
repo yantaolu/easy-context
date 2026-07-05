@@ -11,8 +11,7 @@ enum CommandLauncher {
         else { return }
         let q = comps.queryItems ?? []
         func value(_ name: String) -> String? { q.first { $0.name == name }?.value }
-        guard let cmdName = value("cmd"), let dir = value("dir"), let term = value("term")
-        else { return }
+        guard let dir = value("dir"), let term = value("term") else { return }
 
         let configStore = ConfigStore()
         // 安全①：token 必须匹配（挡网页/其它 app 伪造的 easycontext:// URL）。
@@ -30,14 +29,22 @@ enum CommandLauncher {
         else { return }
 
         var settings = configStore.load() // 权威当前配置
-        settings.normalizeCommandNames(defaultName: String(localized: "Command"))
+        settings.normalizeCommands(defaultName: String(localized: "Command"))
         // 安全③：命令必须在用户配置里且可运行（不执行 URL 里的任意命令串）。
-        // 查不到多半是「菜单弹出后命令被改名/禁用」的竞态——给提示而非静默。
+        // 按稳定 id 查（改名不影响执行）；cmd=name 是旧版扩展驻留进程的兼容回退。
+        // 查不到 = 命令已删除/禁用/未填内容——给提示而非静默。
         // isRunnable 与菜单显示同口径：禁用或命令串为空都拒绝（挡竞态/伪造 URL）。
-        guard let entry = settings.commands.first(where: { $0.name == cmdName }), entry.isRunnable
-        else {
+        let found: CommandEntry?
+        if let id = value("id") {
+            found = settings.commands.first { $0.id == id }
+        } else if let name = value("cmd") {
+            found = settings.commands.first { $0.name == name }
+        } else {
+            return
+        }
+        guard let entry = found, entry.isRunnable else {
             notify(String(localized: "Cannot Run"),
-                   String(localized: "This command was renamed or disabled. Reopen the right-click menu and try again."))
+                   String(localized: "This command was removed or disabled. Reopen the right-click menu and try again."))
             return
         }
         // 终端必须有模板（内置或用户覆盖）。

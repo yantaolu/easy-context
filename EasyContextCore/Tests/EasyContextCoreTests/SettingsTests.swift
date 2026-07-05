@@ -129,21 +129,21 @@ final class SettingsTests: XCTestCase {
         XCTAssertEqual(s.commands.map(\.name), ["Claude", "Codex"])
     }
 
-    func test_normalizeCommandNames_trimsFillsEmptyAndDeduplicates() {
+    func test_normalizeCommands_trimsFillsEmptyAndFixesIds() {
         var s = Settings(commands: [
             CommandEntry(id: "keep-1", name: " Claude ", command: "claude"),
             CommandEntry(id: "keep-2", name: "Claude", command: "claude --continue"),
             CommandEntry(id: "", name: "   ", command: "codex"),
             CommandEntry(id: "keep-2", name: "Command", command: "custom"),
         ])
-        s.normalizeCommandNames(defaultName: "Command")
-        XCTAssertEqual(s.commands.map(\.name), ["Claude", "Claude2", "Command", "Command2"])
+        s.normalizeCommands(defaultName: "Command")
+        // 名字：trim + 空名补默认，不再强制唯一（执行协议的键是 id）
+        XCTAssertEqual(s.commands.map(\.name), ["Claude", "Claude", "Command", "Command"])
         XCTAssertEqual(s.commands.map(\.command), ["claude", "claude --continue", "codex", "custom"])
+        // id：唯一 id 保持不变；空/重复 id 回填新 UUID，最终全表唯一
         XCTAssertEqual(s.commands[0].id, "keep-1")
         XCTAssertEqual(s.commands[1].id, "keep-2")
         XCTAssertFalse(s.commands[2].id.isEmpty)
-        XCTAssertNotEqual(s.commands[2].id, "keep-1")
-        XCTAssertNotEqual(s.commands[2].id, "keep-2")
         XCTAssertFalse(s.commands[3].id.isEmpty)
         XCTAssertNotEqual(s.commands[3].id, "keep-2")
         XCTAssertEqual(Set(s.commands.map(\.id)).count, s.commands.count)
