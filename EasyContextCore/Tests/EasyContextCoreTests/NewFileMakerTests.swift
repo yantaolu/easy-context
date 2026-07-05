@@ -2,6 +2,30 @@ import XCTest
 @testable import EasyContextCore
 
 final class NewFileMakerTests: XCTestCase {
+    private final class ConcurrentCreateResults: @unchecked Sendable {
+        private let lock = NSLock()
+        private var urls: [URL] = []
+        private var failures: [Error] = []
+
+        func append(_ url: URL) {
+            lock.lock()
+            urls.append(url)
+            lock.unlock()
+        }
+
+        func append(_ error: Error) {
+            lock.lock()
+            failures.append(error)
+            lock.unlock()
+        }
+
+        var snapshot: (urls: [URL], failures: [Error]) {
+            lock.lock()
+            defer { lock.unlock() }
+            return (urls, failures)
+        }
+    }
+
     private func tempDir() throws -> URL {
         let dir = FileManager.default.temporaryDirectory
             .appendingPathComponent("ecnf-\(ProcessInfo.processInfo.globallyUniqueString)")
@@ -35,6 +59,36 @@ final class NewFileMakerTests: XCTestCase {
         let b = try NewFileMaker.create(template: .text, in: dir, requestedName: "a.txt")
         XCTAssertEqual(a.lastPathComponent, "a.txt")
         XCTAssertEqual(b.lastPathComponent, "a 2.txt")
+    }
+
+    func test_create_concurrentSameName_createsUniqueFilesWithoutOverwrite() throws {
+        let dir = try tempDir()
+        let count = 20
+        let group = DispatchGroup()
+        let results = ConcurrentCreateResults()
+
+        for _ in 0..<count {
+            group.enter()
+            DispatchQueue.global(qos: .userInitiated).async {
+                do {
+                    let url = try NewFileMaker.create(template: .json, in: dir, requestedName: "data.json")
+                    results.append(url)
+                } catch {
+                    results.append(error)
+                }
+                group.leave()
+            }
+        }
+
+        XCTAssertEqual(group.wait(timeout: .now() + 5), .success)
+        let snapshot = results.snapshot
+        XCTAssertTrue(snapshot.failures.isEmpty, "\(snapshot.failures)")
+        XCTAssertEqual(snapshot.urls.count, count)
+        XCTAssertEqual(Set(snapshot.urls.map(\.lastPathComponent)).count, count)
+
+        for url in snapshot.urls {
+            XCTAssertEqual(try String(contentsOf: url, encoding: .utf8), "{}\n")
+        }
     }
 
     func test_create_shell_isExecutable() throws {

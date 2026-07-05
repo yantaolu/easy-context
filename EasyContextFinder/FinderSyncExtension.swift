@@ -7,7 +7,6 @@ class FinderSyncExtension: FIFinderSync {
     // FinderSync 的 XPC 往返会丢弃 NSMenuItem.representedObject，
     // 故用 tag 索引这些列表来定位被点的项。
     private var openableApps: [AppEntry] = []
-    private var openableTerminalCount = 0 // openableApps 前 N 个是终端，其余是编辑器
     private var runnableCommands: [CommandEntry] = []
     private var commandTerm: String = ""
     // 本次菜单对应的目标 URL 快照（按 menuKind 定，多选时含全部选中项），动作回调
@@ -21,7 +20,7 @@ class FinderSyncExtension: FIFinderSync {
     private let configStore = ConfigStore()
     private let cacheLock = NSLock()
     private var settingsCache: Settings?
-    private var settingsMTime: Date?
+    private var settingsToken: ConfigStore.FileToken?
     private var urlCache: [String: URL] = [:]       // bundleId -> App URL（只缓存已安装）
     private var imageCache: [String: NSImage] = [:] // "app:bid|path|style" / "sym:name|dark"
     private var appSnapshotCache: InstalledAppSnapshot?
@@ -150,7 +149,6 @@ class FinderSyncExtension: FIFinderSync {
         let editors = appsToShow(config.editors, builtins: KnownApps.editors, snapshot: appSnapshot)
         cacheLock.lock()
         openableApps = terminals + editors
-        openableTerminalCount = terminals.count
         cacheLock.unlock()
 
         for (idx, app) in terminals.enumerated() {
@@ -275,18 +273,18 @@ class FinderSyncExtension: FIFinderSync {
         return snapshot
     }
 
-    // 配置按修改时间缓存：mtime 没变就用缓存，避免每次右键重读+解码；
-    // 改了 config.json（mtime 变化）即时重读，保留实时生效。
+    // 配置按文件指纹缓存：mtime + size 没变就用缓存，避免每次右键重读+解码；
+    // 改了 config.json（指纹变化）即时重读，保留实时生效。
     private func currentSettings() -> Settings {
-        let mtime = (try? FileManager.default.attributesOfItem(atPath: configStore.path)[.modificationDate]) as? Date
+        let token = configStore.fileToken()
         cacheLock.lock()
-        if let settingsCache, settingsMTime == mtime { defer { cacheLock.unlock() }; return settingsCache }
+        if let settingsCache, settingsToken == token { defer { cacheLock.unlock() }; return settingsCache }
         cacheLock.unlock()
         var loaded = configStore.load() // 读盘+解码在锁外，避免阻塞主线程的 volumesChanged
         loaded.normalizeCommands(defaultName: String(localized: "Command"))
         cacheLock.lock()
         settingsCache = loaded
-        settingsMTime = mtime
+        settingsToken = token
         cacheLock.unlock()
         return loaded
     }
@@ -461,14 +459,13 @@ class FinderSyncExtension: FIFinderSync {
         guard let item = sender as? NSMenuItem else { return }
         cacheLock.lock()
         let apps = openableApps
-        let terminalCount = openableTerminalCount
         cacheLock.unlock()
         guard item.tag >= 0, item.tag < apps.count,
               let url = freshAppURL(apps[item.tag].bundleId)
         else { return }
-        // 终端只能对目录（文件→父目录，多选去重）；编辑器打开右键对象本身（多选全开）。
-        let isTerminal = item.tag < terminalCount
-        let targets = isTerminal ? targetDirectories() : snapshotURLs()
+        // 打开类动作统一对目录生效：目录→自身，文件→父目录，多选按路径去重。
+        // 这样终端和编辑器语义一致，避免文件多选时向编辑器塞入一组文件而非工作目录。
+        let targets = targetDirectories()
         guard !targets.isEmpty else { return }
         // 沙盒下不能 spawn /usr/bin/open，改用 LaunchServices。
         NSWorkspace.shared.open(targets, withApplicationAt: url,

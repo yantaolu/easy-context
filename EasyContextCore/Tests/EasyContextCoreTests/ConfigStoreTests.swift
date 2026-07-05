@@ -26,6 +26,27 @@ final class ConfigStoreTests: XCTestCase {
         XCTAssertEqual(sut.load(), s)
     }
 
+    func test_fileToken_includesSizeWhenModificationDateMatches() throws {
+        let url = tempFileURL()
+        try FileManager.default.createDirectory(
+            at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let sut = ConfigStore(fileURL: url)
+        let fixedDate = Date(timeIntervalSince1970: 1_700_000_000)
+
+        try Data("a".utf8).write(to: url)
+        try FileManager.default.setAttributes([.modificationDate: fixedDate], ofItemAtPath: url.path)
+        let first = sut.fileToken()
+
+        try Data("abcd".utf8).write(to: url)
+        try FileManager.default.setAttributes([.modificationDate: fixedDate], ofItemAtPath: url.path)
+        let second = sut.fileToken()
+
+        XCTAssertNotNil(first)
+        XCTAssertNotNil(second)
+        XCTAssertEqual(first?.mtime, second?.mtime)
+        XCTAssertNotEqual(first, second)
+    }
+
     func test_load_returnsDefaults_whenCorrupt() throws {
         let url = tempFileURL()
         try FileManager.default.createDirectory(

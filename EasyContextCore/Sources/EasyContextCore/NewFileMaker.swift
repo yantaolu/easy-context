@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 
 /// 按模板在目录里创建文件的纯逻辑（宿主与扩展共用）。
 public enum NewFileMaker {
@@ -23,12 +24,49 @@ public enum NewFileMaker {
         let resolver = UniqueNameResolver(exists: {
             fm.fileExists(atPath: dir.appendingPathComponent($0).path)
         })
-        let finalName = resolver.uniqueName(base: base, ext: ext)
-        let fileURL = dir.appendingPathComponent(finalName)
-        try template.initialContent.write(to: fileURL, atomically: true, encoding: .utf8)
-        if template.isExecutable {
-            try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: fileURL.path)
+        while true {
+            let finalName = resolver.uniqueName(base: base, ext: ext)
+            let fileURL = dir.appendingPathComponent(finalName)
+            do {
+                try createExclusiveFile(at: fileURL, contents: template.initialContent)
+                if template.isExecutable {
+                    try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: fileURL.path)
+                }
+                return fileURL
+            } catch let error as POSIXError where error.code == .EEXIST {
+                // Another process created this candidate after uniqueName checked it.
+                // Re-run resolution and try the next suffix instead of overwriting.
+                continue
+            }
         }
-        return fileURL
+    }
+
+    private static func createExclusiveFile(at url: URL, contents: String) throws {
+        let fd = open(url.path, O_WRONLY | O_CREAT | O_EXCL, mode_t(0o644))
+        guard fd >= 0 else {
+            throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
+        }
+
+        var didFinish = false
+        defer {
+            close(fd)
+            if !didFinish {
+                try? FileManager.default.removeItem(at: url)
+            }
+        }
+
+        let data = Data(contents.utf8)
+        try data.withUnsafeBytes { rawBuffer in
+            guard let base = rawBuffer.baseAddress else { return }
+            var written = 0
+            while written < rawBuffer.count {
+                let result = write(fd, base.advanced(by: written), rawBuffer.count - written)
+                if result < 0 {
+                    throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
+                }
+                written += result
+            }
+        }
+        didFinish = true
     }
 }
