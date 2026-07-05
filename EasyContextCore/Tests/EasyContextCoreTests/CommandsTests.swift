@@ -88,6 +88,19 @@ final class CommandsTests: XCTestCase {
         XCTAssertEqual(TerminalLaunch.render(t), t)
     }
 
+    // MARK: 可执行终端过滤（launchable）
+    func test_launchable_keepsOnlyTerminalsWithTemplate() {
+        let list = [term("com.apple.Terminal"),        // 有内置模板
+                    term("dev.warp.Warp-Stable"),      // 无模板 → 剔除
+                    term("com.custom.term")]           // 无内置但有用户覆盖 → 保留
+        let overrides = ["com.custom.term": "open -nb com.custom.term {dir}"]
+        XCTAssertEqual(TerminalLaunch.launchable(list, overrides: overrides).map(\.bundleId),
+                       ["com.apple.Terminal", "com.custom.term"])
+        // 无覆盖时只剩有内置模板的
+        XCTAssertEqual(TerminalLaunch.launchable(list, overrides: [:]).map(\.bundleId),
+                       ["com.apple.Terminal"])
+    }
+
     // MARK: 默认终端解析
     private func term(_ id: String) -> AppEntry { AppEntry(bundleId: id, name: id, custom: false, enabled: true) }
 

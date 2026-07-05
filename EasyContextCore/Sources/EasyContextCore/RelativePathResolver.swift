@@ -12,7 +12,10 @@ public struct RelativePathResolver {
     public init(fileManager: FileManager = .default) {
         // `.git` 存在即可，不限类型：普通仓库是目录，worktree / submodule 下是文件（gitlink）。
         self.gitMarkerExists = { fileManager.fileExists(atPath: $0.path) }
-        self.homeDirectory = fileManager.homeDirectoryForCurrentUser
+        // 沙盒扩展里 homeDirectoryForCurrentUser 会被重定向到容器路径，「~/」回退
+        // 将永远匹配不上真实家目录 → 与 ConfigStore 一致，用 getpwuid 取真实家目录。
+        self.homeDirectory = URL(fileURLWithPath: ConfigStore.realHomeDirectory(),
+                                 isDirectory: true)
     }
 
     /// 从 url 向上（含自身目录）查找第一个含 `.git`（目录或 gitlink 文件）的祖先。

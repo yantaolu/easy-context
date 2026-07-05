@@ -89,8 +89,15 @@ public enum TerminalLaunch {
             .replacingOccurrences(of: "{cmd}", with: "\"$EC_CMD\"")
     }
 
+    /// 过滤出「有启动模板」（内置或用户覆盖）的终端。只有这些能用于运行命令——
+    /// 无模板的终端（如 Warp/Hyper）不该出现在执行终端候选里，否则选中后必然失败。
+    public static func launchable(_ terminals: [AppEntry],
+                                  overrides: [String: String]) -> [AppEntry] {
+        terminals.filter { template(for: $0.bundleId, overrides: overrides) != nil }
+    }
+
     /// 解析用于运行命令的默认终端（返回 bundleId）。
-    /// - eligible：已启用且已安装的终端（按列表顺序）。
+    /// - eligible：已安装且有启动模板的终端（按列表顺序，调用方先经 launchable 过滤）。
     /// 规则：preferred 若在 eligible 中→用它；否则用第一个 eligible；都没有→系统默认终端。
     public static func resolveDefaultTerminal(eligible: [AppEntry], preferred: String?) -> String {
         if let preferred, eligible.contains(where: { $0.bundleId == preferred }) {

@@ -151,10 +151,14 @@ class FinderSyncExtension: FIFinderSync {
         }
 
         // 在执行终端运行命令（claude/codex 等）。执行终端与「菜单是否显示」解耦，
-        // 只要装了就能用；故从「已安装终端」解析（忽略启用状态）。
+        // 只要装了就能用；故从「已安装终端」解析（忽略启用状态），再过滤出有启动
+        // 模板的（与宿主 SettingsStore.installedTerminals 同口径）——无模板的终端
+        // 被解析为执行终端后点击必然失败。
         let enabledCmds = config.commands.filter { $0.enabled }
         if !enabledCmds.isEmpty {
-            let installedTerms = installedTerminals(config.terminals, snapshot: appSnapshot)
+            let installedTerms = TerminalLaunch.launchable(
+                installedTerminals(config.terminals, snapshot: appSnapshot),
+                overrides: config.terminalTemplates)
             let termId = TerminalLaunch.resolveDefaultTerminal(eligible: installedTerms,
                                                               preferred: config.defaultTerminal)
             let termName = terminalName(termId, eligible: installedTerms)
@@ -364,10 +368,20 @@ class FinderSyncExtension: FIFinderSync {
 
     private static let iconSize = NSSize(width: 16, height: 16)
 
-    // 系统外观（深浅色）：读全局 AppleInterfaceStyle，线程安全、不依赖 NSApp
-    // （NSApp.effectiveAppearance 是主线程属性，工作线程读不可靠）。
+    // 系统外观（深浅色）：手动模式读全局 AppleInterfaceStyle（线程安全）；
+    // 「自动切换」模式下该键不跟随时段翻转、不可靠 → 改问 AppKit 的 effectiveAppearance
+    // （主线程属性，工作线程经 main.sync 跳转读取）。
+    // ⚠️ 勿在持有 cacheLock 时调用：main.sync 与主线程等锁（volumesChanged）会成死锁环。
     private static func isDarkMode() -> Bool {
-        UserDefaults.standard.string(forKey: "AppleInterfaceStyle")?.lowercased() == "dark"
+        let defaults = UserDefaults.standard
+        if defaults.bool(forKey: "AppleInterfaceStyleSwitchesAutomatically") {
+            let resolve = {
+                NSApplication.shared.effectiveAppearance
+                    .bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+            }
+            return Thread.isMainThread ? resolve() : DispatchQueue.main.sync(execute: resolve)
+        }
+        return defaults.string(forKey: "AppleInterfaceStyle")?.lowercased() == "dark"
     }
 
     private func appIcon(_ bundleId: String, style: Settings.AppIconStyle,

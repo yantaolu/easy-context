@@ -321,6 +321,46 @@
         }
       }
     },
+    "Cannot Verify Request": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法验证请求"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法驗證請求"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リクエストを検証できません"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anfrage kann nicht verifiziert werden"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible de vérifier la requête"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se puede verificar la solicitud"
+          }
+        }
+      }
+    },
     "Close Window": {
       "localizations": {
         "zh-Hant": {
@@ -2157,6 +2197,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "El comando terminó con un error."
+          }
+        }
+      }
+    },
+    "The request could not be verified. Please try again from the right-click menu.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法验证该请求。请从右键菜单重试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法驗證該請求。請從右鍵選單重試。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リクエストを検証できませんでした。右クリックメニューからもう一度お試しください。"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Anfrage konnte nicht verifiziert werden. Bitte versuchen Sie es erneut über das Kontextmenü."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La requête n'a pas pu être vérifiée. Veuillez réessayer depuis le menu contextuel."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo verificar la solicitud. Inténtalo de nuevo desde el menú contextual."
           }
         }
       }

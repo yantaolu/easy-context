@@ -15,8 +15,17 @@ enum NewFileLauncher {
 
         let store = ConfigStore()
         // 安全：token 必须匹配（挡外部伪造）；目录必须存在且是目录。
+        // 校验失败给提示而非静默（同 CommandLauncher：合法场景基本只剩 token 首建
+        // 竞态/写盘失败，重试即恢复）。
         let token = store.readIPCToken()
-        guard !token.isEmpty, value("t") == token else { return }
+        guard !token.isEmpty, value("t") == token else {
+            let a = NSAlert()
+            a.messageText = String(localized: "Cannot Verify Request")
+            a.informativeText = String(localized: "The request could not be verified. Please try again from the right-click menu.")
+            NSApp.activate(ignoringOtherApps: true)
+            a.runModal()
+            return
+        }
         var isDir: ObjCBool = false
         guard FileManager.default.fileExists(atPath: dir, isDirectory: &isDir), isDir.boolValue
         else { return }

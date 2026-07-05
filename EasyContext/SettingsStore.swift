@@ -95,8 +95,12 @@ final class SettingsStore: ObservableObject {
         process.waitUntilExit()
         let out = (String(data: data, encoding: .utf8) ?? "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        // 行首 '+' = 启用，'-' = 已注册未启用，空 = 未注册
-        return out.hasPrefix("+")
+        // 行首 '+' = 启用，'-' = 已注册未启用，空 = 未注册。
+        // 同一 bundleId 可能注册多行（如 build 目录与 /Applications 各一份，顺序不定），
+        // 任一行启用即视为启用——只看首行会误报「未启用」横幅。
+        return out.split(separator: "\n").contains {
+            $0.trimmingCharacters(in: .whitespaces).hasPrefix("+")
+        }
     }
 
     func openExtensionSettings() {
@@ -316,9 +320,11 @@ final class SettingsStore: ObservableObject {
 
     // MARK: - 默认终端（运行命令用）
 
-    /// 已安装的终端（按配置顺序）。执行终端只看「装没装」，与菜单显示开关无关。
+    /// 可用作执行终端的终端（按配置顺序）：已安装且有启动模板（内置或用户覆盖），
+    /// 与菜单显示开关无关。无模板的终端（如 Warp/Hyper）不进候选——选了也必然运行失败。
     var installedTerminals: [AppEntry] {
-        settings.terminals.filter { isInstalled($0) }
+        TerminalLaunch.launchable(settings.terminals.filter { isInstalled($0) },
+                                  overrides: settings.terminalTemplates)
     }
 
     /// 执行终端下拉的选项，永不为空：无已安装终端时回退系统 Terminal，

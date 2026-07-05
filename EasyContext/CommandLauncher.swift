@@ -16,8 +16,14 @@ enum CommandLauncher {
 
         let configStore = ConfigStore()
         // 安全①：token 必须匹配（挡网页/其它 app 伪造的 easycontext:// URL）。
+        // 校验失败给提示而非静默：合法场景几乎只剩「token 首建竞态/写盘失败」，
+        // 重试即可恢复；伪造 URL 触发提示也无害（浏览器打开自定义 scheme 前有确认框）。
         let expected = configStore.readIPCToken()
-        guard !expected.isEmpty, value("t") == expected else { return }
+        guard !expected.isEmpty, value("t") == expected else {
+            notify(String(localized: "Cannot Verify Request"),
+                   String(localized: "The request could not be verified. Please try again from the right-click menu."))
+            return
+        }
         // 安全②：目录必须真实存在且是目录（挡任意/伪造路径）。
         var isDir: ObjCBool = false
         guard FileManager.default.fileExists(atPath: dir, isDirectory: &isDir), isDir.boolValue
@@ -57,14 +63,21 @@ enum CommandLauncher {
         // 被用户拒过一次 → 此后永远静默无反应）只体现在退出码/stderr，必须检查并提示。
         let stderrPipe = Pipe()
         process.standardError = stderrPipe
-        process.terminationHandler = { p in
-            guard p.terminationStatus != 0 else { return }
+        do { try process.run() } catch {
+            notify(String(localized: "Run Failed"), error.localizedDescription)
+            return
+        }
+        // 与 pluginkit 检测同一模式：先读完 stderr 再等退出。若只在退出回调里读，
+        // 子进程 stderr 超过管道缓冲（64KB）时会阻塞在写端、永不退出 → 双方互等卡死，
+        // 且每次点击都泄漏一组孤儿进程。闭包捕获 process，顺带保证其存活到退出。
+        DispatchQueue.global(qos: .utility).async {
             let data = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+            process.waitUntilExit()
+            guard process.terminationStatus != 0 else { return }
             let stderr = (String(data: data, encoding: .utf8) ?? "")
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             Task { @MainActor in reportRunFailure(stderr: stderr) }
         }
-        do { try process.run() } catch { notify(String(localized: "Run Failed"), error.localizedDescription) }
     }
 
     /// 区分「自动化权限被拒」（osascript -1743）与一般失败：前者给出跳系统设置的引导。

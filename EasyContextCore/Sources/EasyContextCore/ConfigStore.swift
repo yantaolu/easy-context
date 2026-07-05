@@ -128,7 +128,7 @@ public struct ConfigStore {
 
     /// 读，缺失则生成并以 0600 写入。宿主启动时调用；扩展在发 IPC URL 前也调用
     /// （扩展的 entitlement 可写 ~/.easy-context），消除「宿主从未运行 → token 缺失
-    /// → 首次点击静默失败」。两端并发首建时后写者胜，至多失败一次后即一致。
+    /// → 首次点击静默失败」。
     @discardableResult
     public func ensureIPCToken() -> String {
         let existing = readIPCToken()
@@ -139,7 +139,10 @@ public struct ConfigStore {
         // 创建即 0600，避免「先写后 chmod」之间的可读窗口。
         FileManager.default.createFile(atPath: ipcTokenURL.path, contents: Data(token.utf8),
                                        attributes: [.posixPermissions: 0o600])
-        return token
+        // 写完回读、以盘上实际内容为准：两端并发首建时后写者胜，双方都回读即收敛到
+        // 同一 token（不回读会出现「扩展带 A、宿主读 B」的一次性校验失败）；
+        // 写盘失败时返回空串，调用方 fail-closed。
+        return readIPCToken()
     }
 
     private struct TemplatesReference: Encodable {
