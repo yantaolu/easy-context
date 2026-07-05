@@ -31,18 +31,14 @@ enum CommandLauncher {
         var settings = configStore.load() // 权威当前配置
         settings.normalizeCommands(defaultName: String(localized: "Command"))
         // 安全③：命令必须在用户配置里且可运行（不执行 URL 里的任意命令串）。
-        // 按稳定 id 查（改名不影响执行）；cmd=name 是旧版扩展驻留进程的兼容回退。
-        // 查不到 = 命令已删除/禁用/未填内容——给提示而非静默。
+        // 按稳定 id 查（改名不影响执行）；id 查不到再回退 name——手改配置抹掉 id 时，
+        // 扩展内存中随机回填的 id 与宿主重新加载时回填的不同，此时 URL 里的 name
+        // 仍能对上；name 也兼容升级期间尚未重启的旧版扩展进程。
         // isRunnable 与菜单显示同口径：禁用或命令串为空都拒绝（挡竞态/伪造 URL）。
-        let found: CommandEntry?
-        if let id = value("id") {
-            found = settings.commands.first { $0.id == id }
-        } else if let name = value("cmd") {
-            found = settings.commands.first { $0.name == name }
-        } else {
-            return
-        }
-        guard let entry = found, entry.isRunnable else {
+        guard value("id") != nil || value("cmd") != nil else { return }
+        let byId = value("id").flatMap { id in settings.commands.first { $0.id == id } }
+        let byName = value("cmd").flatMap { name in settings.commands.first { $0.name == name } }
+        guard let entry = byId ?? byName, entry.isRunnable else {
             notify(String(localized: "Cannot Run"),
                    String(localized: "This command was removed or disabled. Reopen the right-click menu and try again."))
             return
