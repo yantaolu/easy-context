@@ -73,7 +73,8 @@ targets:
     info:
       path: EasyContextFinder/Info.plist
       properties:
-        CFBundleDisplayName: EasyContextFinder
+        # 系统设置 → 扩展列表里显示的名字，与宿主品牌一致
+        CFBundleDisplayName: Easy Context
         CFBundleLocalizations:
           - en
           - zh-Hans

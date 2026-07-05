@@ -104,15 +104,15 @@ public struct ConfigStore {
 
     /// 写出内置终端启动模板参考（每次启动覆盖生成，best-effort，失败静默）。
     /// 用户不知道 bundleId / 内置模板长啥样，照此文件复制到 config.json 的
-    /// terminalTemplates 里即可覆盖修改。
+    /// terminalTemplates 里即可覆盖修改。说明用英文（配置文件的 lingua franca）。
     public func writeTemplatesReference(builtin: [String: String]) {
         let dir = fileURL.deletingLastPathComponent()
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let payload = TemplatesReference(
-            note: "内置终端启动模板参考（只读；每次启动自动覆盖，改这里无效）。"
-                + "要覆盖某终端：把它的 bundleId 与模板复制到 config.json 的 terminalTemplates 里修改。"
-                + "占位符 {dir}=当前目录、{cmd}=命令（执行时替换为 \"$EC_DIR\"/\"$EC_CMD\"，勿自行加引号）；"
-                + "可用 $EC_SHELL=用户登录 shell。值只走环境变量，天然免注入。",
+            note: "Built-in terminal launch template reference (read-only; regenerated on every launch, edits here have no effect). "
+                + "To override a terminal, copy its bundleId and template into \"terminalTemplates\" in config.json and edit there. "
+                + "Placeholders: {dir} = target directory, {cmd} = command; they are replaced with \"$EC_DIR\"/\"$EC_CMD\" at run time, so do not add quotes yourself. "
+                + "$EC_SHELL = the user's login shell. Values travel via environment variables only, immune to shell injection.",
             templates: builtin)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -159,7 +159,7 @@ public struct ConfigStore {
         let note: String
         let templates: [String: String]
         enum CodingKeys: String, CodingKey {
-            case note = "_说明"
+            case note = "_note"
             case templates
         }
     }

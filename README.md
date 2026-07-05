@@ -65,7 +65,7 @@
 
 ### 在终端运行命令
 
-- 右键菜单出现 `用 <执行终端> 运行 <命令名>`（如 `用 Terminal 运行 Claude`），在**当前目录**打开终端并运行该命令。
+- 右键菜单出现 `用 <执行终端> 运行 <命令名>`（如 `用 Terminal 运行 Claude`），在**当前目录**打开终端并运行该命令。多选跨目录时只作用于**第一个目录**（一个终端窗口）。
 - **执行终端 ≠ 菜单显示**：执行终端是「命令在哪跑」，与「菜单显示的终端」开关无关，条件是**已安装且有启动模板**——内置模板覆盖 Terminal / iTerm / Ghostty / Otty / kitty / WezTerm / Alacritty；其余（Warp、Hyper 等）需在 `terminalTemplates` 自行添加模板后才会进入候选。设置界面「执行终端」下拉即列出这些可用终端，`defaultTerminal` 为 `null` 时取第一个（系统 Terminal 兜底）。
 - **PATH**：GUI 进程 PATH 精简，`-e` 型终端（kitty/WezTerm/Alacritty）经用户登录 shell `$EC_SHELL -lic <cmd>` 运行，确保能找到 `~/.local/bin` 等里的 `claude`/`codex`。Terminal/iTerm/Ghostty/Otty 用 AppleScript 把命令输入交互 shell，PATH 天然正确。
 - **自定义启动模板**：`terminalTemplates` 只存**覆盖**（空 = 用内置）。想改某终端：参照配置目录里自动生成的 **`terminal-templates.reference.json`**（列出全部内置模板与 bundleId），把对应条目复制到 `terminalTemplates` 修改。占位符 `{dir}`/`{cmd}` 会替换为 `"$EC_DIR"`/`"$EC_CMD"`（值只走环境变量，勿自行加引号），可用 `$EC_SHELL`。
@@ -95,8 +95,6 @@ cd EasyContextCore && swift test
 - **EasyContextFinder**（FinderSync 扩展，沙盒）：注入右键菜单、执行动作。
 - **EasyContext**（AppKit 宿主 + SwiftUI 设置界面，非沙盒）：后台代理型 App，手动管窗，处理设置界面、引导启用扩展、执行命令 / 新建文件。
 - 宿主与扩展通过共享文件 `~/.easy-context/config.json` 交换配置。
-
-详见 [设计文档](docs/superpowers/specs/2026-06-30-easy-context-design.md)（含相对初始设计的关键变更）。
 
 ## FinderSync 开发要点（贡献者须知）
 

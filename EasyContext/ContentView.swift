@@ -104,17 +104,24 @@ struct ContentView: View {
         }
     }
 
-    // 单行：标题左，两个 link 按钮右对齐。
+    // 标题左，两个 link 按钮右对齐；德/法等长文案一行放不下时自动转为右对齐竖排。
     private var otherSection: some View {
-        HStack(spacing: 8) {
+        HStack(alignment: .top, spacing: 8) {
             sectionTitle("Other")
-            Spacer()
-            Button("Open Config Folder") { openConfigDirectory() }
-                .buttonStyle(.link)
-            Button("Finder Extension Settings") { openExtensionSettings() }
-                .buttonStyle(.link)
-                .padding(.leading, 12)
+            Spacer(minLength: 16)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 12) { configFolderButton; extensionSettingsButton }
+                VStack(alignment: .trailing, spacing: 6) { configFolderButton; extensionSettingsButton }
+            }
         }
+    }
+
+    private var configFolderButton: some View {
+        Button("Open Config Folder") { openConfigDirectory() }.buttonStyle(.link)
+    }
+
+    private var extensionSettingsButton: some View {
+        Button("Finder Extension Settings") { openExtensionSettings() }.buttonStyle(.link)
     }
 
     // 每个组别的统一内边距；fill=true 的组撑满剩余高度（内部列表可滚动）。
