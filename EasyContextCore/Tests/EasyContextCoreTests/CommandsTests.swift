@@ -1,3 +1,4 @@
+import Foundation
 import XCTest
 @testable import EasyContextCore
 
@@ -78,6 +79,127 @@ final class CommandsTests: XCTestCase {
         XCTAssertFalse(t.contains("-e $EC_SHELL")) // 不再走 open -e
         // 无 {dir}/{cmd} 占位符（用 system attribute 读环境）→ render 不改动
         XCTAssertEqual(TerminalLaunch.render(t), t)
+    }
+
+    // Muxy 通过官方 CLI 打开目标项目，在该项目新建 tab 后发送命令与 Enter；
+    // 不用 split-right，避免“运行命令”额外改变用户的分屏布局。
+    func test_builtin_muxy_usesCLIToRunCommandInProjectTab() {
+        XCTAssertEqual(KnownApps.terminals.first { $0.bundleId == "com.muxy.app" }?.displayName,
+                       "Muxy")
+        let t = TerminalLaunch.builtinTemplates["com.muxy.app"]!
+        XCTAssertTrue(t.contains("EC_MUXY_CLI"))
+        XCTAssertTrue(t.contains("/usr/local/bin/muxy"))
+        XCTAssertTrue(t.contains("$HOME/.local/bin/muxy"))
+        XCTAssertTrue(t.contains("command -v muxy"))
+        XCTAssertTrue(t.contains("Muxy CLI is not installed"))
+        XCTAssertTrue(t.contains("MUXY_CLI_TIMEOUT=1 \"$MUXY_CLI\" \"$EC_DIR\""))
+        XCTAssertTrue(t.contains("MUXY_CLI_TIMEOUT=1 \"$MUXY_CLI\" list-projects"))
+        XCTAssertTrue(t.contains("MUXY_CLI_TIMEOUT=1 \"$MUXY_CLI\" list-panes"))
+        XCTAssertFalse(t.contains("export MUXY_CLI_TIMEOUT"))
+        XCTAssertTrue(t.contains("\"$MUXY_CLI\" \"$EC_DIR\""))
+        XCTAssertTrue(t.contains("\"$MUXY_CLI\" list-projects"))
+        XCTAssertTrue(t.contains("TAB_ID=$(\"$MUXY_CLI\" new-tab --project \"$EC_DIR\")"))
+        XCTAssertTrue(t.contains("tab rename \"$TAB_ID\" \"$EC_MUXY_TOKEN\""))
+        XCTAssertTrue(t.contains("\"$MUXY_CLI\" list-panes"))
+        XCTAssertTrue(t.contains("Muxy did not expose a pane"))
+        XCTAssertTrue(t.contains("\"$MUXY_CLI\" send --pane \"$PANE\" \"$EC_CMD\""))
+        XCTAssertTrue(t.contains("\"$MUXY_CLI\" send-keys --pane \"$PANE\" Enter"))
+        XCTAssertFalse(t.contains("split-right"))
+        XCTAssertEqual(TerminalLaunch.render(t), t)
+    }
+
+    /// 行为级覆盖：fake CLI 返回互不相同的 tab/pane ID，并故意把同目录的旧 focused
+    /// pane 放在第一行；模板必须借唯一临时标题找到新 pane，且只调用一次 new-tab。
+    func test_builtin_muxy_routesCommandToPaneCreatedForNewTab() throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory.appendingPathComponent("Easy Context Muxy \(UUID().uuidString)")
+        let project = root.appendingPathComponent("Project With Spaces")
+        let cli = root.appendingPathComponent("fake muxy")
+        let log = root.appendingPathComponent("calls.log")
+        let state = root.appendingPathComponent("tab-title")
+        let ready = root.appendingPathComponent("ready")
+        try fm.createDirectory(at: project, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: root) }
+
+        let fakeCLI = #"""
+        #!/bin/sh
+        COMMAND=$1
+        shift
+        {
+          printf '%s\t%s' "${MUXY_CLI_TIMEOUT:-default}" "$COMMAND"
+          for ARG in "$@"; do printf '\t%s' "$ARG"; done
+          printf '\n'
+        } >> "$FAKE_MUXY_LOG"
+
+        case "$COMMAND" in
+          list-projects)
+            if [ ! -e "$FAKE_MUXY_READY" ]; then
+              : > "$FAKE_MUXY_READY"
+              exit 1
+            fi
+            printf 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa\tproject\t%s\ttrue\n' "$EC_DIR"
+            ;;
+          new-tab)
+            printf '11111111-1111-1111-1111-111111111111\n'
+            ;;
+          tab)
+            if [ "$1" = rename ] && [ "$#" -eq 3 ]; then
+              printf '%s' "$3" > "$FAKE_MUXY_STATE"
+            fi
+            printf 'ok\n'
+            ;;
+          list-panes)
+            TOKEN=$(cat "$FAKE_MUXY_STATE")
+            printf '33333333-3333-3333-3333-333333333333\told\t%s\ttrue\n' "$EC_DIR"
+            printf '22222222-2222-2222-2222-222222222222\t%s\t%s\tfalse\n' "$TOKEN" "$EC_DIR"
+            ;;
+          *)
+            printf 'ok\n'
+            ;;
+        esac
+        """#
+        try fakeCLI.write(to: cli, atomically: true, encoding: .utf8)
+        try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: cli.path)
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/sh")
+        process.arguments = ["-c", TerminalLaunch.builtinTemplates["com.muxy.app"]!]
+        var env = ProcessInfo.processInfo.environment
+        let command = "printf 'hello world' | sed 's/world/muxy/'"
+        env["EC_DIR"] = project.path
+        env["EC_CMD"] = command
+        env["EC_MUXY_CLI"] = cli.path
+        env["FAKE_MUXY_LOG"] = log.path
+        env["FAKE_MUXY_STATE"] = state.path
+        env["FAKE_MUXY_READY"] = ready.path
+        env.removeValue(forKey: "MUXY_CLI_TIMEOUT")
+        process.environment = env
+        let stdout = Pipe()
+        let stderr = Pipe()
+        process.standardOutput = stdout
+        process.standardError = stderr
+        try process.run()
+        process.waitUntilExit()
+
+        let error = String(data: stderr.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        XCTAssertEqual(process.terminationStatus, 0, error)
+        let calls = try String(contentsOf: log, encoding: .utf8).split(separator: "\n").map(String.init)
+        XCTAssertEqual(calls.filter { $0.hasPrefix("1\tlist-projects") }.count, 2)
+        XCTAssertEqual(calls.filter { $0.hasPrefix("default\tnew-tab") }.count, 1)
+        XCTAssertTrue(calls.contains(
+            "default\ttab\trename\t11111111-1111-1111-1111-111111111111"
+                + "\teasycontext-11111111-1111-1111-1111-111111111111"
+        ))
+        XCTAssertTrue(calls.contains(
+            "default\ttab\trename\t11111111-1111-1111-1111-111111111111"
+        ))
+        XCTAssertTrue(calls.contains(
+            "default\tsend\t--pane\t22222222-2222-2222-2222-222222222222\t\(command)"
+        ))
+        XCTAssertTrue(calls.contains(
+            "default\tsend-keys\t--pane\t22222222-2222-2222-2222-222222222222\tEnter"
+        ))
+        XCTAssertFalse(calls.contains { $0.contains("33333333-3333-3333-3333-333333333333") })
     }
 
     func test_builtin_otty_usesAppleScriptDoScript() {
