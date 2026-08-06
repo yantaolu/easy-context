@@ -460,13 +460,24 @@ class FinderSyncExtension: FIFinderSync {
         cacheLock.lock()
         let apps = openableApps
         cacheLock.unlock()
-        guard item.tag >= 0, item.tag < apps.count,
-              let url = freshAppURL(apps[item.tag].bundleId)
-        else { return }
+        guard item.tag >= 0, item.tag < apps.count else { return }
+        let bundleId = apps[item.tag].bundleId
+        guard let url = freshAppURL(bundleId) else { return }
         // 打开类动作统一对目录生效：目录→自身，文件→父目录，多选按路径去重。
         // 这样终端和编辑器语义一致，避免文件多选时向编辑器塞入一组文件而非工作目录。
         let targets = targetDirectories()
         guard !targets.isEmpty else { return }
+        // Muxy 没有声明 public.folder 文稿类型，直接用应用打开目录会被 LaunchServices
+        // 拒绝（“无法打开指定的文稿 URL”）；按其官方 CLI 的同一路由改走 muxy://open。
+        if bundleId == KnownApps.muxyBundleId {
+            for target in targets {
+                guard let deepLink = AppOpenRouting.customDirectoryURL(for: bundleId,
+                                                                       directory: target)
+                else { continue }
+                NSWorkspace.shared.open(deepLink)
+            }
+            return
+        }
         // 沙盒下不能 spawn /usr/bin/open，改用 LaunchServices。
         NSWorkspace.shared.open(targets, withApplicationAt: url,
                                 configuration: NSWorkspace.OpenConfiguration(),

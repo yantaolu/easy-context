@@ -69,7 +69,7 @@ public enum TerminalLaunch {
         // 唯一临时标题，再从 list-panes 精确取回对应 pane ID；取到后立即恢复自动标题。
         // 冷启动只重试只读探测（不重复建 tab），探测请求单次超时 1 秒、各等待阶段约 11 秒。
         // CLI 需先在 Muxy → Install CLI 安装。EC_MUXY_CLI 仅供测试/诊断覆盖路径。
-        "com.muxy.app":
+        KnownApps.muxyBundleId:
             "MUXY_CLI=${EC_MUXY_CLI:-}; "
             + "if [ -z \"$MUXY_CLI\" ]; then "
             + "for CANDIDATE in /usr/local/bin/muxy \"$HOME/bin/muxy\" \"$HOME/.local/bin/muxy\"; do "

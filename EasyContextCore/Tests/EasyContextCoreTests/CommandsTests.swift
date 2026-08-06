@@ -84,9 +84,9 @@ final class CommandsTests: XCTestCase {
     // Muxy 通过官方 CLI 打开目标项目，在该项目新建 tab 后发送命令与 Enter；
     // 不用 split-right，避免“运行命令”额外改变用户的分屏布局。
     func test_builtin_muxy_usesCLIToRunCommandInProjectTab() {
-        XCTAssertEqual(KnownApps.terminals.first { $0.bundleId == "com.muxy.app" }?.displayName,
+        XCTAssertEqual(KnownApps.terminals.first { $0.bundleId == KnownApps.muxyBundleId }?.displayName,
                        "Muxy")
-        let t = TerminalLaunch.builtinTemplates["com.muxy.app"]!
+        let t = TerminalLaunch.builtinTemplates[KnownApps.muxyBundleId]!
         XCTAssertTrue(t.contains("EC_MUXY_CLI"))
         XCTAssertTrue(t.contains("/usr/local/bin/muxy"))
         XCTAssertTrue(t.contains("$HOME/.local/bin/muxy"))
@@ -163,7 +163,7 @@ final class CommandsTests: XCTestCase {
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/sh")
-        process.arguments = ["-c", TerminalLaunch.builtinTemplates["com.muxy.app"]!]
+        process.arguments = ["-c", TerminalLaunch.builtinTemplates[KnownApps.muxyBundleId]!]
         var env = ProcessInfo.processInfo.environment
         let command = "printf 'hello world' | sed 's/world/muxy/'"
         env["EC_DIR"] = project.path
