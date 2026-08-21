@@ -89,10 +89,13 @@ final class CommandsTests: XCTestCase {
         XCTAssertTrue(t.contains("tell application \"cmux\""))
         XCTAssertTrue(t.contains("set workspaceTab to new tab"))
         XCTAssertTrue(t.contains("focused terminal of workspaceTab"))
+        XCTAssertTrue(t.contains("focus targetTerminal"))
+        XCTAssertTrue(t.contains("delay 0.2"))
         XCTAssertTrue(t.contains("input text"))
         XCTAssertTrue(t.contains("system attribute \"EC_DIR\""))
         XCTAssertTrue(t.contains("system attribute \"EC_CMD\""))
-        XCTAssertTrue(t.contains("perform action \"send_key:enter\" on targetTerminal"))
+        XCTAssertTrue(t.contains("perform action \"text:\\\\x0d\" on targetTerminal"))
+        XCTAssertFalse(t.contains("send_key:enter"))
         XCTAssertEqual(TerminalLaunch.render(t), t)
     }
 
@@ -121,6 +124,8 @@ final class CommandsTests: XCTestCase {
         XCTAssertTrue(t.contains("tab rename \"$TAB_ID\" \"$EC_MUXY_TOKEN\""))
         XCTAssertTrue(t.contains("\"$MUXY_CLI\" list-panes"))
         XCTAssertTrue(t.contains("Muxy did not expose a pane"))
+        XCTAssertTrue(t.contains("-ge 50"))
+        XCTAssertTrue(t.contains("sleep 0.2"))
         XCTAssertTrue(t.contains("\"$MUXY_CLI\" send --pane \"$PANE\" \"$EC_CMD\""))
         XCTAssertTrue(t.contains("\"$MUXY_CLI\" send-keys --pane \"$PANE\" Enter"))
         XCTAssertFalse(t.contains("split-right"))
