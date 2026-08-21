@@ -9,13 +9,20 @@ enum CommandLauncher {
         guard url.scheme == "easycontext", url.host == "open-muxy",
               let comps = URLComponents(url: url, resolvingAgainstBaseURL: false),
               let dir = comps.queryItems?.first(where: { $0.name == "dir" })?.value,
-              comps.queryItems?.first(where: { $0.name == "t" })?.value == ConfigStore().readIPCToken()
+              case let expectedToken = ConfigStore().readIPCToken(),
+              !expectedToken.isEmpty,
+              comps.queryItems?.first(where: { $0.name == "t" })?.value == expectedToken
         else { return }
         var isDir: ObjCBool = false
         guard FileManager.default.fileExists(atPath: dir, isDirectory: &isDir), isDir.boolValue else { return }
-        let script = TerminalLaunch.builtinTemplates[KnownApps.muxyBundleId]!
-        let openOnly = script.components(separatedBy: "MUXY_PROJECT_WAS_OPEN=0;").first!
-            + "\"$MUXY_CLI\" \"$EC_DIR\""
+        let marker = "MUXY_PROJECT_WAS_OPEN=0;"
+        guard let script = TerminalLaunch.builtinTemplates[KnownApps.muxyBundleId],
+              let markerRange = script.range(of: marker) else {
+            notify(String(localized: "Run Failed"),
+                   "The built-in Muxy launch template is invalid.")
+            return
+        }
+        let openOnly = String(script[..<markerRange.lowerBound]) + "\"$MUXY_CLI\" \"$EC_DIR\""
         run(command: "", dir: dir, template: openOnly)
     }
 
