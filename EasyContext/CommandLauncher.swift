@@ -5,6 +5,21 @@ import EasyContextCore
 /// 处理扩展发来的 easycontext://run?cmd=&dir=&term= —— 在指定终端于目录运行命令。
 enum CommandLauncher {
     @MainActor
+    static func handleMuxyOpen(_ url: URL) {
+        guard url.scheme == "easycontext", url.host == "open-muxy",
+              let comps = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              let dir = comps.queryItems?.first(where: { $0.name == "dir" })?.value,
+              comps.queryItems?.first(where: { $0.name == "t" })?.value == ConfigStore().readIPCToken()
+        else { return }
+        var isDir: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: dir, isDirectory: &isDir), isDir.boolValue else { return }
+        let script = TerminalLaunch.builtinTemplates[KnownApps.muxyBundleId]!
+        let openOnly = script.components(separatedBy: "MUXY_PROJECT_WAS_OPEN=0;").first!
+            + "\"$MUXY_CLI\" \"$EC_DIR\""
+        run(command: "", dir: dir, template: openOnly)
+    }
+
+    @MainActor
     static func handle(_ url: URL) {
         guard url.scheme == "easycontext", url.host == "run",
               let comps = URLComponents(url: url, resolvingAgainstBaseURL: false)

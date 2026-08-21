@@ -110,6 +110,8 @@ final class CommandsTests: XCTestCase {
         XCTAssertTrue(t.contains("$HOME/.local/bin/muxy"))
         XCTAssertTrue(t.contains("command -v muxy"))
         XCTAssertTrue(t.contains("Muxy CLI is not installed"))
+        XCTAssertTrue(t.contains("/usr/bin/open -b com.muxy.app"))
+        XCTAssertTrue(t.contains("Muxy CLI did not become ready"))
         XCTAssertTrue(t.contains("MUXY_CLI_TIMEOUT=1 \"$MUXY_CLI\" \"$EC_DIR\""))
         XCTAssertTrue(t.contains("MUXY_CLI_TIMEOUT=1 \"$MUXY_CLI\" list-projects"))
         XCTAssertTrue(t.contains("MUXY_PROJECT_WAS_OPEN=0"))
@@ -158,10 +160,9 @@ final class CommandsTests: XCTestCase {
 
         case "$COMMAND" in
           list-projects)
-            if [ ! -e "$FAKE_MUXY_READY" ]; then
-              exit 1
+            if [ -e "$FAKE_MUXY_READY" ]; then
+              printf 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa\tproject\t%s\ttrue\n' "$EC_DIR"
             fi
-            printf 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa\tproject\t%s\ttrue\n' "$EC_DIR"
             ;;
           list-tabs)
             printf '0\t11111111-1111-1111-1111-111111111111\tterminal\tTerminal\ttrue\n'
@@ -212,7 +213,8 @@ final class CommandsTests: XCTestCase {
         let error = String(data: stderr.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
         XCTAssertEqual(process.terminationStatus, 0, error)
         let calls = try String(contentsOf: log, encoding: .utf8).split(separator: "\n").map(String.init)
-        XCTAssertEqual(calls.filter { $0.hasPrefix("1\tlist-projects") }.count, 2)
+        XCTAssertEqual(calls.filter { $0.hasPrefix("1\tlist-projects") }.count, 3,
+                       "应依次探测 CLI ready、既有项目和打开后的目标项目")
         XCTAssertEqual(calls.filter { $0.hasPrefix("default\tnew-tab") }.count, 0,
                        "首次打开项目应复用 Muxy 自动创建的初始 tab")
         XCTAssertEqual(calls.filter { $0.hasPrefix("1\tlist-tabs") }.count, 1)

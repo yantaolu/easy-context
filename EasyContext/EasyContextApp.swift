@@ -56,7 +56,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         // 只有可识别的动作 URL 才算「为处理 URL 而启动」；垃圾 URL 冷启动仍照常
         // 显示设置窗，避免进程无窗静默驻留。须在此同步置位（didFinishLaunching
         // 同步读取，handle 里的 Task 是异步的）。
-        if url.host == "run" || url.host == "newfile" { launchedForURL = true }
+        if url.host == "run" || url.host == "newfile" || url.host == "open-muxy" {
+            launchedForURL = true
+        }
         handle(url)
     }
 
@@ -69,6 +71,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         Task { @MainActor in
             switch url.host {
             case "run": CommandLauncher.handle(url)
+            case "open-muxy": CommandLauncher.handleMuxyOpen(url)
             case "newfile": NewFileLauncher.handle(url)
             default: break
             }

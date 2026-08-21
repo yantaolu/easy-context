@@ -467,14 +467,18 @@ class FinderSyncExtension: FIFinderSync {
         // 这样终端和编辑器语义一致，避免文件多选时向编辑器塞入一组文件而非工作目录。
         let targets = targetDirectories()
         guard !targets.isEmpty else { return }
-        // Muxy 没有声明 public.folder 文稿类型，直接用应用打开目录会被 LaunchServices
-        // 拒绝（“无法打开指定的文稿 URL”）；按其官方 CLI 的同一路由改走 muxy://open。
+        // Muxy 不接受 LaunchServices 的目录文稿事件，当前官方接口是 CLI。扩展自身
+        // 处于沙盒，交给宿主先启动 Muxy、等待控制服务 ready，再调用 muxy <目录>。
         if bundleId == KnownApps.muxyBundleId {
             for target in targets {
-                guard let deepLink = AppOpenRouting.customDirectoryURL(for: bundleId,
-                                                                       directory: target)
-                else { continue }
-                NSWorkspace.shared.open(deepLink)
+                var comps = URLComponents()
+                comps.scheme = "easycontext"
+                comps.host = "open-muxy"
+                comps.queryItems = [
+                    URLQueryItem(name: "dir", value: target.path),
+                    URLQueryItem(name: "t", value: configStore.ensureIPCToken()),
+                ]
+                if let request = comps.url { NSWorkspace.shared.open(request) }
             }
             return
         }
