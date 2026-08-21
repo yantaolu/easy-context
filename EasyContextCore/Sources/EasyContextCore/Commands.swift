@@ -64,8 +64,19 @@ public enum TerminalLaunch {
             + "-e 'input text (system attribute \"EC_CMD\") to (terminal 1 of selected tab of win)' "
             + "-e 'send key \"enter\" to (terminal 1 of selected tab of win)' "
             + "-e 'end tell'",
-        // Muxy 官方 CLI 没有单个 run --cwd 命令：先打开/选中目录项目，再新建 tab。
-        // new-tab 返回 tab ID（不是 send 所需的 pane ID），所以给该 tab 设置基于 UUID 的
+        // cmux 官方 Scripting Dictionary：新建 workspace，向其 focused terminal
+        // 输入命令，再用 Ghostty action 发送 Enter。目录与命令仅从环境读取。
+        KnownApps.cmuxBundleId:
+            "osascript -e 'tell application \"cmux\"' "
+            + "-e 'set workspaceTab to new tab' "
+            + "-e 'set targetTerminal to focused terminal of workspaceTab' "
+            + "-e 'input text (\"cd \" & quoted form of (system attribute \"EC_DIR\") "
+            + "& \" && \" & (system attribute \"EC_CMD\")) to targetTerminal' "
+            + "-e 'perform action \"send_key:enter\" on targetTerminal' "
+            + "-e 'end tell'",
+        // Muxy 官方 CLI 没有单个 run --cwd 命令。已打开的项目新建 tab；首次打开项目时
+        // 复用 Muxy 自动创建的初始 tab，避免得到两个 tab。tab ID 不是 send 所需的
+        // pane ID，故给它设置基于 UUID 的
         // 唯一临时标题，再从 list-panes 精确取回对应 pane ID；取到后立即恢复自动标题。
         // 冷启动只重试只读探测（不重复建 tab），探测请求单次超时 1 秒、各等待阶段约 11 秒。
         // CLI 需先在 Muxy → Install CLI 安装。EC_MUXY_CLI 仅供测试/诊断覆盖路径。
@@ -79,6 +90,11 @@ public enum TerminalLaunch {
             + "echo \"Muxy CLI is not installed. Run Muxy -> Install CLI first.\" >&2; exit 1;; esac; "
             + "if [ ! -x \"$MUXY_CLI\" ]; then "
             + "echo \"Muxy CLI is not executable: $MUXY_CLI\" >&2; exit 1; fi; "
+            + "MUXY_PROJECT_WAS_OPEN=0; "
+            + "if MUXY_CLI_TIMEOUT=1 \"$MUXY_CLI\" list-projects 2>/dev/null "
+            + "| /usr/bin/awk -F \"\\t\" "
+            + "'$3 == ENVIRON[\"EC_DIR\"] { found=1 } END { exit !found }'; then "
+            + "MUXY_PROJECT_WAS_OPEN=1; fi; "
             + "MUXY_CLI_TIMEOUT=1 \"$MUXY_CLI\" \"$EC_DIR\" || exit 1; "
             + "i=0; until MUXY_CLI_TIMEOUT=1 \"$MUXY_CLI\" list-projects 2>/dev/null "
             + "| /usr/bin/awk -F \"\\t\" "
@@ -86,7 +102,14 @@ public enum TerminalLaunch {
             + "i=$((i + 1)); if [ \"$i\" -ge 10 ]; then "
             + "echo \"Muxy did not become ready for $EC_DIR\" >&2; exit 1; fi; "
             + "sleep 0.1; done; "
+            + "if [ \"$MUXY_PROJECT_WAS_OPEN\" = 1 ]; then "
             + "TAB_ID=$(\"$MUXY_CLI\" new-tab --project \"$EC_DIR\") || exit 1; "
+            + "else i=0; TAB_ID=; while [ -z \"$TAB_ID\" ]; do "
+            + "TAB_ID=$(MUXY_CLI_TIMEOUT=1 \"$MUXY_CLI\" list-tabs --project \"$EC_DIR\" 2>/dev/null "
+            + "| /usr/bin/awk -F \"\\t\" '$3 == \"terminal\" && $5 == \"true\" { print $2; exit }'); "
+            + "i=$((i + 1)); if [ \"$i\" -ge 10 ]; then "
+            + "echo \"Muxy did not expose the initial tab for $EC_DIR\" >&2; exit 1; fi; "
+            + "[ -n \"$TAB_ID\" ] || sleep 0.1; done; fi; "
             + "case \"$TAB_ID\" in \"\"|*[!0-9A-Fa-f-]*) "
             + "echo \"Muxy returned an invalid tab ID: $TAB_ID\" >&2; exit 1;; esac; "
             + "EC_MUXY_TOKEN=easycontext-$TAB_ID; export EC_MUXY_TOKEN; "

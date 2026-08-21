@@ -45,9 +45,10 @@ final class LocalizationTests: XCTestCase {
         }
         let finderStrings = try XCTUnwrap(try loadCatalog(catalogs[3])["strings"] as? [String: Any])
         for key in ["Copy Path", "Copy Relative Path", "New File",
-                    "Open Terminal with %@", "Open with %@", "Run %@ in %@", "Command"] {
+                    "Open with %@", "Run %@ in %@", "Command"] {
             XCTAssertNotNil(finderStrings[key], "扩展 catalog 缺 key：\(key)")
         }
+        XCTAssertNil(finderStrings["Open Terminal with %@"], "终端与编辑器应共用简洁的 Open with %@ 文案")
     }
 
     func testEveryNonBrandKeyHasAllSixNonEnglishTranslations() throws {

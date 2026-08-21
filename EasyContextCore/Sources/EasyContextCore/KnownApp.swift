@@ -21,6 +21,7 @@ public struct KnownApp: Identifiable, Equatable, Sendable {
 
 public enum KnownApps {
     public static let muxyBundleId = "com.muxy.app"
+    public static let cmuxBundleId = "com.cmuxterm.app"
 
     // bundle id 来自公开资料，未装的写错也只是“不显示”，无副作用；
     // 真机已装的若没出现，用 `osascript -e 'id of app "名称"'` 核对后修正。
@@ -30,6 +31,7 @@ public enum KnownApps {
         KnownApp(bundleId: "dev.warp.Warp-Stable", displayName: "Warp", category: .terminal),
         KnownApp(bundleId: "io.appmakes.otty", displayName: "Otty", category: .terminal),
         KnownApp(bundleId: "com.mitchellh.ghostty", displayName: "Ghostty", category: .terminal),
+        KnownApp(bundleId: cmuxBundleId, displayName: "cmux", category: .terminal),
         KnownApp(bundleId: muxyBundleId, displayName: "Muxy", category: .terminal),
         KnownApp(bundleId: "net.kovidgoyal.kitty", displayName: "kitty", category: .terminal),
         KnownApp(bundleId: "com.github.wez.wezterm", displayName: "WezTerm", category: .terminal),

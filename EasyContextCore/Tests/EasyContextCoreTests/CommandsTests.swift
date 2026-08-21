@@ -81,7 +81,22 @@ final class CommandsTests: XCTestCase {
         XCTAssertEqual(TerminalLaunch.render(t), t)
     }
 
-    // Muxy 通过官方 CLI 打开目标项目，在该项目新建 tab 后发送命令与 Enter；
+    // cmux 官方 AppleScript 字典：创建 workspace，定位其 focused terminal，输入并回车。
+    func test_builtin_cmux_usesOfficialAppleScriptDictionary() {
+        XCTAssertEqual(KnownApps.terminals.first { $0.bundleId == KnownApps.cmuxBundleId }?.displayName,
+                       "cmux")
+        let t = TerminalLaunch.builtinTemplates[KnownApps.cmuxBundleId]!
+        XCTAssertTrue(t.contains("tell application \"cmux\""))
+        XCTAssertTrue(t.contains("set workspaceTab to new tab"))
+        XCTAssertTrue(t.contains("focused terminal of workspaceTab"))
+        XCTAssertTrue(t.contains("input text"))
+        XCTAssertTrue(t.contains("system attribute \"EC_DIR\""))
+        XCTAssertTrue(t.contains("system attribute \"EC_CMD\""))
+        XCTAssertTrue(t.contains("perform action \"send_key:enter\" on targetTerminal"))
+        XCTAssertEqual(TerminalLaunch.render(t), t)
+    }
+
+    // Muxy 通过官方 CLI 打开目标项目，复用初始 tab 或新建一个命令 tab 后发送命令与 Enter；
     // 不用 split-right，避免“运行命令”额外改变用户的分屏布局。
     func test_builtin_muxy_usesCLIToRunCommandInProjectTab() {
         XCTAssertEqual(KnownApps.terminals.first { $0.bundleId == KnownApps.muxyBundleId }?.displayName,
@@ -94,10 +109,14 @@ final class CommandsTests: XCTestCase {
         XCTAssertTrue(t.contains("Muxy CLI is not installed"))
         XCTAssertTrue(t.contains("MUXY_CLI_TIMEOUT=1 \"$MUXY_CLI\" \"$EC_DIR\""))
         XCTAssertTrue(t.contains("MUXY_CLI_TIMEOUT=1 \"$MUXY_CLI\" list-projects"))
+        XCTAssertTrue(t.contains("MUXY_PROJECT_WAS_OPEN=0"))
+        XCTAssertTrue(t.contains("list-tabs --project \"$EC_DIR\""))
+        XCTAssertTrue(t.contains("Muxy did not expose the initial tab"))
         XCTAssertTrue(t.contains("MUXY_CLI_TIMEOUT=1 \"$MUXY_CLI\" list-panes"))
         XCTAssertFalse(t.contains("export MUXY_CLI_TIMEOUT"))
         XCTAssertTrue(t.contains("\"$MUXY_CLI\" \"$EC_DIR\""))
         XCTAssertTrue(t.contains("\"$MUXY_CLI\" list-projects"))
+        XCTAssertTrue(t.contains("if [ \"$MUXY_PROJECT_WAS_OPEN\" = 1 ]"))
         XCTAssertTrue(t.contains("TAB_ID=$(\"$MUXY_CLI\" new-tab --project \"$EC_DIR\")"))
         XCTAssertTrue(t.contains("tab rename \"$TAB_ID\" \"$EC_MUXY_TOKEN\""))
         XCTAssertTrue(t.contains("\"$MUXY_CLI\" list-panes"))
@@ -108,8 +127,9 @@ final class CommandsTests: XCTestCase {
         XCTAssertEqual(TerminalLaunch.render(t), t)
     }
 
-    /// 行为级覆盖：fake CLI 返回互不相同的 tab/pane ID，并故意把同目录的旧 focused
-    /// pane 放在第一行；模板必须借唯一临时标题找到新 pane，且只调用一次 new-tab。
+    /// 行为级覆盖：首次打开复用 Muxy 自动创建的初始 tab；项目已打开时才新建一个 tab。
+    /// fake CLI 返回互不相同的 tab/pane ID，并故意把同目录的旧 focused pane 放第一行，
+    /// 模板必须借唯一临时标题找到正确 pane。
     func test_builtin_muxy_routesCommandToPaneCreatedForNewTab() throws {
         let fm = FileManager.default
         let root = fm.temporaryDirectory.appendingPathComponent("Easy Context Muxy \(UUID().uuidString)")
@@ -134,10 +154,12 @@ final class CommandsTests: XCTestCase {
         case "$COMMAND" in
           list-projects)
             if [ ! -e "$FAKE_MUXY_READY" ]; then
-              : > "$FAKE_MUXY_READY"
               exit 1
             fi
             printf 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa\tproject\t%s\ttrue\n' "$EC_DIR"
+            ;;
+          list-tabs)
+            printf '0\t11111111-1111-1111-1111-111111111111\tterminal\tTerminal\ttrue\n'
             ;;
           new-tab)
             printf '11111111-1111-1111-1111-111111111111\n'
@@ -154,6 +176,7 @@ final class CommandsTests: XCTestCase {
             printf '22222222-2222-2222-2222-222222222222\t%s\t%s\tfalse\n' "$TOKEN" "$EC_DIR"
             ;;
           *)
+            if [ "$COMMAND" = "$EC_DIR" ]; then : > "$FAKE_MUXY_READY"; fi
             printf 'ok\n'
             ;;
         esac
@@ -185,7 +208,9 @@ final class CommandsTests: XCTestCase {
         XCTAssertEqual(process.terminationStatus, 0, error)
         let calls = try String(contentsOf: log, encoding: .utf8).split(separator: "\n").map(String.init)
         XCTAssertEqual(calls.filter { $0.hasPrefix("1\tlist-projects") }.count, 2)
-        XCTAssertEqual(calls.filter { $0.hasPrefix("default\tnew-tab") }.count, 1)
+        XCTAssertEqual(calls.filter { $0.hasPrefix("default\tnew-tab") }.count, 0,
+                       "首次打开项目应复用 Muxy 自动创建的初始 tab")
+        XCTAssertEqual(calls.filter { $0.hasPrefix("1\tlist-tabs") }.count, 1)
         XCTAssertTrue(calls.contains(
             "default\ttab\trename\t11111111-1111-1111-1111-111111111111"
                 + "\teasycontext-11111111-1111-1111-1111-111111111111"
@@ -200,6 +225,27 @@ final class CommandsTests: XCTestCase {
             "default\tsend-keys\t--pane\t22222222-2222-2222-2222-222222222222\tEnter"
         ))
         XCTAssertFalse(calls.contains { $0.contains("33333333-3333-3333-3333-333333333333") })
+
+        // ready 已存在，模拟项目已在运行中的 Muxy 打开：这次应恰好新建一个命令 tab。
+        try fm.removeItem(at: log)
+        try? fm.removeItem(at: state)
+        let second = Process()
+        second.executableURL = URL(fileURLWithPath: "/bin/sh")
+        second.arguments = ["-c", TerminalLaunch.builtinTemplates[KnownApps.muxyBundleId]!]
+        second.environment = env
+        let secondError = Pipe()
+        second.standardOutput = Pipe()
+        second.standardError = secondError
+        try second.run()
+        second.waitUntilExit()
+        let secondErrorText = String(data: secondError.fileHandleForReading.readDataToEndOfFile(),
+                                     encoding: .utf8) ?? ""
+        XCTAssertEqual(second.terminationStatus, 0, secondErrorText)
+        let secondCalls = try String(contentsOf: log, encoding: .utf8)
+            .split(separator: "\n").map(String.init)
+        XCTAssertEqual(secondCalls.filter { $0.hasPrefix("default\tnew-tab") }.count, 1,
+                       "已有项目应只新建一个命令 tab")
+        XCTAssertEqual(secondCalls.filter { $0.hasPrefix("1\tlist-tabs") }.count, 0)
     }
 
     func test_builtin_otty_usesAppleScriptDoScript() {
@@ -208,6 +254,25 @@ final class CommandsTests: XCTestCase {
         XCTAssertTrue(t.contains("system attribute \"EC_DIR\""))
         XCTAssertTrue(t.contains("system attribute \"EC_CMD\""))
         XCTAssertEqual(TerminalLaunch.render(t), t)
+    }
+
+    // Muxy 之外的内置模板都只有一个窗口/tab 创建入口，不能出现“先打开再新建”的组合。
+    func test_builtin_nonMuxyTerminals_createExactlyOneExecutionSurface() {
+        let expectedPrimitive: [String: String] = [
+            "com.mitchellh.ghostty": "new window with configuration",
+            KnownApps.cmuxBundleId: "new tab",
+            "io.appmakes.otty": "do script",
+            "net.kovidgoyal.kitty": "open -nb",
+            "com.github.wez.wezterm": "open -nb",
+            "org.alacritty": "open -nb",
+            "com.apple.Terminal": "do script",
+            "com.googlecode.iterm2": "create window with default profile",
+        ]
+        for (bundleID, primitive) in expectedPrimitive {
+            let template = TerminalLaunch.builtinTemplates[bundleID]!
+            XCTAssertEqual(template.components(separatedBy: primitive).count - 1, 1,
+                           "\(bundleID) 每次运行应只创建一个窗口或 tab")
+        }
     }
 
     // MARK: 可运行判定（菜单显示与宿主执行共用口径）

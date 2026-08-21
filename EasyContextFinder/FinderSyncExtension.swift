@@ -152,7 +152,7 @@ class FinderSyncExtension: FIFinderSync {
         cacheLock.unlock()
 
         for (idx, app) in terminals.enumerated() {
-            let item = addItem(to: menu, title: String(localized: "Open Terminal with \(app.name)"),
+            let item = addItem(to: menu, title: String(localized: "Open with \(app.name)"),
                                action: #selector(openWithApp(_:)),
                                image: appIcon(app.bundleId, style: iconStyle, snapshot: appSnapshot) ?? symbolImage("terminal", dark: dark))
             item.tag = idx
