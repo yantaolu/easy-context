@@ -1,14 +1,13 @@
 #!/bin/bash
-# 构建 universal Release App，并打包成 ad-hoc 签名、未签名的 .pkg。
+# 构建指定架构的 Release App，并打包成 ad-hoc 签名、未签名的 .pkg。
 #
-# 用法：VERSION=1.2.3 BUILD_NUMBER=123 ./scripts/build-pkg.sh
+# 用法：VERSION=1.2.3 BUILD_NUMBER=123 TARGET_ARCH=universal ./scripts/build-pkg.sh
+# TARGET_ARCH 可选 universal（默认）、arm64 或 x86_64。
 # 本地 VERSION 可为 1、1.2 或 1.2.3；GitHub tag 构建必须是三段版本号。
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-APP="build-release/Build/Products/Release/EasyContext.app"
-APPEX="$APP/Contents/PlugIns/EasyContextFinder.appex"
 IDENTIFIER="com.luyantao.easycontext"
 PKG_SCRIPTS="packaging/pkg-scripts"
 
@@ -21,6 +20,7 @@ DEFAULT_VERSION="$(default_setting MARKETING_VERSION)"
 DEFAULT_BUILD_NUMBER="$(default_setting CURRENT_PROJECT_VERSION)"
 VERSION="${VERSION:-$DEFAULT_VERSION}"
 BUILD_NUMBER="${BUILD_NUMBER:-$DEFAULT_BUILD_NUMBER}"
+TARGET_ARCH="${TARGET_ARCH:-universal}"
 
 local_version_pattern='^(0|[1-9][0-9]*)(\.(0|[1-9][0-9]*)){0,2}$'
 tag_version_pattern='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
@@ -38,6 +38,27 @@ if ! [[ "$BUILD_NUMBER" =~ ^[1-9][0-9]*$ ]]; then
   echo "BUILD_NUMBER 必须为正整数，实际为：$BUILD_NUMBER" >&2
   exit 1
 fi
+
+case "$TARGET_ARCH" in
+  universal)
+    BUILD_ARCHS="arm64 x86_64"
+    EXPECTED_ARCHITECTURES=(arm64 x86_64)
+    DERIVED_DATA_PATH="build-release"
+    ;;
+  arm64|x86_64)
+    BUILD_ARCHS="$TARGET_ARCH"
+    EXPECTED_ARCHITECTURES=("$TARGET_ARCH")
+    # 单架构构建使用独立 DerivedData，避免从此前的 universal 或另一架构构建复用产物。
+    DERIVED_DATA_PATH="build-release/$TARGET_ARCH"
+    ;;
+  *)
+    echo "TARGET_ARCH 必须为 universal、arm64 或 x86_64，实际为：$TARGET_ARCH" >&2
+    exit 1
+    ;;
+esac
+
+APP="$DERIVED_DATA_PATH/Build/Products/Release/EasyContext.app"
+APPEX="$APP/Contents/PlugIns/EasyContextFinder.appex"
 
 PKG_ROOT=""
 PKG_SCRIPTS_DIR=""
@@ -57,11 +78,11 @@ echo "==> 版本：${VERSION}（构建号：${BUILD_NUMBER}）"
 echo "==> 生成 Xcode 工程"
 xcodegen generate
 
-echo "==> Release universal 构建（ad-hoc 签名）"
+echo "==> Release ${TARGET_ARCH} 构建（ad-hoc 签名）"
 xcodebuild -project EasyContext.xcodeproj -scheme EasyContext -configuration Release \
-  -derivedDataPath build-release \
+  -derivedDataPath "$DERIVED_DATA_PATH" \
   MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
-  ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO \
+  ARCHS="$BUILD_ARCHS" ONLY_ACTIVE_ARCH=NO \
   CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=YES CODE_SIGNING_ALLOWED=YES \
   CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO \
   ENABLE_DEBUG_DYLIB=NO build
@@ -81,13 +102,21 @@ assert_plist_value() {
   }
 }
 
-assert_universal_binary() {
+assert_target_architectures() {
   local binary="$1"
   local architectures
+  local actual_architectures
+  local expected_architecture
   architectures="$(lipo -archs "$binary")"
-  for architecture in arm64 x86_64; do
-    [[ " $architectures " == *" $architecture "* ]] || {
-      echo "$binary 缺少 $architecture 架构（实际：$architectures）" >&2
+  read -r -a actual_architectures <<< "$architectures"
+
+  [[ "${#actual_architectures[@]}" -eq "${#EXPECTED_ARCHITECTURES[@]}" ]] || {
+    echo "$binary 架构应恰好为 ${EXPECTED_ARCHITECTURES[*]}，实际为：$architectures" >&2
+    exit 1
+  }
+  for expected_architecture in "${EXPECTED_ARCHITECTURES[@]}"; do
+    [[ " $architectures " == *" $expected_architecture "* ]] || {
+      echo "$binary 缺少 $expected_architecture 架构（实际：$architectures）" >&2
       exit 1
     }
   done
@@ -134,8 +163,8 @@ assert_plist_value "$APP/Contents/Info.plist" CFBundleShortVersionString "$VERSI
 assert_plist_value "$APP/Contents/Info.plist" CFBundleVersion "$BUILD_NUMBER"
 assert_plist_value "$APPEX/Contents/Info.plist" CFBundleShortVersionString "$VERSION"
 assert_plist_value "$APPEX/Contents/Info.plist" CFBundleVersion "$BUILD_NUMBER"
-assert_universal_binary "$APP/Contents/MacOS/EasyContext"
-assert_universal_binary "$APPEX/Contents/MacOS/EasyContextFinder"
+assert_target_architectures "$APP/Contents/MacOS/EasyContext"
+assert_target_architectures "$APPEX/Contents/MacOS/EasyContextFinder"
 codesign --verify --deep --strict --verbose=2 "$APP"
 codesign --verify --deep --strict --verbose=2 "$APPEX"
 assert_get_task_allow_not_true "$APP"
@@ -158,7 +187,7 @@ while /usr/libexec/PlistBuddy -c "Print :$index:BundleIsRelocatable" "$COMPONENT
   index=$((index + 1))
 done
 
-OUTPUT_PKG="dist/EasyContext-${VERSION}-macOS-universal.pkg"
+OUTPUT_PKG="dist/EasyContext-${VERSION}-macOS-${TARGET_ARCH}.pkg"
 TEMP_PKG="$(mktemp "${TMPDIR:-/tmp}/EasyContext-${VERSION}.XXXXXX.pkg")"
 mkdir -p dist
 
