@@ -25,15 +25,19 @@
 
 ## 安装
 
-> 应用为 ad-hoc 签名、**未做 Apple 公证**，首次打开安装包需手动允许一次（详见 [`packaging/安装说明.txt`](packaging/安装说明.txt)）。
+从 [GitHub Releases](https://github.com/yantaolu/easy-context/releases) 下载与 macOS 对应的 `EasyContext-<版本>-macOS-universal.pkg`。`.pkg` 本身未签名；其中的 App 使用 ad-hoc 签名、**未做 Apple 公证**，首次打开安装包需手动允许一次（详见 [`packaging/安装说明.txt`](packaging/安装说明.txt)）。
 
-1. **右键**点 `EasyContext.pkg` →「打开」→ 弹窗再点「打开」（不签名安装包直接双击会被拦，用右键打开这一次即可）。
+1. **右键**点下载的 `EasyContext-<版本>-macOS-universal.pkg` →「打开」→ 弹窗再点「打开」（不签名安装包直接双击会被拦，用右键打开这一次即可）。
 2. 按安装向导点「继续 / 安装」，输入密码授权装到「应用程序」。装完 App 会自动启动；重装 / 更新时安装程序会**自动关闭旧版本**，无需手动退出、也不会再报「正在使用中」。
 3. 启用扩展：打开 EasyContext，点顶部横幅「去启用」，或
    **系统设置 → 通用 → 登录项与扩展 → 访达扩展 → 勾选 EasyContextFinder**。
 4. 在访达里右键任意文件 / 文件夹即可使用。
 
-> pkg 装出来的 App 不带隔离标记，**无需再执行 `sudo xattr -dr com.apple.quarantine`**。命令行安装可用 `sudo installer -pkg EasyContext.pkg -target /`。
+> pkg 装出来的 App 不带隔离标记，**无需再执行 `sudo xattr -dr com.apple.quarantine`**。命令行安装可用 `sudo installer -pkg EasyContext-<版本>-macOS-universal.pkg -target /`。
+
+### 发布版本
+
+维护者将已合入 `master` 的提交打上严格的三段版本标签，例如 `v1.2.3` 并推送。GitHub Actions 会验证该标签提交可从 `origin/master` 到达，运行测试、构建通用 macOS `.pkg`、生成 SHA-256 校验文件，并创建同名 GitHub Release。Release 提供的是未签名 `.pkg`，其中的 App 为 ad-hoc 签名且**未公证**；这不是 App Store 或 Developer ID 签名发布，下载者仍可能看到 macOS 安全提示。
 
 ## 配置
 
@@ -90,7 +94,8 @@ xcodebuild -project EasyContext.xcodeproj -scheme EasyContext -configuration Deb
 cd EasyContextCore && swift test
 
 # 打包成分发用 .pkg（安装时自动关旧进程/扩展、装出的 App 免清 quarantine）
-./scripts/build-pkg.sh   # 产物：dist/EasyContext.pkg
+VERSION=1.2.3 BUILD_NUMBER=123 ./scripts/build-pkg.sh
+# 产物：dist/EasyContext-1.2.3-macOS-universal.pkg
 ```
 
 ## 架构
@@ -116,7 +121,7 @@ cd EasyContextCore && swift test
 
 ## 已知限制
 
-- **分发**：用 `.pkg`（`scripts/build-pkg.sh`）分发——安装出来的 App 不带 quarantine、无需手动清理，且 preinstall 会自动关掉正在运行的旧 App 与 FinderSync 扩展，重装不再报「正在使用中」。不签名的 pkg 首次打开仍需右键→打开放行一次；要做到「双击即装、全程零提示」，需 **Apple Developer ID 证书 + 公证（notarization）**（付费账号，详见 `scripts/build-pkg.sh` 顶部注释）。
+- **分发**：从 GitHub Releases 下载通用 `.pkg`（`scripts/build-pkg.sh` 构建）——安装出来的 App 不带 quarantine、无需手动清理，且 preinstall 会自动关掉正在运行的旧 App 与 FinderSync 扩展，重装不再报「正在使用中」。`.pkg` 未签名，其中的 App 为 ad-hoc 签名、**未公证**，首次打开仍需右键→打开放行一次；要做到「双击即装、全程零提示」，需 **Apple Developer ID 证书 + 公证（notarization）**（付费账号，详见 `scripts/build-pkg.sh` 顶部注释）。
 - 部分小众 AI 编辑器（PearAI / Void 等）暂无可靠 bundle id，未进内置清单，可用设置界面的 `+` 自行添加。
 - **在终端运行命令 / 新建文件**由宿主 App 处理（后台代理，无 Dock 图标；双击 App 才显示配置窗）：首次用 AppleScript 型终端（Terminal / iTerm / Ghostty / cmux）运行命令时，会弹一次性「控制终端」的自动化授权；Otty 的官方 CLI 路径不需要该自动化授权。
 - Warp、Hyper、Tabby、Rio、Wave、Termius 暂无内置启动模板：可在菜单里**打开目录**，但不能作为**执行终端**运行命令，除非在设置的「Templates…」编辑器（或 `terminalTemplates`）里添加模板。

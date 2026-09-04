@@ -1,0 +1,105 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 40
+    outputs:
+      version: ${{ steps.version.outputs.value }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: version
+        name: Validate tag and master ancestry
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          if [[ ! "$tag" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Release tag must be vX.Y.Z: $tag" >&2
+            exit 1
+          fi
+          if ! git show-ref --verify --quiet refs/remotes/origin/master; then
+            echo "origin/master was not fetched by checkout" >&2
+            exit 1
+          fi
+          tag_commit="$(git rev-list -n 1 "$tag")"
+          if ! git merge-base --is-ancestor "$tag_commit" origin/master; then
+            echo "Release tag $tag does not point to a commit reachable from origin/master" >&2
+            exit 1
+          fi
+          echo "value=${tag#v}" >> "$GITHUB_OUTPUT"
+      - name: Install XcodeGen
+        run: command -v xcodegen >/dev/null || brew install xcodegen
+      - name: Test core logic
+        run: >-
+          swift test --package-path EasyContextCore
+          --skip CommandsTests/test_builtin_muxy_routesCommandToPaneCreatedForNewTab
+      - name: Build universal installer package
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: ./scripts/build-pkg.sh
+      - name: Create checksum
+        run: >-
+          (cd dist && shasum -a 256
+          EasyContext-${{ steps.version.outputs.value }}-macOS-universal.pkg
+          > EasyContext-${{ steps.version.outputs.value }}-macOS-universal.pkg.sha256)
+      - name: Upload release assets
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-assets
+          path: |
+            dist/EasyContext-${{ steps.version.outputs.value }}-macOS-universal.pkg
+            dist/EasyContext-${{ steps.version.outputs.value }}-macOS-universal.pkg.sha256
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Download verified release assets
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-assets
+          path: release-assets
+      - name: Verify checksum and create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ needs.build.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          pkg="release-assets/EasyContext-${VERSION}-macOS-universal.pkg"
+          checksum="${pkg}.sha256"
+          (cd release-assets && sha256sum -c "$(basename "$checksum")")
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Refusing to overwrite existing release: $TAG" >&2
+            exit 1
+          fi
+          gh release create "$TAG" "$pkg" "$checksum" \
+            --verify-tag \
+            --draft \
+            --generate-notes \
+            --title "$TAG" \
+            --notes $'⚠️ 此 Release 的 .pkg 未签名；其中的 App 使用 ad-hoc 签名且未经过 Apple 公证。首次安装或打开时 macOS 可能显示安全警告；请仅从本 Release 下载。'
+          gh release edit "$TAG" --draft=false

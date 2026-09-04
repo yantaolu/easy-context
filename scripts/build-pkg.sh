@@ -1,66 +1,136 @@
 #!/bin/bash
-# 构建 Release 版并打包成【不签名】的 .pkg 安装包（本地/内部分发用）。
+# 构建 universal Release App，并打包成 ad-hoc 签名、未签名的 .pkg。
 #
-# 亮点：安装前自动关闭正在运行的 EasyContext 及其 FinderSync 扩展，解决
-#      “项目 EasyContext.app 正在使用中、无法覆盖”的问题；安装后以登录
-#      用户身份重启 App（脚本见 packaging/pkg-scripts/）。
-#
-# 无 Apple 账号版本：pkg 不签名。首次安装会被 Gatekeeper 拦，用户需：
-#   · 右键点 pkg → 打开 → 再点“打开”；或
-#   · 终端执行：sudo installer -pkg dist/EasyContext.pkg -target /
-# 想去掉该警告需付费 Developer ID 证书 + 公证（见 README「已知限制 · 分发」）。
-#
-# 用法：scripts/build-pkg.sh            # 版本号自动从 app Info.plist 读取
-#      VERSION=1.2 scripts/build-pkg.sh # 手动指定版本号
+# 用法：VERSION=1.2.3 BUILD_NUMBER=123 ./scripts/build-pkg.sh
+# 本地 VERSION 可为 1、1.2 或 1.2.3；GitHub tag 构建必须是三段版本号。
 set -euo pipefail
+
 cd "$(dirname "$0")/.."
 
 APP="build-release/Build/Products/Release/EasyContext.app"
+APPEX="$APP/Contents/PlugIns/EasyContextFinder.appex"
 IDENTIFIER="com.luyantao.easycontext"
 PKG_SCRIPTS="packaging/pkg-scripts"
 
+default_setting() {
+  local key="$1"
+  sed -nE "s/^[[:space:]]*${key}:[[:space:]]*\"?([^\"[:space:]#]+)\"?.*/\1/p" project.yml | head -n 1
+}
+
+DEFAULT_VERSION="$(default_setting MARKETING_VERSION)"
+DEFAULT_BUILD_NUMBER="$(default_setting CURRENT_PROJECT_VERSION)"
+VERSION="${VERSION:-$DEFAULT_VERSION}"
+BUILD_NUMBER="${BUILD_NUMBER:-$DEFAULT_BUILD_NUMBER}"
+
+local_version_pattern='^(0|[1-9][0-9]*)(\.(0|[1-9][0-9]*)){0,2}$'
+tag_version_pattern='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+
+if ! [[ "$VERSION" =~ $local_version_pattern ]]; then
+  echo "VERSION 必须为 1、1.2 或 1.2.3 形式，实际为：$VERSION" >&2
+  exit 1
+fi
+if [[ "${GITHUB_ACTIONS:-}" == "true" && "${GITHUB_REF_TYPE:-}" == "tag" ]] \
+  && ! [[ "$VERSION" =~ $tag_version_pattern ]]; then
+  echo "GitHub tag 构建的 VERSION 必须为三段版本号，实际为：$VERSION" >&2
+  exit 1
+fi
+if ! [[ "$BUILD_NUMBER" =~ ^[1-9][0-9]*$ ]]; then
+  echo "BUILD_NUMBER 必须为正整数，实际为：$BUILD_NUMBER" >&2
+  exit 1
+fi
+
+PKG_ROOT=""
+PKG_SCRIPTS_DIR=""
+PLIST_DIR=""
+TEMP_PKG=""
+cleanup() {
+  [[ -n "$PKG_ROOT" ]] && rm -rf "$PKG_ROOT"
+  [[ -n "$PKG_SCRIPTS_DIR" ]] && rm -rf "$PKG_SCRIPTS_DIR"
+  [[ -n "$PLIST_DIR" ]] && rm -rf "$PLIST_DIR"
+  [[ -n "$TEMP_PKG" ]] && rm -f "$TEMP_PKG"
+}
+trap cleanup EXIT
+
+echo "==> 版本：${VERSION}（构建号：${BUILD_NUMBER}）"
 echo "==> 生成 Xcode 工程"
 xcodegen generate
 
-echo "==> Release 构建（ad-hoc 签名）"
+echo "==> Release universal 构建（ad-hoc 签名）"
 xcodebuild -project EasyContext.xcodeproj -scheme EasyContext -configuration Release \
   -derivedDataPath build-release \
-  CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=YES CODE_SIGNING_ALLOWED=YES build
-[ -d "$APP" ] || { echo "构建产物缺失：$APP"; exit 1; }
+  MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+  ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO \
+  CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=YES CODE_SIGNING_ALLOWED=YES \
+  ENABLE_DEBUG_DYLIB=NO build
 
-# 版本号：优先取环境变量，其次读 app 内 Info.plist，最后兜底 1.0
-VERSION="${VERSION:-$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$APP/Contents/Info.plist" 2>/dev/null || true)}"
-[ -n "$VERSION" ] || VERSION="1.0"
-echo "==> 版本：$VERSION"
+[[ -d "$APP" ]] || { echo "构建产物缺失：$APP" >&2; exit 1; }
+[[ -d "$APPEX" ]] || { echo "Finder 扩展产物缺失：$APPEX" >&2; exit 1; }
+
+assert_plist_value() {
+  local plist="$1"
+  local key="$2"
+  local expected="$3"
+  local actual
+  actual="$(/usr/libexec/PlistBuddy -c "Print :$key" "$plist")"
+  [[ "$actual" == "$expected" ]] || {
+    echo "$plist 的 $key 应为 $expected，实际为 $actual" >&2
+    exit 1
+  }
+}
+
+assert_universal_binary() {
+  local binary="$1"
+  local architectures
+  architectures="$(lipo -archs "$binary")"
+  for architecture in arm64 x86_64; do
+    [[ " $architectures " == *" $architecture "* ]] || {
+      echo "$binary 缺少 $architecture 架构（实际：$architectures）" >&2
+      exit 1
+    }
+  done
+}
+
+echo "==> 验证版本、架构与签名结构"
+assert_plist_value "$APP/Contents/Info.plist" CFBundleShortVersionString "$VERSION"
+assert_plist_value "$APP/Contents/Info.plist" CFBundleVersion "$BUILD_NUMBER"
+assert_plist_value "$APPEX/Contents/Info.plist" CFBundleShortVersionString "$VERSION"
+assert_plist_value "$APPEX/Contents/Info.plist" CFBundleVersion "$BUILD_NUMBER"
+assert_universal_binary "$APP/Contents/MacOS/EasyContext"
+assert_universal_binary "$APPEX/Contents/MacOS/EasyContextFinder"
+codesign --verify --deep --strict --verbose=2 "$APP"
+codesign --verify --deep --strict --verbose=2 "$APPEX"
 
 echo "==> 组装安装内容"
-ROOT="$(mktemp -d)"
-SCRIPTS="$(mktemp -d)"
-PLISTDIR="$(mktemp -d)"; PLIST="$PLISTDIR/component.plist"
-cp -R "$APP" "$ROOT/"                                   # 装到 /Applications/EasyContext.app
-install -m 0755 "$PKG_SCRIPTS/preinstall"  "$SCRIPTS/preinstall"
-install -m 0755 "$PKG_SCRIPTS/postinstall" "$SCRIPTS/postinstall"
+PKG_ROOT="$(mktemp -d)"
+PKG_SCRIPTS_DIR="$(mktemp -d)"
+PLIST_DIR="$(mktemp -d)"
+COMPONENT_PLIST="$PLIST_DIR/component.plist"
+cp -R "$APP" "$PKG_ROOT/"
+install -m 0755 "$PKG_SCRIPTS/preinstall" "$PKG_SCRIPTS_DIR/preinstall"
+install -m 0755 "$PKG_SCRIPTS/postinstall" "$PKG_SCRIPTS_DIR/postinstall"
 
-# 关闭「Bundle 重定位」：pkgbuild 默认给 app 生成 <relocate>，安装器一旦在系统别处
-# （如开发目录 build-release）发现同 bundle id 的旧副本，就会把新版装到那个旧位置、
-# 而非 /Applications——表现为“装完 /Applications 里什么都没有”。故强制 false。
-pkgbuild --analyze --root "$ROOT" "$PLIST" >/dev/null
-i=0
-while /usr/libexec/PlistBuddy -c "Print :$i:BundleIsRelocatable" "$PLIST" >/dev/null 2>&1; do
-  /usr/libexec/PlistBuddy -c "Set :$i:BundleIsRelocatable false" "$PLIST"
-  i=$((i+1))
+# 禁用 Bundle 重定位，始终安装至 /Applications/EasyContext.app。
+pkgbuild --analyze --root "$PKG_ROOT" "$COMPONENT_PLIST" >/dev/null
+index=0
+while /usr/libexec/PlistBuddy -c "Print :$index:BundleIsRelocatable" "$COMPONENT_PLIST" >/dev/null 2>&1; do
+  /usr/libexec/PlistBuddy -c "Set :$index:BundleIsRelocatable false" "$COMPONENT_PLIST"
+  index=$((index + 1))
 done
 
-echo "==> 打包 pkg（不签名）"
-mkdir -p dist; rm -f dist/EasyContext.pkg
-pkgbuild --root "$ROOT" \
-  --component-plist "$PLIST" \
+OUTPUT_PKG="dist/EasyContext-${VERSION}-macOS-universal.pkg"
+TEMP_PKG="$(mktemp "${TMPDIR:-/tmp}/EasyContext-${VERSION}.XXXXXX.pkg")"
+mkdir -p dist
+
+echo "==> 打包 pkg（未签名）"
+pkgbuild --root "$PKG_ROOT" \
+  --component-plist "$COMPONENT_PLIST" \
   --identifier "$IDENTIFIER" \
   --version "$VERSION" \
   --install-location /Applications \
-  --scripts "$SCRIPTS" \
-  dist/EasyContext.pkg
+  --scripts "$PKG_SCRIPTS_DIR" \
+  "$TEMP_PKG"
+mv -f "$TEMP_PKG" "$OUTPUT_PKG"
+TEMP_PKG=""
 
-rm -rf "$ROOT" "$SCRIPTS" "$PLISTDIR"
-echo "==> 完成：$(pwd)/dist/EasyContext.pkg"
-ls -lh dist/EasyContext.pkg
+echo "==> 完成：$(pwd)/$OUTPUT_PKG"
+ls -lh "$OUTPUT_PKG"

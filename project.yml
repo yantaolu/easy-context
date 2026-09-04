@@ -20,6 +20,8 @@ settings:
     CODE_SIGNING_REQUIRED: "YES"
     CODE_SIGNING_ALLOWED: "YES"
     ENABLE_HARDENED_RUNTIME: "NO"
+    MARKETING_VERSION: 1.0.0
+    CURRENT_PROJECT_VERSION: 1
     PRODUCT_NAME: "$(TARGET_NAME)"
     SWIFT_VERSION: "5.0"
 packages:
@@ -44,6 +46,8 @@ targets:
       path: EasyContext/Info.plist
       properties:
         CFBundleDisplayName: Easy Context
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         CFBundleLocalizations:
           - en
           - zh-Hans
@@ -75,6 +79,8 @@ targets:
       properties:
         # 系统设置 → 扩展列表里显示的名字，与宿主品牌一致
         CFBundleDisplayName: Easy Context
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         CFBundleLocalizations:
           - en
           - zh-Hans

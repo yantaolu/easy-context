@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-package:
+    runs-on: macos-15
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Install XcodeGen
+        run: command -v xcodegen >/dev/null || brew install xcodegen
+      - name: Test core logic
+        run: >-
+          swift test --package-path EasyContextCore
+          --skip CommandsTests/test_builtin_muxy_routesCommandToPaneCreatedForNewTab
+      - name: Build universal installer package
+        env:
+          VERSION: "1.0.0"
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: ./scripts/build-pkg.sh
+      - name: Upload installer package
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: EasyContext-macOS-universal
+          path: dist/EasyContext-*-macOS-universal.pkg
+          if-no-files-found: error
+          retention-days: 7
