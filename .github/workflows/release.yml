@@ -13,12 +13,14 @@ concurrency:
 
 jobs:
   build:
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 40
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
     outputs:
       version: ${{ steps.version.outputs.value }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -42,8 +44,15 @@ jobs:
             exit 1
           fi
           echo "value=${tag#v}" >> "$GITHUB_OUTPUT"
-      - name: Install XcodeGen
-        run: command -v xcodegen >/dev/null || brew install xcodegen
+      - name: Install XcodeGen and report build environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v xcodegen >/dev/null || brew install xcodegen
+          uname -m
+          xcodebuild -version
+          swift --version
+          xcodegen --version
       - name: Test core logic
         run: >-
           swift test --package-path EasyContextCore
@@ -52,14 +61,29 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.value }}
           BUILD_NUMBER: ${{ github.run_number }}
-        run: ./scripts/build-pkg.sh
+        shell: bash
+        run: |
+          set -euo pipefail
+          log="$RUNNER_TEMP/build-pkg.log"
+          set +e
+          ./scripts/build-pkg.sh 2>&1 | tee "$log"
+          build_status=${PIPESTATUS[0]}
+          set -e
+          if [[ "$build_status" -ne 0 ]]; then
+            error_log="$(tail -n 80 "$log")"
+            error_log="${error_log//%/%25}"
+            error_log="${error_log//$'\r'/%0D}"
+            error_log="${error_log//$'\n'/%0A}"
+            printf '::error title=build-pkg failed::%s\n' "$error_log"
+            exit "$build_status"
+          fi
       - name: Create checksum
         run: >-
           (cd dist && shasum -a 256
           EasyContext-${{ steps.version.outputs.value }}-macOS-universal.pkg
           > EasyContext-${{ steps.version.outputs.value }}-macOS-universal.pkg.sha256)
       - name: Upload release assets
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: release-assets
           path: |
@@ -76,7 +100,7 @@ jobs:
       contents: write
     steps:
       - name: Download verified release assets
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
         with:
           name: release-assets
           path: release-assets
