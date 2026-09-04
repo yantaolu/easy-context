@@ -69,9 +69,10 @@
 
 - 右键菜单出现 `用 <执行终端> 运行 <命令名>`（如 `用 Terminal 运行 Claude`），在**当前目录**打开终端并运行该命令。多选跨目录时只作用于去重后的**第一个目录**（一个终端窗口）。
 - **执行终端 ≠ 菜单显示**：执行终端是「命令在哪跑」，与「菜单显示的终端」开关无关，条件是**已安装且有启动模板**——内置模板覆盖 Terminal / iTerm / Ghostty / cmux / Otty / Muxy / kitty / WezTerm / Alacritty；其余（Warp、Hyper 等）需在 `terminalTemplates` 自行添加模板后才会进入候选。设置界面「执行终端」下拉即列出这些可用终端，`defaultTerminal` 为 `null` 时取第一个（系统 Terminal 兜底）。
-- **PATH**：GUI 进程 PATH 精简，`-e` 型终端（kitty/WezTerm/Alacritty）经用户登录 shell `$EC_SHELL -lic <cmd>` 运行，确保能找到 `~/.local/bin` 等里的 `claude`/`codex`。Terminal/iTerm/Ghostty/cmux/Otty 用 AppleScript 把命令输入交互 shell，PATH 天然正确。
+- **PATH**：GUI 进程 PATH 精简，`-e` 型终端（kitty/WezTerm/Alacritty）经用户登录 shell `$EC_SHELL -lic <cmd>` 运行，确保能找到 `~/.local/bin` 等里的 `claude`/`codex`。Terminal/iTerm/Ghostty/cmux 用 AppleScript 把命令输入交互 shell，PATH 天然正确；Otty 使用其官方 CLI。
 - **自定义启动模板**：`terminalTemplates` 只存**覆盖**（空 = 用内置）。想改某终端：参照配置目录里自动生成的 **`terminal-templates.reference.json`**（列出全部内置模板与 bundleId），把对应条目复制到 `terminalTemplates` 修改。占位符 `{dir}`/`{cmd}` 会替换为 `"$EC_DIR"`/`"$EC_CMD"`（值只走环境变量，勿自行加引号），可用 `$EC_SHELL`。
-- **Ghostty / cmux / Terminal / iTerm / Otty** 用 AppleScript 运行命令（把命令输入交互 shell，非 `-e` 执行）：无「Allow execute」弹框、PATH 正确；仅**首次**需一次性授权「EasyContext 控制 <终端>」（macOS 自动化权限）。Ghostty 需 1.3.0+；cmux 使用其官方 Scripting Dictionary 新建 workspace 并向 focused terminal 发送命令。
+- **Ghostty / cmux / Terminal / iTerm** 用 AppleScript 运行命令（把命令输入交互 shell，非 `-e` 执行）：无「Allow execute」弹框、PATH 正确；仅**首次**需一次性授权「EasyContext 控制 <终端>」（macOS 自动化权限）。Ghostty 需 1.3.0+；cmux 使用其官方 Scripting Dictionary 新建 workspace 并向 focused terminal 发送命令。
+- **Otty** 使用 App 内置的官方 CLI（按 Otty 1.4.1 API）：已有窗口时原子地新建一个 tab，再以 `--cwd` / `--command` 启动命令；没有窗口时创建窗口。它不会向当前正在交互的终端 pane 输入文本。请使用提供 `otty-cli`、`window show current`、`tab new` 和 `open` 的 Otty 1.4.1 或兼容版本。
 - **Muxy** 使用官方 CLI：先在 Muxy 菜单执行 **Muxy → Install CLI**。Easy Context 会先用 `muxy <目录>` 打开或选中项目；首次打开时复用 Muxy 自动创建的初始终端 tab，项目已打开时只新建一个命令 tab，然后发送命令并回车。Muxy 冷启动时会等待其本地控制服务就绪。
 
 ## 从源码构建
@@ -117,7 +118,7 @@ cd EasyContextCore && swift test
 
 - **分发**：用 `.pkg`（`scripts/build-pkg.sh`）分发——安装出来的 App 不带 quarantine、无需手动清理，且 preinstall 会自动关掉正在运行的旧 App 与 FinderSync 扩展，重装不再报「正在使用中」。不签名的 pkg 首次打开仍需右键→打开放行一次；要做到「双击即装、全程零提示」，需 **Apple Developer ID 证书 + 公证（notarization）**（付费账号，详见 `scripts/build-pkg.sh` 顶部注释）。
 - 部分小众 AI 编辑器（PearAI / Void 等）暂无可靠 bundle id，未进内置清单，可用设置界面的 `+` 自行添加。
-- **在终端运行命令 / 新建文件**由宿主 App 处理（后台代理，无 Dock 图标；双击 App 才显示配置窗）：首次用 AppleScript 型终端（Terminal / iTerm / Ghostty / cmux / Otty）运行命令时，会弹一次性「控制终端」的自动化授权。
+- **在终端运行命令 / 新建文件**由宿主 App 处理（后台代理，无 Dock 图标；双击 App 才显示配置窗）：首次用 AppleScript 型终端（Terminal / iTerm / Ghostty / cmux）运行命令时，会弹一次性「控制终端」的自动化授权；Otty 的官方 CLI 路径不需要该自动化授权。
 - Warp、Hyper、Tabby、Rio、Wave、Termius 暂无内置启动模板：可在菜单里**打开目录**，但不能作为**执行终端**运行命令，除非在设置的「Templates…」编辑器（或 `terminalTemplates`）里添加模板。
 - **外置磁盘在访达侧栏的图标会显示为 EasyContext 的图标**：这是 FinderSync 监控卷根目录（为提供外置盘右键菜单）的系统机制性副作用，与 Dropbox 文件夹在侧栏显示 Dropbox 图标同理，仅影响侧栏显示、不影响磁盘本身；扩展停用后图标即恢复。
 - 覆盖安装（升级）时安装器会自动重启访达，以立即挂接新版扩展——否则右键菜单可能消失，直到系统重新扫描注册插件。

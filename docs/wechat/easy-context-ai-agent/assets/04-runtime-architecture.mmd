@@ -1,0 +1,22 @@
+%%{init: {'theme':'base','themeVariables': {'fontFamily':'PingFang SC, Hiragino Sans GB, Arial Unicode MS, sans-serif','background':'#F3F6FA','primaryTextColor':'#183B63','lineColor':'#7187A3','tertiaryColor':'#F3F6FA','edgeLabelBackground':'#F3F6FA'}}}%%
+flowchart TB
+    A[Finder 右键] --> B[沙盒 Finder 扩展]
+    B --> C[轻量动作<br/>复制路径<br/>打开终端 / 编辑器]
+    B --> D[easycontext://<br/>IPC token]
+    D --> E[非沙盒<br/>宿主 App]
+    E --> F[运行命令 / 新建文件]
+    B -. 共同依赖 .-> G[共享基础<br/>EasyContextCore<br/>~/.easy-context/config.json]
+    E -.-> G
+
+    classDef entry fill:#E7F0FF,stroke:#3678C8,stroke-width:2px,color:#183B63,rx:14,ry:14;
+    classDef extension fill:#F0EAFE,stroke:#7655C6,stroke-width:2px,color:#34265D,rx:14,ry:14;
+    classDef light fill:#E5F6EF,stroke:#31936D,stroke-width:2px,color:#1D5A44,rx:14,ry:14;
+    classDef relay fill:#FFF0E1,stroke:#D57A2A,stroke-width:2px,color:#6D3A12,rx:14,ry:14;
+    classDef host fill:#FFE8E5,stroke:#D45E58,stroke-width:2px,color:#6C2925,rx:14,ry:14;
+    classDef shared fill:#EEF1F5,stroke:#7B8798,stroke-width:2px,color:#384657,rx:14,ry:14;
+    class A entry;
+    class B extension;
+    class C light;
+    class D relay;
+    class E,F host;
+    class G shared;

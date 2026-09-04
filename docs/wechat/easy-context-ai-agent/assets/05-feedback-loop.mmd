@@ -1,0 +1,21 @@
+%%{init: {'theme':'base','themeVariables': {'fontFamily':'PingFang SC, Hiragino Sans GB, Arial Unicode MS, sans-serif','background':'#F3F6FA','primaryTextColor':'#183B63','lineColor':'#7187A3','tertiaryColor':'#F3F6FA','edgeLabelBackground':'#F3F6FA'}}}%%
+flowchart TB
+    A[目标] --> B[显式假设]
+    B --> C[实现]
+    C --> D[自动测试]
+    D --> E[真机验证]
+    E -->|通过| F[交付<br/>仍由人最终验收]
+    E -->|失败| G[定位根因]
+    G --> H[沉淀为测试、文档<br/>与工程约束]
+    H --> A
+
+    classDef goal fill:#E7F0FF,stroke:#3678C8,stroke-width:2px,color:#183B63,rx:14,ry:14;
+    classDef process fill:#F0EAFE,stroke:#7655C6,stroke-width:2px,color:#34265D,rx:14,ry:14;
+    classDef verify fill:#FFF0E1,stroke:#D57A2A,stroke-width:2px,color:#6D3A12,rx:14,ry:14;
+    classDef success fill:#E5F6EF,stroke:#31936D,stroke-width:2px,color:#1D5A44,rx:14,ry:14;
+    classDef failure fill:#FFE8E5,stroke:#D45E58,stroke-width:2px,color:#6C2925,rx:14,ry:14;
+    class A goal;
+    class B,C process;
+    class D,E verify;
+    class F success;
+    class G,H failure;

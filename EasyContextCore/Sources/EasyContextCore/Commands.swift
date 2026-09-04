@@ -139,9 +139,22 @@ public enum TerminalLaunch {
             + "\"$MUXY_CLI\" send --pane \"$PANE\" \"$EC_CMD\" && "
             + "\"$MUXY_CLI\" send-keys --pane \"$PANE\" Enter",
         "io.appmakes.otty":
-            "osascript -e 'tell application \"Otty\" to do script "
-            + "\"cd \" & quoted form of (system attribute \"EC_DIR\") & \" && \" "
-            + "& (system attribute \"EC_CMD\")'",
+            // Otty 1.4.1+ 官方 CLI：绝不向既有 pane 输入文本。先用只读 selector
+            // 探测当前窗口；有窗口时由 tab new 原子地创建 tab 并传入 cwd/command。
+            // 仅当探测和实际创建之间窗口被关掉（selector-not-found，exit 4）时，
+            // 才允许回退到 open；其它错误 fail-closed，避免重复执行命令。
+            // EC_TERMINAL_APP 由宿主按 bundle ID 注入；EC_OTTY_CLI 仅供测试/诊断覆盖。
+            "OTTY_CLI=${EC_OTTY_CLI:-}; "
+            + "if [ -z \"$OTTY_CLI\" ]; then OTTY_CLI=\"${EC_TERMINAL_APP:-}/Contents/MacOS/otty-cli\"; fi; "
+            + "if [ ! -x \"$OTTY_CLI\" ]; then "
+            + "echo \"Otty CLI is unavailable: $OTTY_CLI\" >&2; exit 1; fi; "
+            + "if \"$OTTY_CLI\" window show current >/dev/null 2>&1; then "
+            + "\"$OTTY_CLI\" tab new --window current --cwd \"$EC_DIR\" --command \"$EC_CMD\"; "
+            + "OTTY_STATUS=$?; "
+            + "if [ \"$OTTY_STATUS\" -eq 4 ]; then "
+            + "\"$OTTY_CLI\" open \"$EC_DIR\" --command \"$EC_CMD\"; "
+            + "else exit \"$OTTY_STATUS\"; fi; "
+            + "else \"$OTTY_CLI\" open \"$EC_DIR\" --command \"$EC_CMD\"; fi",
         "net.kovidgoyal.kitty":
             "open -nb net.kovidgoyal.kitty --args --directory {dir} \"$EC_SHELL\" -lic {cmd}",
         "com.github.wez.wezterm":

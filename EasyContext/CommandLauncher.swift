@@ -72,10 +72,14 @@ enum CommandLauncher {
                    String(localized: "“\(term)” has no launch template configured. Please add one in EasyContext settings."))
             return
         }
-        run(command: entry.command, dir: dir, template: template)
+        // Otty 的官方 CLI 位于 App bundle 内。通过 bundle ID 解析实际安装位置，避免
+        // 假设 /Applications 或依赖 GUI 进程的 PATH；其它模板也可按需使用该环境变量。
+        let terminalAppURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: term)
+        run(command: entry.command, dir: dir, template: template, terminalAppURL: terminalAppURL)
     }
 
-    private static func run(command: String, dir: String, template: String) {
+    private static func run(command: String, dir: String, template: String,
+                            terminalAppURL: URL? = nil) {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/sh")
         process.arguments = ["-c", TerminalLaunch.render(template)]
@@ -84,6 +88,7 @@ enum CommandLauncher {
         env["EC_DIR"] = dir
         env["EC_CMD"] = command
         env["EC_SHELL"] = loginShell() // `-e` 型模板据此走登录 shell 取全 PATH
+        env["EC_TERMINAL_APP"] = terminalAppURL?.path ?? ""
         process.environment = env
         // run() 成功只代表 /bin/sh 起来了；osascript/open 的失败（最典型：自动化权限
         // 被用户拒过一次 → 此后永远静默无反应）只体现在退出码/stderr，必须检查并提示。

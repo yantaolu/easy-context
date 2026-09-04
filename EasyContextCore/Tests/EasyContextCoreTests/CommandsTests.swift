@@ -255,20 +255,71 @@ final class CommandsTests: XCTestCase {
         XCTAssertEqual(secondCalls.filter { $0.hasPrefix("1\tlist-tabs") }.count, 0)
     }
 
-    func test_builtin_otty_usesAppleScriptDoScript() {
+    func test_builtin_otty_usesOfficialCLIWithoutSendingTextToExistingPane() {
         let t = TerminalLaunch.builtinTemplates["io.appmakes.otty"]!
-        XCTAssertTrue(t.contains("tell application \"Otty\" to do script"))
-        XCTAssertTrue(t.contains("system attribute \"EC_DIR\""))
-        XCTAssertTrue(t.contains("system attribute \"EC_CMD\""))
+        XCTAssertTrue(t.contains("EC_OTTY_CLI"))
+        XCTAssertTrue(t.contains("EC_TERMINAL_APP"))
+        XCTAssertTrue(t.contains("window show current"))
+        XCTAssertTrue(t.contains("tab new --window current --cwd \"$EC_DIR\" --command \"$EC_CMD\""))
+        XCTAssertTrue(t.contains("open \"$EC_DIR\" --command \"$EC_CMD\""))
+        XCTAssertTrue(t.contains("[ \"$OTTY_STATUS\" -eq 4 ]"),
+                      "仅 selector-not-found (exit 4) 可回退到 open")
+        XCTAssertFalse(t.contains("do script"))
+        XCTAssertFalse(t.contains("front window"))
+        XCTAssertFalse(t.contains("pane send-text"))
+        XCTAssertFalse(t.contains("pane send-keys"))
+        XCTAssertFalse(t.contains("pane run"))
         XCTAssertEqual(TerminalLaunch.render(t), t)
     }
 
-    // Muxy 之外的内置模板都只有一个窗口/tab 创建入口，不能出现“先打开再新建”的组合。
+    /// 以 fake Otty CLI 运行渲染后的真实 shell 模板，确保目录和命令各作为一个 argv 传入。
+    func test_builtin_otty_existingWindowCreatesOneTabWithExactArguments() throws {
+        let directory = "/tmp/Project with spaces ' \" $[]"
+        let command = "codex --prompt 'a b' && printf \"$HOME; []\""
+        let result = try runOttyTemplate(mode: "existing", directory: directory, command: command)
+        XCTAssertEqual(result.status, 0, result.stderr)
+        XCTAssertEqual(result.calls, [
+            ["window", "show", "current"],
+            ["tab", "new", "--window", "current", "--cwd", directory, "--command", command],
+        ])
+    }
+
+    func test_builtin_otty_withoutWindowOpensOnceWithExactArguments() throws {
+        let directory = "/tmp/cold start \"quoted\""
+        let command = "claude --message 'keep this as one argument'"
+        let result = try runOttyTemplate(mode: "cold", directory: directory, command: command)
+        XCTAssertEqual(result.status, 0, result.stderr)
+        XCTAssertEqual(result.calls, [
+            ["window", "show", "current"],
+            ["open", directory, "--command", command],
+        ])
+    }
+
+    func test_builtin_otty_selectorRaceFallsBackToOpenOnce() throws {
+        let result = try runOttyTemplate(mode: "race", directory: "/tmp/race", command: "codex")
+        XCTAssertEqual(result.status, 0, result.stderr)
+        XCTAssertEqual(result.calls, [
+            ["window", "show", "current"],
+            ["tab", "new", "--window", "current", "--cwd", "/tmp/race", "--command", "codex"],
+            ["open", "/tmp/race", "--command", "codex"],
+        ])
+    }
+
+    func test_builtin_otty_unknownTabErrorDoesNotFallbackOrDuplicateCommand() throws {
+        let result = try runOttyTemplate(mode: "error", directory: "/tmp/error", command: "claude")
+        XCTAssertEqual(result.status, 42, result.stderr)
+        XCTAssertEqual(result.calls, [
+            ["window", "show", "current"],
+            ["tab", "new", "--window", "current", "--cwd", "/tmp/error", "--command", "claude"],
+        ])
+    }
+
+    // Muxy/Otty 之外的内置模板每条运行路径都只创建一个窗口/tab；Otty 的分支由
+    // 上面的 fake CLI 行为测试覆盖。
     func test_builtin_nonMuxyTerminals_createExactlyOneExecutionSurface() {
         let expectedPrimitive: [String: String] = [
             "com.mitchellh.ghostty": "new window with configuration",
             KnownApps.cmuxBundleId: "new tab",
-            "io.appmakes.otty": "do script",
             "net.kovidgoyal.kitty": "open -nb",
             "com.github.wez.wezterm": "open -nb",
             "org.alacritty": "open -nb",
@@ -304,6 +355,66 @@ final class CommandsTests: XCTestCase {
     }
 
     // MARK: 默认终端解析
+    private func runOttyTemplate(mode: String, directory: String, command: String)
+        throws -> (status: Int32, calls: [[String]], stderr: String) {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory.appendingPathComponent("Easy Context Otty \(UUID().uuidString)")
+        let cli = root.appendingPathComponent("fake otty-cli")
+        let log = root.appendingPathComponent("calls.log")
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: root) }
+
+        let fakeCLI = #"""
+        #!/bin/sh
+        printf 'CALL\037' >> "$FAKE_OTTY_LOG"
+        for ARG in "$@"; do printf '%s\037' "$ARG" >> "$FAKE_OTTY_LOG"; done
+        printf '\n' >> "$FAKE_OTTY_LOG"
+
+        case "$1" in
+          window)
+            [ "$FAKE_OTTY_MODE" = cold ] && exit 1
+            exit 0
+            ;;
+          tab)
+            [ "$FAKE_OTTY_MODE" = race ] && exit 4
+            [ "$FAKE_OTTY_MODE" = error ] && exit 42
+            exit 0
+            ;;
+          open) exit 0 ;;
+          *) exit 99 ;;
+        esac
+        """#
+        try fakeCLI.write(to: cli, atomically: true, encoding: .utf8)
+        try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: cli.path)
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/sh")
+        process.arguments = ["-c", TerminalLaunch.render(TerminalLaunch.builtinTemplates["io.appmakes.otty"]!)]
+        var env = ProcessInfo.processInfo.environment
+        env["EC_DIR"] = directory
+        env["EC_CMD"] = command
+        env["EC_OTTY_CLI"] = cli.path
+        env["EC_TERMINAL_APP"] = "/Applications/Otty.app"
+        env["FAKE_OTTY_LOG"] = log.path
+        env["FAKE_OTTY_MODE"] = mode
+        process.environment = env
+        let stderr = Pipe()
+        process.standardError = stderr
+        process.standardOutput = Pipe()
+        try process.run()
+        process.waitUntilExit()
+
+        let stderrText = String(data: stderr.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        let rows = (try? Data(contentsOf: log))?.split(separator: 0x0A) ?? []
+        let calls = rows.map { row in
+            row.split(separator: 0x1F, omittingEmptySubsequences: false)
+                .dropFirst()
+                .dropLast()
+                .map { String(decoding: $0, as: UTF8.self) }
+        }
+        return (process.terminationStatus, calls, stderrText)
+    }
+
     private func term(_ id: String) -> AppEntry { AppEntry(bundleId: id, name: id, custom: false, enabled: true) }
 
     func test_resolve_preferredInEligible() {

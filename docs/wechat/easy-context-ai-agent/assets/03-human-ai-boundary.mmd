@@ -1,0 +1,21 @@
+%%{init: {'theme':'base','themeVariables': {'fontFamily':'PingFang SC, Hiragino Sans GB, Arial Unicode MS, sans-serif','background':'#F3F6FA','primaryTextColor':'#183B63','lineColor':'#7187A3','fontSize':'20px'}}}%%
+flowchart TB
+    T[人 × AI：责任边界]
+    subgraph ROW[ ]
+        direction LR
+        H[人｜方向与责任<br/><br/>定义问题与目标<br/>边界与验收<br/>风险与复杂度取舍<br/>真机验收与最终责任]
+        J[共同决策与协作<br/><br/>澄清假设与评审方案<br/>形成任务合同<br/>接受 / 调整 / 停止<br/>复盘并沉淀规则]
+        A[AI Agent｜专业执行<br/><br/>探索与比较<br/>拆解与实现<br/>测试、日志与风险证据]
+        H <-->|目标·边界·验收<br/>↔ 取舍依据·验收结果| J
+        J <-->|任务合同·调整<br/>↔ 方案·代码·测试·证据| A
+    end
+    P[共同形成判断，人最终拍板并承担责任]
+    T ~~~ ROW
+    ROW ~~~ P
+    classDef human fill:#FFF0E1,stroke:#D57A2A,stroke-width:3px,color:#6D3A12,rx:18,ry:18;
+    classDef ai fill:#E7F0FF,stroke:#3678C8,stroke-width:3px,color:#183B63,rx:18,ry:18;
+    classDef joint fill:#F0EAFE,stroke:#7655C6,stroke-width:3px,color:#34265D,rx:18,ry:18;
+    class T,P,J joint;
+    class H human;
+    class A ai;
+    style ROW fill:transparent,stroke:transparent

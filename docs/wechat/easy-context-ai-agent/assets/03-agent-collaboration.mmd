@@ -1,0 +1,18 @@
+%%{init: {'theme':'base','themeVariables': {'fontFamily':'PingFang SC, Hiragino Sans GB, Arial Unicode MS, sans-serif','background':'#F3F6FA','primaryTextColor':'#183B63','lineColor':'#7187A3','tertiaryColor':'#F3F6FA','edgeLabelBackground':'#F3F6FA'}}}%%
+flowchart TB
+    A[人：定义目标、边界、验收] --> B[主 Agent：拆解任务<br/>路由上下文]
+    B --> C[规划 / 探索<br/>方案与系统约束]
+    C --> D[实现 / 测试<br/>代码与验证证据]
+    D --> E[独立审查<br/>Codex<br/>Claude<br/>角色可互换]
+    E --> F[真机验收<br/>Finder、终端、安装]
+    F --> G[规则沉淀<br/>测试 / 文档 / 工程约束]
+    G -.-> B
+
+    classDef person fill:#E7F0FF,stroke:#3678C8,stroke-width:2px,color:#183B63,rx:14,ry:14;
+    classDef agent fill:#F0EAFE,stroke:#7655C6,stroke-width:2px,color:#34265D,rx:14,ry:14;
+    classDef verify fill:#FFF0E1,stroke:#D57A2A,stroke-width:2px,color:#6D3A12,rx:14,ry:14;
+    classDef feedback fill:#E5F6EF,stroke:#31936D,stroke-width:2px,color:#1D5A44,rx:14,ry:14;
+    class A person;
+    class B,C,D agent;
+    class E,F verify;
+    class G feedback;
