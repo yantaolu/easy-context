@@ -44,10 +44,12 @@ PKG_SCRIPTS_DIR=""
 PLIST_DIR=""
 TEMP_PKG=""
 cleanup() {
-  [[ -n "$PKG_ROOT" ]] && rm -rf "$PKG_ROOT"
-  [[ -n "$PKG_SCRIPTS_DIR" ]] && rm -rf "$PKG_SCRIPTS_DIR"
-  [[ -n "$PLIST_DIR" ]] && rm -rf "$PLIST_DIR"
-  [[ -n "$TEMP_PKG" ]] && rm -f "$TEMP_PKG"
+  local exit_status=$?
+  [[ -z "$PKG_ROOT" ]] || rm -rf "$PKG_ROOT" || true
+  [[ -z "$PKG_SCRIPTS_DIR" ]] || rm -rf "$PKG_SCRIPTS_DIR" || true
+  [[ -z "$PLIST_DIR" ]] || rm -rf "$PLIST_DIR" || true
+  [[ -z "$TEMP_PKG" ]] || rm -f "$TEMP_PKG" || true
+  return "$exit_status"
 }
 trap cleanup EXIT
 

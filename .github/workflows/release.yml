@@ -70,10 +70,28 @@ jobs:
           build_status=${PIPESTATUS[0]}
           set -e
           if [[ "$build_status" -ne 0 ]]; then
-            error_log="$(tail -n 80 "$log")"
+            error_log="$(
+              {
+                grep -Ei 'error:|fatal|(^|[[:space:]])ld(:|[[:space:]])|Undefined symbols|BUILD FAILED|failed|not found|No such file|构建产物|Finder 扩展|lipo|codesign|pkgbuild' "$log" | tail -n 20 || true
+                printf '%s\n' '--- build-pkg tail context ---'
+                tail -n 8 "$log" || true
+              } | awk '
+                {
+                  line = $0
+                  if (length(line) > 1000) line = substr(line, 1, 997) "..."
+                  if (total + length(line) + 1 > 12000) exit
+                  print line
+                  total += length(line) + 1
+                  if (++lines >= 29) exit
+                }
+              ' || true
+            )"
             error_log="${error_log//%/%25}"
             error_log="${error_log//$'\r'/%0D}"
             error_log="${error_log//$'\n'/%0A}"
+            if (( ${#error_log} > 20000 )); then
+              error_log="${error_log:0:19997}..."
+            fi
             printf '::error title=build-pkg failed::%s\n' "$error_log"
             exit "$build_status"
           fi
