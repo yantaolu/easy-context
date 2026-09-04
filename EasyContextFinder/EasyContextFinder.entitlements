@@ -4,16 +4,20 @@
 <dict>
     <key>com.apple.security.app-sandbox</key>
     <true/>
-    <key>com.apple.security.files.user-selected.read-write</key>
+    <key>com.apple.security.files.user-selected.read-only</key>
     <true/>
-    <!-- 本地自用（非上架）：放开常见文件位置的读写，使沙盒扩展能在
-         右键目录里打开 App / 新建文件，并覆盖外置磁盘。 -->
-    <key>com.apple.security.temporary-exception.files.absolute-path.read-write</key>
+    <!-- Finder 仅需读取右键目标路径；文件创建交由宿主 App 完成。 -->
+    <key>com.apple.security.temporary-exception.files.absolute-path.read-only</key>
     <array>
         <string>/Users/</string>
         <string>/Volumes/</string>
         <string>/private/</string>
         <string>/tmp/</string>
+    </array>
+    <!-- 共享配置及 IPC token 由 Finder 扩展和宿主 App 共同维护。 -->
+    <key>com.apple.security.temporary-exception.files.home-relative-path.read-write</key>
+    <array>
+        <string>/.easy-context/</string>
     </array>
 </dict>
 </plist>

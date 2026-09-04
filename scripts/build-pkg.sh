@@ -63,6 +63,7 @@ xcodebuild -project EasyContext.xcodeproj -scheme EasyContext -configuration Rel
   MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
   ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO \
   CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=YES CODE_SIGNING_ALLOWED=YES \
+  CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO \
   ENABLE_DEBUG_DYLIB=NO build
 
 [[ -d "$APP" ]] || { echo "构建产物缺失：$APP" >&2; exit 1; }
@@ -92,6 +93,42 @@ assert_universal_binary() {
   done
 }
 
+assert_get_task_allow_not_true() {
+  local bundle="$1"
+  local entitlements
+  local value
+
+  entitlements="$(mktemp)"
+  if ! codesign -d --entitlements :- "$bundle" >"$entitlements" 2>/dev/null; then
+    rm -f "$entitlements"
+    echo "无法读取 $bundle 的签名 entitlement" >&2
+    exit 1
+  fi
+
+  # 未设置 entitlement 时 codesign 可以输出空内容；这等价于缺少该 key，属于正常情况。
+  if [[ ! -s "$entitlements" ]]; then
+    rm -f "$entitlements"
+    return
+  fi
+  if ! plutil -lint "$entitlements" >/dev/null; then
+    rm -f "$entitlements"
+    echo "无法解析 $bundle 的签名 entitlement，拒绝将其视为安全产物" >&2
+    exit 1
+  fi
+
+  if value="$(/usr/libexec/PlistBuddy -c 'Print :com.apple.security.get-task-allow' "$entitlements" 2>/dev/null)"; then
+    rm -f "$entitlements"
+    [[ "$value" == "false" ]] || {
+      echo "$bundle 的 com.apple.security.get-task-allow 必须为 false 或缺失，实际为：$value" >&2
+      exit 1
+    }
+    return
+  fi
+
+  rm -f "$entitlements"
+  # plutil 已验证整个 plist；无法提取该 key 表示它不存在，属于允许的状态。
+}
+
 echo "==> 验证版本、架构与签名结构"
 assert_plist_value "$APP/Contents/Info.plist" CFBundleShortVersionString "$VERSION"
 assert_plist_value "$APP/Contents/Info.plist" CFBundleVersion "$BUILD_NUMBER"
@@ -101,6 +138,8 @@ assert_universal_binary "$APP/Contents/MacOS/EasyContext"
 assert_universal_binary "$APPEX/Contents/MacOS/EasyContextFinder"
 codesign --verify --deep --strict --verbose=2 "$APP"
 codesign --verify --deep --strict --verbose=2 "$APPEX"
+assert_get_task_allow_not_true "$APP"
+assert_get_task_allow_not_true "$APPEX"
 
 echo "==> 组装安装内容"
 PKG_ROOT="$(mktemp -d)"

@@ -113,7 +113,7 @@ VERSION=1.2.3 BUILD_NUMBER=123 ./scripts/build-pkg.sh
   - 跨「工作线程菜单构建」与「主线程卷通知」共享的缓存**必须加锁**（本项目用 `NSLock`，临界区只读写缓存、把读盘/渲染等耗时操作放在锁外；非递归锁，临界区内不得调用其它加锁方法）。
   - 离屏图标绘制用 **bitmap-backed `NSGraphicsContext`**，不要用 `NSImage.lockFocus`（主线程取向的 API，在工作线程属未受支持路径，会偶发失败/崩溃）。
   - 读系统深浅色：手动深浅色模式读全局 **`AppleInterfaceStyle`**（线程安全）；「自动切换」外观下该键不跟随时段翻转，需 `main.sync` 跳主线程读 `NSApp.effectiveAppearance`（主线程属性，工作线程直接取不可靠）。⚠️ 勿在持缓存锁时调用，否则与主线程等锁形成死锁环。
-- **扩展必须开启 App Sandbox**（pkd 拒绝非沙盒插件）；本地自用靠 `temporary-exception` entitlement 放行 `/Users//Volumes/` 等文件访问。
+- **扩展必须开启 App Sandbox**（pkd 拒绝非沙盒插件）；本地自用靠 `temporary-exception` entitlement：普通用户目录、外置卷和临时目录仅临时只读，只有 `~/.easy-context/` 为共享配置 / IPC token 保留 home-relative 读写。
 - **菜单项的 `representedObject` 会在 XPC 往返中丢失**，故用 `tag` 索引应用列表。
 - **打开 App 用 `NSWorkspace.open`**（沙盒禁止 spawn 进程，不能用 `Process`/`open`）；**新建文件用子菜单**选模板、点选后交宿主弹命名面板创建（扩展弹模态 UI 会抛异常）。
 - **监控所有挂载卷**（单个 `/` 不覆盖 `/Volumes/*` 外置盘），并监听挂载/卸载/改名动态刷新。
@@ -121,9 +121,9 @@ VERSION=1.2.3 BUILD_NUMBER=123 ./scripts/build-pkg.sh
 
 ## 已知限制
 
-- **分发**：从 GitHub Releases 下载通用 `.pkg`（`scripts/build-pkg.sh` 构建）——安装出来的 App 不带 quarantine、无需手动清理，且 preinstall 会自动关掉正在运行的旧 App 与 FinderSync 扩展，重装不再报「正在使用中」。`.pkg` 未签名，其中的 App 为 ad-hoc 签名、**未公证**，首次打开仍需右键→打开放行一次；要做到「双击即装、全程零提示」，需 **Apple Developer ID 证书 + 公证（notarization）**（付费账号，详见 `scripts/build-pkg.sh` 顶部注释）。
+- **分发**：从 GitHub Releases 下载通用 `.pkg`（`scripts/build-pkg.sh` 构建）——安装出来的 App 不带 quarantine、无需手动清理；安装器会自动关闭正在运行的旧 App、启动宿主并重启 Finder，以立即挂接新版扩展。扩展注册或刷新等辅助步骤失败时会记录警告，但不会回滚已经安装的 App。`.pkg` 未签名，其中的 App 为 ad-hoc 签名、**未公证**，首次打开仍需右键→打开放行一次；要做到「双击即装、全程零提示」，需 **Apple Developer ID 证书 + 公证（notarization）**（付费账号，详见 `scripts/build-pkg.sh` 顶部注释）。
 - 部分小众 AI 编辑器（PearAI / Void 等）暂无可靠 bundle id，未进内置清单，可用设置界面的 `+` 自行添加。
 - **在终端运行命令 / 新建文件**由宿主 App 处理（后台代理，无 Dock 图标；双击 App 才显示配置窗）：首次用 AppleScript 型终端（Terminal / iTerm / Ghostty / cmux）运行命令时，会弹一次性「控制终端」的自动化授权；Otty 的官方 CLI 路径不需要该自动化授权。
 - Warp、Hyper、Tabby、Rio、Wave、Termius 暂无内置启动模板：可在菜单里**打开目录**，但不能作为**执行终端**运行命令，除非在设置的「Templates…」编辑器（或 `terminalTemplates`）里添加模板。
 - **外置磁盘在访达侧栏的图标会显示为 EasyContext 的图标**：这是 FinderSync 监控卷根目录（为提供外置盘右键菜单）的系统机制性副作用，与 Dropbox 文件夹在侧栏显示 Dropbox 图标同理，仅影响侧栏显示、不影响磁盘本身；扩展停用后图标即恢复。
-- 覆盖安装（升级）时安装器会自动重启访达，以立即挂接新版扩展——否则右键菜单可能消失，直到系统重新扫描注册插件。
+- 覆盖安装（升级）时安装器会自动启动宿主并重启访达，以立即挂接新版扩展；扩展注册或刷新失败会记录警告，不会回滚已安装的 App，右键菜单可能需要手动重新启用或等待系统重新扫描注册插件。

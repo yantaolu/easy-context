@@ -2,22 +2,63 @@
 # 覆盖安装【前】执行：关闭正在运行的 EasyContext 与其 FinderSync 扩展，
 # 释放对 .app 包的占用，避免“项目 EasyContext.app 正在使用中”导致安装失败。
 #
-# 说明：安装器以 root 身份运行本脚本。必须以 exit 0 结尾，
-#       任何非 0 退出都会让整个安装中止。
-set +e
+# 安装器以 root 身份运行本脚本。进程退出仅是覆盖安装的准备工作：任何失败都
+# 记录到 Installer 日志，但不得阻止已验证的 payload 安装。
 
-CONSOLE_USER="$(stat -f '%Su' /dev/console 2>/dev/null)"
+LOG_PREFIX="[EasyContext installer:preinstall]"
 
-# 1) 先以登录用户身份礼貌退出宿主 App（菜单栏后台应用，无 Dock 图标）
-if [ -n "$CONSOLE_USER" ] && [ "$CONSOLE_USER" != "root" ]; then
-  sudo -u "$CONSOLE_USER" /usr/bin/osascript -e 'quit app "EasyContext"' 2>/dev/null
+log() {
+  printf '%s %s\n' "$LOG_PREFIX" "$*"
+}
+
+warn() {
+  printf '%s WARNING: %s\n' "$LOG_PREFIX" "$*" >&2
+}
+
+CONSOLE_USER=""
+if ! CONSOLE_USER="$(/usr/bin/stat -f '%Su' /dev/console)"; then
+  warn "Could not determine the console user; skipping polite app quit."
 fi
-sleep 1
 
-# 2) 兜底强杀宿主与 FinderSync 扩展进程（root 可结束任意用户进程），
-#    彻底释放对 .app 包的文件占用
-pkill -x EasyContext 2>/dev/null
-pkill -f EasyContextFinder 2>/dev/null
-sleep 1
+# 1) 先以登录用户身份礼貌退出宿主 App（菜单栏后台应用，无 Dock 图标）。
+if [ -n "$CONSOLE_USER" ] && [ "$CONSOLE_USER" != "root" ]; then
+  log "Requesting a graceful quit for EasyContext as $CONSOLE_USER."
+  if ! /usr/bin/sudo -u "$CONSOLE_USER" /usr/bin/osascript -e 'quit app "EasyContext"'; then
+    warn "Graceful EasyContext quit failed; continuing with exact process termination."
+  fi
+else
+  log "No non-root console user; skipping graceful EasyContext quit."
+fi
 
+if ! /bin/sleep 1; then
+  warn "Could not wait after the graceful quit request."
+fi
+
+# 2) 兜底结束宿主与 FinderSync 扩展进程。-x 只匹配真实进程名，避免误伤命令
+# 行中恰好包含 EasyContextFinder 的其它程序。
+terminate_if_running() {
+  local process_name="$1"
+  local status
+
+  if /usr/bin/pkill -x "$process_name"; then
+    log "Terminated running process: $process_name."
+    return 0
+  else
+    status=$?
+    if [ "$status" -eq 1 ]; then
+      log "Process is not running: $process_name."
+    else
+      warn "Could not terminate $process_name (pkill exit $status); installation will continue."
+    fi
+  fi
+}
+
+terminate_if_running "EasyContext"
+terminate_if_running "EasyContextFinder"
+
+if ! /bin/sleep 1; then
+  warn "Could not wait after process termination."
+fi
+
+log "Preinstall preparation complete."
 exit 0

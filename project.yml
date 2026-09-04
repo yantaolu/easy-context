@@ -2,8 +2,9 @@
 # 通过共享文件 ~/.easy-context/config.json 交换配置。关键：ConfigStore 用
 # getpwuid(getuid())->pw_dir 取【真实】家目录——沙盒里 NSHomeDirectory() 会被重定向
 # 到容器，导致宿主与扩展读到不同文件、配置“不生效”；getpwuid 读用户数据库、不被
-# 沙盒重定向，两端都得到 /Users/<用户>。扩展靠 EasyContextFinder.entitlements 里的
-# temporary-exception.files.absolute-path.read-write 放行该路径读写。
+# 沙盒重定向，两端都得到 /Users/<用户>。扩展的普通 Finder 路径访问由
+# temporary-exception.files.absolute-path.read-only 放行；仅共享的
+# ~/.easy-context/ 目录通过 home-relative-path.read-write 允许读写。
 # 若将来为公证/上架收紧沙盒，需改用 App Group 容器并相应改 ConfigStore 的路径来源。
 name: EasyContext
 options:
@@ -24,6 +25,10 @@ settings:
     CURRENT_PROJECT_VERSION: 1
     PRODUCT_NAME: "$(TARGET_NAME)"
     SWIFT_VERSION: "5.0"
+  configs:
+    Release:
+      # 发布产物不注入 Xcode 默认的调试 entitlement；Debug 保持默认行为，便于开发调试。
+      CODE_SIGN_INJECT_BASE_ENTITLEMENTS: "NO"
 packages:
   EasyContextCore:
     path: EasyContextCore
