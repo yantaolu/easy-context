@@ -17,6 +17,7 @@ jobs:
     timeout-minutes: 10
     outputs:
       version: ${{ steps.version.outputs.value }}
+      build_number: ${{ steps.version.outputs.build_number }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -28,10 +29,7 @@ jobs:
         run: |
           set -euo pipefail
           tag="${GITHUB_REF_NAME}"
-          if [[ ! "$tag" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
-            echo "Release tag must be vX.Y.Z: $tag" >&2
-            exit 1
-          fi
+          version="$(./scripts/version.sh --check-tag "$tag")"
           if ! git show-ref --verify --quiet refs/remotes/origin/master; then
             echo "origin/master was not fetched by checkout" >&2
             exit 1
@@ -41,7 +39,8 @@ jobs:
             echo "Release tag $tag does not point to a commit reachable from origin/master" >&2
             exit 1
           fi
-          echo "value=${tag#v}" >> "$GITHUB_OUTPUT"
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+          echo "build_number=$(./scripts/version.sh --build)" >> "$GITHUB_OUTPUT"
 
   test-core:
     needs: validate-release
@@ -60,6 +59,8 @@ jobs:
           uname -m
           xcodebuild -version
           swift --version
+      - name: Test version management scripts
+        run: ./scripts/test-version.sh
       - name: Test core logic
         run: >-
           swift test --package-path EasyContextCore
@@ -76,7 +77,7 @@ jobs:
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
       VERSION: ${{ needs.validate-release.outputs.version }}
-      BUILD_NUMBER: ${{ github.run_number }}
+      BUILD_NUMBER: ${{ needs.validate-release.outputs.build_number }}
       TARGET_ARCH: ${{ matrix.target_arch }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -190,4 +191,4 @@ jobs:
             --generate-notes \
             --title "$TAG" \
             --notes $'⚠️ 此 Release 的 .pkg 未签名；其中的 App 使用 ad-hoc 签名且未经过 Apple 公证。首次安装或打开时 macOS 可能显示安全警告；请仅从本 Release 下载。\n\n下载选择：Apple Silicon（M 系列）Mac 请下载 `EasyContext-<版本>-macOS-arm64.pkg`；Intel Mac 请下载 `EasyContext-<版本>-macOS-x86_64.pkg`。'
-          gh release edit "$TAG" --draft=false
+          gh release edit "$TAG" --draft=false --latest

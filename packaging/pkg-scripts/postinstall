@@ -37,6 +37,10 @@ fi
 APPEX_PATH="$APP_PATH/Contents/PlugIns/EasyContextFinder.appex"
 APP_EXECUTABLE="$APP_PATH/Contents/MacOS/EasyContext"
 APPEX_EXECUTABLE="$APPEX_PATH/Contents/MacOS/EasyContextFinder"
+EXPECTED_VERSION="@EXPECTED_VERSION@"
+EXPECTED_BUILD_NUMBER="@EXPECTED_BUILD_NUMBER@"
+EXPECTED_APP_EXECUTABLE_SHA256="@APP_EXECUTABLE_SHA256@"
+EXPECTED_APPEX_EXECUTABLE_SHA256="@APPEX_EXECUTABLE_SHA256@"
 
 require_directory() {
   local path="$1"
@@ -59,7 +63,46 @@ require_directory "$APP_PATH" "application bundle"
 require_directory "$APPEX_PATH" "Finder extension bundle"
 require_executable "$APP_EXECUTABLE" "application executable"
 require_executable "$APPEX_EXECUTABLE" "Finder extension executable"
-log "Verified installed payload at $APP_PATH."
+
+require_plist_value() {
+  local plist="$1"
+  local key="$2"
+  local expected="$3"
+  local actual
+  if ! actual="$(/usr/libexec/PlistBuddy -c "Print :$key" "$plist" 2>/dev/null)"; then
+    fatal "Could not read $key from $plist"
+  fi
+  if [ "$actual" != "$expected" ]; then
+    fatal "$plist has $key=$actual; expected $expected. The payload may have been skipped."
+  fi
+}
+
+require_sha256() {
+  local path="$1"
+  local expected="$2"
+  local actual
+  if ! actual="$(/usr/bin/shasum -a 256 "$path" | /usr/bin/awk '{print $1}')"; then
+    fatal "Could not calculate SHA-256 for $path"
+  fi
+  if [ "$actual" != "$expected" ]; then
+    fatal "$path does not match the packaged executable SHA-256. The payload may have been skipped or altered."
+  fi
+}
+
+require_plist_value "$APP_PATH/Contents/Info.plist" CFBundleShortVersionString "$EXPECTED_VERSION"
+require_plist_value "$APP_PATH/Contents/Info.plist" CFBundleVersion "$EXPECTED_BUILD_NUMBER"
+require_plist_value "$APPEX_PATH/Contents/Info.plist" CFBundleShortVersionString "$EXPECTED_VERSION"
+require_plist_value "$APPEX_PATH/Contents/Info.plist" CFBundleVersion "$EXPECTED_BUILD_NUMBER"
+require_sha256 "$APP_EXECUTABLE" "$EXPECTED_APP_EXECUTABLE_SHA256"
+require_sha256 "$APPEX_EXECUTABLE" "$EXPECTED_APPEX_EXECUTABLE_SHA256"
+log "Verified installed payload version and executables at $APP_PATH."
+
+# An offline target volume has no matching GUI session. Payload verification is
+# complete, so do not register, launch, or refresh anything on the startup disk.
+if [ "$TARGET_VOLUME" != "/" ]; then
+  log "Offline target volume verified; skipping runtime registration and launch."
+  exit 0
+fi
 
 CONSOLE_USER=""
 if ! CONSOLE_USER="$(/usr/bin/stat -f '%Su' /dev/console)"; then

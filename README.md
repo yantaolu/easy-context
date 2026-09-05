@@ -20,6 +20,7 @@
 - **多语言支持** —— 自动跟随系统语言切换，支持简体中文、English、繁體中文、日本語、Deutsch、Français、Español 7 种语言
 - **内置盘 + 外置磁盘**都生效
 - **可配置设置界面**：选择菜单显示哪些终端 / 编辑器、管理自定义命令、选执行终端、`+` 自定义添加未识别的 App、菜单图标黑白 / 彩色、深色模式自动适配
+- **版本与更新提醒**：设置窗口底部显示版本号和刷新图标，点击后以弹窗告知检查结果；发现新版可前往 GitHub 下载，不自动下载安装。
 
 多选目标规则：复制完整路径 / 相对路径会复制所有选中项；打开终端 / 打开编辑器会把目录取自身、文件取父目录后按路径去重，并打开这些目录；运行命令 / 新建文件是一次性动作，使用去重后的第一个目录。
 
@@ -37,7 +38,51 @@
 
 ### 发布版本
 
-维护者将已合入 `master` 的提交打上严格的三段版本标签，例如 `v1.2.3` 并推送。GitHub Actions 会验证该标签提交可从 `origin/master` 到达，运行测试，分别构建 Apple Silicon（`arm64`）和 Intel（`x86_64`）macOS `.pkg`，为两个包分别生成 SHA-256 校验文件，并创建同名 GitHub Release。Release 提供两个独立的未签名 `.pkg`，其中的 App 为 ad-hoc 签名且**未公证**；这不是 App Store 或 Developer ID 签名发布，下载者仍可能看到 macOS 安全提示。
+`project.yml` 的 `MARKETING_VERSION`（严格 `X.Y.Z`）和 `CURRENT_PROJECT_VERSION`（正整数构建号）是唯一的构建版本来源。宿主、Finder 扩展、本地安装包和 CI 使用同一对值；客户端显示安装包内实际的版本，不读取仓库文件。配置文件中的 `"version": 3` 是配置格式版本，与产品版本无关。
+
+版本规则：修复使用 patch（例如 `1.0.2 → 1.0.3`），兼容的新功能使用 minor（例如 `1.0.2 → 1.1.0`），不兼容变化使用 major。每次准备新版本时构建号递增一次；构建或重跑 CI 不会自行改变版本。
+
+维护者发布流程（以下 `1.1.0` 仅为示例）：
+
+```bash
+# 1. 查看当前版本，预览下一版本；预览不写文件
+./scripts/version.sh
+./scripts/prepare-release.sh --dry-run 1.1.0
+
+# 2. 更新 project.yml 中的版本和构建号；不会提交、打标签或推送
+./scripts/prepare-release.sh 1.1.0
+git diff -- project.yml
+
+# 3. 验证脚本与核心逻辑，再按需要构建并测试安装包
+./scripts/test-version.sh
+swift test --package-path EasyContextCore \
+  --skip CommandsTests/test_builtin_muxy_routesCommandToPaneCreatedForNewTab
+TARGET_ARCH=arm64 ./scripts/build-pkg.sh
+
+# 4. 审查并提交本次功能与版本改动，合入 master，等待分支 CI 成功
+# 请按实际改动选择 git add 的文件，不要遗漏待发布的功能代码。
+
+# 5. 在已合入 master 的目标提交上校验、打标签、推送
+./scripts/version.sh --check-tag v1.1.0
+git tag -a v1.1.0 -m "Release v1.1.0"
+git push origin v1.1.0
+```
+
+GitHub Actions 会校验标签版本与工程一致、标签提交可从 `origin/master` 到达，运行测试，分别构建 `arm64` / `x86_64` `.pkg`，生成 SHA-256 校验文件，再创建同名 Release 并标为 Latest。只有两个架构都成功，才公开发布。Release Notes 继续由 GitHub 生成，不引入 changelog 工具或额外语言依赖。
+
+已发布版本不得挪动标签或替换产物；修复后准备下一个版本。准备脚本检查本地已有标签，操作前应确保本地标签与远端同步。发布失败时先查看 Actions 日志，不要通过强推标签绕过校验。
+
+Release 提供的 `.pkg` 未签名，其中 App 为 ad-hoc 签名且**未公证**；这不是 App Store 或 Developer ID 签名发布，下载者仍可能看到 macOS 安全提示。
+
+### 客户端检查更新
+
+- 设置窗口保持原来的 800×494 尺寸。底部原「其他」标题替换为版本号，悬停可查看完整版本与构建号；点击紧随其后的刷新图标才查询本仓库 GitHub Latest Release，检查期间图标显示忙碌状态并禁止重复点击。
+- 只识别严格 `vX.Y.Z` 的稳定发布，并检查两种架构的安装包及校验文件是否齐全。远端版本必须高于本机版本才提醒，不会建议降级。
+- 检查完成后以弹窗显示「已是最新版本」「发现新版本」或「检查失败」。新版本弹窗提供「前往 GitHub 下载」和取消按钮；下载按钮用浏览器打开本仓库 Release 页面，由你选择芯片架构并手动安装。
+- 不显示常驻的更新开关、说明或状态文字，不在打开设置时自动联网或弹窗。关闭设置窗口会撤销本次结果的弹窗呈现，晚到的网络响应不会重新打开窗口或抢焦点。
+- 超时、网络错误和 GitHub 限流会明确提示，不把失败当作「已是最新版本」；服务端要求等待时，手动点击也不能绕过限流。
+- 检查缓存保存在宿主 App 的 `UserDefaults`，不写入共享 `config.json`。旧预览版的自动检查偏好不再触发查询。请求不携带目录路径、命令、配置内容或身份令牌；GitHub 仍会正常收到连接来源 IP 等网络信息。
+- **只有点击刷新图标才会检查更新**，不自动下载、不申请管理员权限、不强制更新。已发布的旧版 `1.0.2` 本身没有这项功能，需要先手动安装包含此功能的新版本。
 
 ## 配置
 
@@ -91,16 +136,24 @@ xcodebuild -project EasyContext.xcodeproj -scheme EasyContext -configuration Deb
   CODE_SIGNING_ALLOWED=YES ENABLE_DEBUG_DYLIB=NO build
 
 # 纯逻辑层单元测试
-cd EasyContextCore && swift test
+swift test --package-path EasyContextCore
 
-# 打包成分发用 .pkg（安装时自动关旧进程/扩展、装出的 App 免清 quarantine）
-VERSION=1.2.3 BUILD_NUMBER=123 ./scripts/build-pkg.sh
+# 打包成 .pkg，版本自动读取 project.yml
+./scripts/build-pkg.sh
 # 分架构产物：设置 TARGET_ARCH=arm64 或 TARGET_ARCH=x86_64
-TARGET_ARCH=arm64 VERSION=1.2.3 BUILD_NUMBER=123 ./scripts/build-pkg.sh
-# 产物：dist/EasyContext-1.2.3-macOS-arm64.pkg
-# TARGET_ARCH=x86_64 时产物为 EasyContext-1.2.3-macOS-x86_64.pkg
+TARGET_ARCH=arm64 ./scripts/build-pkg.sh
+# 产物：dist/EasyContext-<工程版本>-macOS-arm64.pkg
+# TARGET_ARCH=x86_64 时产物为 EasyContext-<工程版本>-macOS-x86_64.pkg
 # 省略 TARGET_ARCH 仍可在本地构建 universal 包
+
+# 同一产品版本下，本地改代码后需要重新安装测试时，明确递增构建号
+./scripts/prepare-release.sh --build-only
+TARGET_ARCH=arm64 ./scripts/build-pkg.sh
 ```
+
+不再使用 `VERSION=... BUILD_NUMBER=...` 覆盖出另一套版本；如果传入值与工程不同，构建会拒绝。`--build-only` 只用于本地测试或正式发布前的构建准备，不会让客户端按 build number 提醒更新，也不能用于替换已发布的同版本 Release。新版本安装测试前，请先准备高于已安装版本的版本号或构建号，避免 macOS Installer 保留已有新版本。
+
+安装包保留 macOS 原有的版本检查，安装后还会验证宿主与扩展的实际版本、构建号及可执行文件 SHA-256。若系统跳过 payload 或文件不匹配，会明确报错，不再仅以「App 文件存在」判断成功；此检查不等于开发者签名认证，也不保证自动回滚。遇到错误请查看 Installer 日志，并使用正确的新版本重新安装。安装后的辅助步骤在非当前启动卷上只校验目标卷，不启动 App 或刷新当前会话的 Finder。
 
 ## 架构
 

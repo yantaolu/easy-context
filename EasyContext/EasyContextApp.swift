@@ -6,6 +6,7 @@ import EasyContextCore
 /// - 处理 easycontext:// URL（run / newfile）时**不显示**设置窗（无闪烁）；
 /// - 用户双击 App / 再次打开时才显示设置窗（并临时露出 Dock 图标）。
 /// 用纯 AppKit 手动管窗，避免 SwiftUI 场景在启动/激活时自动开窗。
+@MainActor
 @main
 final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     static func main() {
@@ -16,6 +17,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private var settingsWindow: NSWindow?
+    private lazy var updateController = UpdateController()
     private var launchedForURL = false
     private static let settingsFrameName = "SettingsWindow"
 
@@ -88,12 +90,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 styleMask: [.titled, .closable, .miniaturizable],
                 backing: .buffered, defer: false)
             win.title = "Easy Context"
-            win.contentViewController = NSHostingController(rootView: ContentView())
+            win.contentViewController = NSHostingController(
+                rootView: ContentView(updateController: updateController))
             win.isReleasedWhenClosed = false
             win.delegate = self
             settingsWindow = win
             // 恢复上次位置；只有首次运行（无保存位置）才居中到鼠标所在屏。
-            if !win.setFrameUsingName(Self.settingsFrameName) { centerOnActiveScreen(win) }
+            let restoredPosition = win.setFrameUsingName(Self.settingsFrameName)
+            // 固定回当前设计尺寸，同时保留用户上次保存的窗口位置。
+            win.setContentSize(ContentView.preferredSize)
+            if !restoredPosition { centerOnActiveScreen(win) }
             win.setFrameAutosaveName(Self.settingsFrameName)
         }
         settingsWindow?.makeKeyAndOrderFront(nil)
@@ -114,6 +120,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     // 关设置窗 → 退回后台代理（去 Dock 图标）；App 继续跑以处理后续 URL。
     func windowWillClose(_ notification: Notification) {
+        updateController.cancelPresentation()
         NSApp.setActivationPolicy(.accessory)
     }
 

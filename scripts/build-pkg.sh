@@ -1,43 +1,34 @@
 #!/bin/bash
 # 构建指定架构的 Release App，并打包成 ad-hoc 签名、未签名的 .pkg。
 #
-# 用法：VERSION=1.2.3 BUILD_NUMBER=123 TARGET_ARCH=universal ./scripts/build-pkg.sh
+# 用法：TARGET_ARCH=universal ./scripts/build-pkg.sh
 # TARGET_ARCH 可选 universal（默认）、arm64 或 x86_64。
-# 本地 VERSION 可为 1、1.2 或 1.2.3；GitHub tag 构建必须是三段版本号。
+# 版本与构建号只从 project.yml 读取。为兼容旧调用方式，VERSION / BUILD_NUMBER
+# 环境变量可以传入，但必须与 project.yml 完全一致。
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+# shellcheck source=scripts/version-lib.sh
+source "scripts/version-lib.sh"
+
 IDENTIFIER="com.luyantao.easycontext"
 PKG_SCRIPTS="packaging/pkg-scripts"
 
-default_setting() {
-  local key="$1"
-  sed -nE "s/^[[:space:]]*${key}:[[:space:]]*\"?([^\"[:space:]#]+)\"?.*/\1/p" project.yml | head -n 1
-}
-
-DEFAULT_VERSION="$(default_setting MARKETING_VERSION)"
-DEFAULT_BUILD_NUMBER="$(default_setting CURRENT_PROJECT_VERSION)"
-VERSION="${VERSION:-$DEFAULT_VERSION}"
-BUILD_NUMBER="${BUILD_NUMBER:-$DEFAULT_BUILD_NUMBER}"
+ec_read_project_version "project.yml"
+SOURCE_VERSION="$EC_MARKETING_VERSION"
+SOURCE_BUILD_NUMBER="$EC_BUILD_NUMBER"
+if [[ -n "${VERSION+x}" && "$VERSION" != "$SOURCE_VERSION" ]]; then
+  echo "VERSION 环境变量（$VERSION）与 project.yml（$SOURCE_VERSION）不一致" >&2
+  exit 1
+fi
+if [[ -n "${BUILD_NUMBER+x}" && "$BUILD_NUMBER" != "$SOURCE_BUILD_NUMBER" ]]; then
+  echo "BUILD_NUMBER 环境变量（$BUILD_NUMBER）与 project.yml（$SOURCE_BUILD_NUMBER）不一致" >&2
+  exit 1
+fi
+VERSION="$SOURCE_VERSION"
+BUILD_NUMBER="$SOURCE_BUILD_NUMBER"
 TARGET_ARCH="${TARGET_ARCH:-universal}"
-
-local_version_pattern='^(0|[1-9][0-9]*)(\.(0|[1-9][0-9]*)){0,2}$'
-tag_version_pattern='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
-
-if ! [[ "$VERSION" =~ $local_version_pattern ]]; then
-  echo "VERSION 必须为 1、1.2 或 1.2.3 形式，实际为：$VERSION" >&2
-  exit 1
-fi
-if [[ "${GITHUB_ACTIONS:-}" == "true" && "${GITHUB_REF_TYPE:-}" == "tag" ]] \
-  && ! [[ "$VERSION" =~ $tag_version_pattern ]]; then
-  echo "GitHub tag 构建的 VERSION 必须为三段版本号，实际为：$VERSION" >&2
-  exit 1
-fi
-if ! [[ "$BUILD_NUMBER" =~ ^[1-9][0-9]*$ ]]; then
-  echo "BUILD_NUMBER 必须为正整数，实际为：$BUILD_NUMBER" >&2
-  exit 1
-fi
 
 case "$TARGET_ARCH" in
   universal)
@@ -176,8 +167,21 @@ PKG_SCRIPTS_DIR="$(mktemp -d)"
 PLIST_DIR="$(mktemp -d)"
 COMPONENT_PLIST="$PLIST_DIR/component.plist"
 cp -R "$APP" "$PKG_ROOT/"
-install -m 0755 "$PKG_SCRIPTS/preinstall" "$PKG_SCRIPTS_DIR/preinstall"
-install -m 0755 "$PKG_SCRIPTS/postinstall" "$PKG_SCRIPTS_DIR/postinstall"
+APP_EXECUTABLE_SHA256="$(shasum -a 256 "$APP/Contents/MacOS/EasyContext" | awk '{print $1}')"
+APPEX_EXECUTABLE_SHA256="$(shasum -a 256 "$APPEX/Contents/MacOS/EasyContextFinder" | awk '{print $1}')"
+render_installer_script() {
+  local source_script="$1"
+  local destination_script="$2"
+  sed \
+    -e "s/@EXPECTED_VERSION@/$VERSION/g" \
+    -e "s/@EXPECTED_BUILD_NUMBER@/$BUILD_NUMBER/g" \
+    -e "s/@APP_EXECUTABLE_SHA256@/$APP_EXECUTABLE_SHA256/g" \
+    -e "s/@APPEX_EXECUTABLE_SHA256@/$APPEX_EXECUTABLE_SHA256/g" \
+    "$source_script" > "$destination_script"
+  chmod 0755 "$destination_script"
+}
+render_installer_script "$PKG_SCRIPTS/preinstall" "$PKG_SCRIPTS_DIR/preinstall"
+render_installer_script "$PKG_SCRIPTS/postinstall" "$PKG_SCRIPTS_DIR/postinstall"
 
 # 禁用 Bundle 重定位，始终安装至 /Applications/EasyContext.app。
 pkgbuild --analyze --root "$PKG_ROOT" "$COMPONENT_PLIST" >/dev/null

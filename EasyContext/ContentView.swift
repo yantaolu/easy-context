@@ -17,6 +17,7 @@ struct ContentView: View {
     static let preferredSize = CGSize(width: 800, height: 494)
 
     @StateObject private var store = SettingsStore()
+    @ObservedObject private var updateController: UpdateController
     @State private var selection: RowSelection?
     @State private var showTemplateEditor = false
     @FocusState private var focusedCommand: String? // 命令输入框焦点键（"name-<id>"/"cmd-<id>"）
@@ -24,6 +25,10 @@ struct ContentView: View {
     private let listRowContentHeight: CGFloat = 18
     // 终端/菜单项固定显示 3 行的容器高度（贴合 3 行）。
     private let threeRowsHeight: CGFloat = 88
+
+    init(updateController: UpdateController) {
+        self.updateController = updateController
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -106,10 +111,10 @@ struct ContentView: View {
         }
     }
 
-    // 标题左，两个 link 按钮右对齐；德/法等长文案一行放不下时自动转为右对齐竖排。
+    // 版本与刷新入口在左，原有两个 link 按钮保持右对齐。
     private var otherSection: some View {
         HStack(alignment: .top, spacing: 8) {
-            sectionTitle("Other")
+            UpdateSettingsView(controller: updateController)
             Spacer(minLength: 16)
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 12) { configFolderButton; extensionSettingsButton }

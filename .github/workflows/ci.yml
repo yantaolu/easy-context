@@ -30,6 +30,8 @@ jobs:
           uname -m
           xcodebuild -version
           swift --version
+      - name: Test version management scripts
+        run: ./scripts/test-version.sh
       - name: Test core logic
         run: >-
           swift test --package-path EasyContextCore
@@ -45,8 +47,6 @@ jobs:
         target_arch: [arm64, x86_64]
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
-      VERSION: "1.0.0"
-      BUILD_NUMBER: ${{ github.run_number }}
       TARGET_ARCH: ${{ matrix.target_arch }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -61,6 +61,15 @@ jobs:
           xcodebuild -version
           swift --version
           xcodegen --version
+      - id: version
+        name: Read product version from project.yml
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(./scripts/version.sh --version)"
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          echo "BUILD_NUMBER=$(./scripts/version.sh --build)" >> "$GITHUB_ENV"
       - name: Build ${{ matrix.target_arch }} installer package
         shell: bash
         run: |
@@ -99,7 +108,7 @@ jobs:
       - name: Upload ${{ matrix.target_arch }} installer package
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: EasyContext-macOS-${{ matrix.target_arch }}
-          path: dist/EasyContext-1.0.0-macOS-${{ matrix.target_arch }}.pkg
+          name: EasyContext-ci-${{ github.sha }}-macOS-${{ matrix.target_arch }}
+          path: dist/EasyContext-${{ steps.version.outputs.value }}-macOS-${{ matrix.target_arch }}.pkg
           if-no-files-found: error
           retention-days: 7
