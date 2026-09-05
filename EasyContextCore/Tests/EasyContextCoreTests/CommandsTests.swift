@@ -52,10 +52,29 @@ final class CommandsTests: XCTestCase {
         XCTAssertFalse(out.contains("{cmd}"))
     }
 
-    func test_render_leavesAppleScriptSystemAttributeTemplateUntouched() {
-        // AppleScript 模板不含 {dir}/{cmd}，用 system attribute 读环境，render 不改动
-        let t = TerminalLaunch.builtinTemplates["com.apple.Terminal"]!
-        XCTAssertEqual(TerminalLaunch.render(t), t)
+    func test_builtinAppleScriptTemplates_useFixedTwoArgumentRunHandler() {
+        for id in ["com.mitchellh.ghostty", KnownApps.cmuxBundleId,
+                   "com.apple.Terminal", "com.googlecode.iterm2"] {
+            let t = TerminalLaunch.builtinTemplates[id]!
+            XCTAssertTrue(t.hasPrefix("/usr/bin/osascript -e 'on run argv\n"), id)
+            XCTAssertTrue(t.hasSuffix("' -- \"$EC_DIR\" \"$EC_CMD\""), id)
+            XCTAssertEqual(t.components(separatedBy: "\"$EC_DIR\"").count - 1, 1, id)
+            XCTAssertEqual(t.components(separatedBy: "\"$EC_CMD\"").count - 1, 1, id)
+            XCTAssertTrue(t.contains("set ecDir to item 1 of argv"), id)
+            XCTAssertTrue(t.contains("set ecCommand to item 2 of argv"), id)
+            XCTAssertFalse(t.contains("system attribute"), id)
+            XCTAssertFalse(t.contains("{dir}"), id)
+            XCTAssertFalse(t.contains("{cmd}"), id)
+            XCTAssertEqual(TerminalLaunch.render(t), t)
+        }
+    }
+
+    func test_appleScriptTemplate_shellQuotesSingleQuoteInStaticBody() {
+        let t = TerminalLaunch.appleScriptTemplate("""
+        return "O'Brien" & ecDir & ecCommand
+        """)
+        XCTAssertTrue(t.contains("O'\"'\"'Brien"))
+        XCTAssertTrue(t.hasSuffix("' -- \"$EC_DIR\" \"$EC_CMD\""))
     }
 
     // -e 型终端（kitty/WezTerm/Alacritty）通过登录 shell 运行命令，保证 GUI 下 PATH 齐全；
@@ -74,10 +93,10 @@ final class CommandsTests: XCTestCase {
     // Ghostty 改用 AppleScript（1.3.0+）：input text 打进交互 shell，非 -e 执行
     func test_builtin_ghostty_usesAppleScript() {
         let t = TerminalLaunch.builtinTemplates["com.mitchellh.ghostty"]!
-        XCTAssertTrue(t.contains("osascript"))
-        XCTAssertTrue(t.contains("input text (system attribute \"EC_CMD\")"))
+        XCTAssertTrue(t.contains("/usr/bin/osascript"))
+        XCTAssertTrue(t.contains("set initial working directory of cfg to ecDir"))
+        XCTAssertTrue(t.contains("input text ecCommand"))
         XCTAssertFalse(t.contains("-e $EC_SHELL")) // 不再走 open -e
-        // 无 {dir}/{cmd} 占位符（用 system attribute 读环境）→ render 不改动
         XCTAssertEqual(TerminalLaunch.render(t), t)
     }
 
@@ -92,8 +111,9 @@ final class CommandsTests: XCTestCase {
         XCTAssertTrue(t.contains("focus targetTerminal"))
         XCTAssertTrue(t.contains("delay 0.2"))
         XCTAssertTrue(t.contains("input text"))
-        XCTAssertTrue(t.contains("system attribute \"EC_DIR\""))
-        XCTAssertTrue(t.contains("system attribute \"EC_CMD\""))
+        XCTAssertTrue(t.contains("quoted form of ecDir"))
+        XCTAssertTrue(t.contains("& ecCommand"))
+        XCTAssertFalse(t.contains("system attribute"))
         XCTAssertTrue(t.contains("perform action \"text:\\\\x0d\" on targetTerminal"))
         XCTAssertFalse(t.contains("send_key:enter"))
         XCTAssertEqual(TerminalLaunch.render(t), t)

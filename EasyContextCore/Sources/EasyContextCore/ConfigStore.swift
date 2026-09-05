@@ -112,7 +112,10 @@ public struct ConfigStore {
             note: "Built-in terminal launch template reference (read-only; regenerated on every launch, edits here have no effect). "
                 + "To override a terminal, copy its bundleId and template into \"terminalTemplates\" in config.json and edit there. "
                 + "Placeholders: {dir} = target directory, {cmd} = command; they are replaced with \"$EC_DIR\"/\"$EC_CMD\" at run time, so do not add quotes yourself. "
-                + "$EC_SHELL = the user's login shell. Values travel via environment variables only, immune to shell injection.",
+                + "$EC_SHELL = the user's login shell. Runtime values travel through quoted shell arguments and are never interpolated into script source. "
+                + "AppleScript templates must not use 'system attribute' for EC_DIR or EC_CMD because it can corrupt Unicode under some locales; "
+                + "follow the built-in 'on run argv' pattern and pass exactly -- \"$EC_DIR\" \"$EC_CMD\". "
+                + "Existing overrides are not migrated automatically; remove an override to restore the current built-in template.",
             templates: builtin)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]

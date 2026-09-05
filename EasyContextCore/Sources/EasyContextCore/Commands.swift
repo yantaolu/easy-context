@@ -50,32 +50,37 @@ public struct CommandEntry: Codable, Equatable, Sendable, Identifiable {
 public enum TerminalLaunch {
     public static let systemTerminalBundleId = "com.apple.Terminal"
 
-    /// 内置默认模板（bundleId -> 模板）。AppleScript 类直接用 system attribute 读环境。
+    /// 内置默认模板（bundleId -> 模板）。AppleScript 类把 EC_DIR / EC_CMD
+    /// 作为两个 argv 传入 `on run argv`，避免 `system attribute` 按区域编码
+    /// 重新解码 UTF-8 路径。
     /// GUI 型终端用 `open -nb <bundleId>` 按 bundleId 启动（与全项目的 App 标识体系
     /// 一致，App 被重命名也不失效）。
     public static let builtinTemplates: [String: String] = [
         // Ghostty 1.3.0+ 支持 AppleScript：用 input text 把命令打进交互 shell（非 -e
-        // 执行）→ 免「Allow execute」弹框、单窗口、PATH 正确。值走环境变量 EC_DIR/EC_CMD。
+        // 执行）→ 免「Allow execute」弹框、单窗口、PATH 正确。值作为 argv 传入。
         "com.mitchellh.ghostty":
-            "osascript -e 'tell application \"Ghostty\"' "
-            + "-e 'set cfg to new surface configuration' "
-            + "-e 'set initial working directory of cfg to (system attribute \"EC_DIR\")' "
-            + "-e 'set win to new window with configuration cfg' "
-            + "-e 'input text (system attribute \"EC_CMD\") to (terminal 1 of selected tab of win)' "
-            + "-e 'send key \"enter\" to (terminal 1 of selected tab of win)' "
-            + "-e 'end tell'",
+            appleScriptTemplate("""
+            tell application "Ghostty"
+                set cfg to new surface configuration
+                set initial working directory of cfg to ecDir
+                set win to new window with configuration cfg
+                input text ecCommand to (terminal 1 of selected tab of win)
+                send key "enter" to (terminal 1 of selected tab of win)
+            end tell
+            """),
         // cmux 官方 Scripting Dictionary：新建 workspace，向其 focused terminal
-        // 输入命令，再用 Ghostty action 发送 Enter。目录与命令仅从环境读取。
+        // 输入命令，再用 Ghostty action 发送 Enter。目录与命令作为 argv 传入。
         KnownApps.cmuxBundleId:
-            "osascript -e 'tell application \"cmux\"' "
-            + "-e 'set workspaceTab to new tab' "
-            + "-e 'set targetTerminal to focused terminal of workspaceTab' "
-            + "-e 'focus targetTerminal' "
-            + "-e 'delay 0.2' "
-            + "-e 'input text (\"cd \" & quoted form of (system attribute \"EC_DIR\") "
-            + "& \" && \" & (system attribute \"EC_CMD\")) to targetTerminal' "
-            + "-e 'perform action \"text:\\\\x0d\" on targetTerminal' "
-            + "-e 'end tell'",
+            appleScriptTemplate("""
+            tell application "cmux"
+                set workspaceTab to new tab
+                set targetTerminal to focused terminal of workspaceTab
+                focus targetTerminal
+                delay 0.2
+                input text ("cd " & quoted form of ecDir & " && " & ecCommand) to targetTerminal
+                perform action "text:\\\\x0d" on targetTerminal
+            end tell
+            """),
         // Muxy 官方 CLI 没有单个 run --cwd 命令。已打开的项目新建 tab；首次打开项目时
         // 复用 Muxy 自动创建的初始 tab，避免得到两个 tab。tab ID 不是 send 所需的
         // pane ID，故给它设置基于 UUID 的
@@ -162,15 +167,38 @@ public enum TerminalLaunch {
         "org.alacritty":
             "open -nb org.alacritty --args --working-directory {dir} -e \"$EC_SHELL\" -lic {cmd}",
         "com.apple.Terminal":
-            "osascript -e 'tell application \"Terminal\" to do script "
-            + "\"cd \" & quoted form of (system attribute \"EC_DIR\") & \" && \" "
-            + "& (system attribute \"EC_CMD\")'",
+            appleScriptTemplate("""
+            tell application "Terminal"
+                do script ("cd " & quoted form of ecDir & " && " & ecCommand)
+            end tell
+            """),
         "com.googlecode.iterm2":
-            "osascript -e 'tell application \"iTerm\" to tell (create window with default profile) "
-            + "to tell current session to write text "
-            + "\"cd \" & quoted form of (system attribute \"EC_DIR\") & \" && \" "
-            + "& (system attribute \"EC_CMD\")'",
+            appleScriptTemplate("""
+            tell application "iTerm"
+                tell (create window with default profile)
+                    tell current session to write text ("cd " & quoted form of ecDir & " && " & ecCommand)
+                end tell
+            end tell
+            """),
     ]
+
+    /// 只接受编译期静态 AppleScript body；运行期的目录/命令固定作为
+    /// `on run argv` 的两个独立参数传入，绝不拼入 AppleScript source。
+    /// 整段 source 作为一个 shell 单引号参数，body 中的单引号也会正确转义。
+    static func appleScriptTemplate(_ body: StaticString) -> String {
+        let source = """
+        on run argv
+            set ecDir to item 1 of argv
+            set ecCommand to item 2 of argv
+        \(String(describing: body))
+        end run
+        """
+        return "/usr/bin/osascript -e \(shellSingleQuoted(source)) -- \"$EC_DIR\" \"$EC_CMD\""
+    }
+
+    private static func shellSingleQuoted(_ value: String) -> String {
+        "'" + value.replacingOccurrences(of: "'", with: "'\"'\"'") + "'"
+    }
 
     /// 取某终端的启动模板：用户覆盖优先，否则内置默认，都没有返回 nil。
     public static func template(for bundleId: String, overrides: [String: String]) -> String? {

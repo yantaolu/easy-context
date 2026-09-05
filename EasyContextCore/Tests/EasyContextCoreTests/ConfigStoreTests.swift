@@ -56,6 +56,19 @@ final class ConfigStoreTests: XCTestCase {
         XCTAssertEqual(sut.load(), Settings())
     }
 
+    func test_templatesReference_documentsUnicodeSafeAppleScriptOverrides() throws {
+        let sut = ConfigStore(fileURL: tempFileURL())
+        defer { try? FileManager.default.removeItem(at: sut.templatesReferenceURL.deletingLastPathComponent()) }
+        sut.writeTemplatesReference(builtin: TerminalLaunch.builtinTemplates)
+        let data = try Data(contentsOf: sut.templatesReferenceURL)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let note = try XCTUnwrap(json["_note"] as? String)
+        XCTAssertTrue(note.contains("must not use 'system attribute'"))
+        XCTAssertTrue(note.contains("on run argv"))
+        XCTAssertTrue(note.contains("-- \"$EC_DIR\" \"$EC_CMD\""))
+        XCTAssertTrue(note.contains("Existing overrides are not migrated automatically"))
+    }
+
     // MARK: loadOutcome 区分 missing / ok / corrupt
 
     func test_loadOutcome_missing() {
