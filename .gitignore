@@ -10,5 +10,6 @@ build/
 EasyContext/Info.plist
 EasyContextFinder/Info.plist
 dist/
+.build-pkg.lock
 build-release/
 .codegraph/

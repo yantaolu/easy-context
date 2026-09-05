@@ -29,9 +29,11 @@ Easy Context 给「访达（Finder）」的右键菜单增加：复制完整/相
 · 命令行安装（进阶）：sudo installer -pkg EasyContext-<版本>-macOS-arm64.pkg -target /
   Intel 用户请将文件名中的 arm64 替换为 x86_64。
 · Release 同时提供 arm64 与 x86_64 两个独立包，并分别提供 SHA-256 校验文件。
-· 源码构建：TARGET_ARCH=arm64 ./scripts/build-pkg.sh（版本统一读取 project.yml）。
-  Intel 使用 TARGET_ARCH=x86_64；省略 TARGET_ARCH 仍可本地构建 universal 包。
-  修改代码后重新安装测试，请先用 ./scripts/prepare-release.sh --build-only 增加构建号；
+· 源码预览：./scripts/release.sh preview（默认本机架构，版本统一读取 project.yml）。
+  可用 --arch arm64、--arch x86_64 或 --arch universal 选择架构。
+  每次构建前清空 dist，不归档；旧包即使在后续构建失败时也不会恢复，请提前另存需要的文件。
+  本次预览包保存在 dist/preview/，安装后会替换正式应用，不能并存。
+  打包不会自动增加构建号；修改内容后需再次覆盖安装测试，请先用 ./scripts/release.sh next-build；
   如果产品版本低于已安装版本，请先准备更高版本，详见 README 的发布流程。
 · 设置：打开 EasyContext 可配置显示哪些终端/编辑器、菜单图标黑白或彩色等。
 · 更新：点击设置窗口底部版本号旁的刷新图标，以弹窗查看检查结果。

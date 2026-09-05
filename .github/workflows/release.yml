@@ -18,6 +18,7 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.value }}
       build_number: ${{ steps.version.outputs.build_number }}
+      expected_sha: ${{ steps.version.outputs.expected_sha }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -29,18 +30,19 @@ jobs:
         run: |
           set -euo pipefail
           tag="${GITHUB_REF_NAME}"
-          version="$(./scripts/version.sh --check-tag "$tag")"
+          version="$(./scripts/release.sh check-tag "$tag")"
           if ! git show-ref --verify --quiet refs/remotes/origin/master; then
             echo "origin/master was not fetched by checkout" >&2
             exit 1
           fi
-          tag_commit="$(git rev-list -n 1 "$tag")"
+          tag_commit="$(git rev-parse "$tag^{commit}")"
           if ! git merge-base --is-ancestor "$tag_commit" origin/master; then
             echo "Release tag $tag does not point to a commit reachable from origin/master" >&2
             exit 1
           fi
           echo "value=$version" >> "$GITHUB_OUTPUT"
-          echo "build_number=$(./scripts/version.sh --build)" >> "$GITHUB_OUTPUT"
+          echo "build_number=$(./scripts/release.sh show --build)" >> "$GITHUB_OUTPUT"
+          echo "expected_sha=$tag_commit" >> "$GITHUB_OUTPUT"
 
   test-core:
     needs: validate-release
@@ -66,8 +68,19 @@ jobs:
           swift test --package-path EasyContextCore
           --skip CommandsTests/test_builtin_muxy_routesCommandToPaneCreatedForNewTab
 
+  test-publish:
+    needs: validate-release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Test offline release publication state machine
+        run: ./scripts/test-publish.sh
+
   build:
-    needs: [validate-release, test-core]
+    needs: [validate-release, test-core, test-publish]
     runs-on: macos-26
     timeout-minutes: 40
     strategy:
@@ -127,12 +140,12 @@ jobs:
             printf '::error title=build-pkg (%s) failed::%s\n' "$TARGET_ARCH" "$error_log"
             exit "$build_status"
           fi
-      - name: Create ${{ matrix.target_arch }} checksum
+      - name: Verify ${{ matrix.target_arch }} checksum
         shell: bash
         run: |
           set -euo pipefail
           pkg="EasyContext-${VERSION}-macOS-${TARGET_ARCH}.pkg"
-          (cd dist && shasum -a 256 "$pkg" > "${pkg}.sha256")
+          (cd dist && shasum -a 256 -c "${pkg}.sha256")
       - name: Upload ${{ matrix.target_arch }} release assets
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
@@ -149,46 +162,42 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: write
+    concurrency:
+      group: release-publish-${{ github.repository }}
+      cancel-in-progress: false
+      queue: max
     steps:
-      - name: Download verified release assets
-        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+      - name: Checkout immutable tag source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
-          pattern: release-assets-*
-          path: release-assets
-          merge-multiple: true
-      - name: Verify checksums and create release
+          fetch-depth: 0
+          persist-credentials: false
+      - id: inspect
+        name: Inspect remote release state
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           TAG: ${{ github.ref_name }}
           VERSION: ${{ needs.validate-release.outputs.version }}
+          BUILD_NUMBER: ${{ needs.validate-release.outputs.build_number }}
+          EXPECTED_SHA: ${{ needs.validate-release.outputs.expected_sha }}
         shell: bash
-        run: |
-          set -euo pipefail
-          release_dir="release-assets"
-          assets=()
-          for target_arch in arm64 x86_64; do
-            pkg="${release_dir}/EasyContext-${VERSION}-macOS-${target_arch}.pkg"
-            checksum="${pkg}.sha256"
-            if [[ ! -s "$pkg" ]]; then
-              echo "Missing or empty ${target_arch} installer package: $pkg" >&2
-              exit 1
-            fi
-            if [[ ! -s "$checksum" ]]; then
-              echo "Missing or empty ${target_arch} checksum: $checksum" >&2
-              exit 1
-            fi
-            (cd "$release_dir" && sha256sum -c "$(basename "$checksum")")
-            assets+=("$pkg" "$checksum")
-          done
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "Refusing to overwrite existing release: $TAG" >&2
-            exit 1
-          fi
-          gh release create "$TAG" "${assets[@]}" \
-            --verify-tag \
-            --draft \
-            --generate-notes \
-            --title "$TAG" \
-            --notes $'⚠️ 此 Release 的 .pkg 未签名；其中的 App 使用 ad-hoc 签名且未经过 Apple 公证。首次安装或打开时 macOS 可能显示安全警告；请仅从本 Release 下载。\n\n下载选择：Apple Silicon（M 系列）Mac 请下载 `EasyContext-<版本>-macOS-arm64.pkg`；Intel Mac 请下载 `EasyContext-<版本>-macOS-x86_64.pkg`。'
-          gh release edit "$TAG" --draft=false --latest
+        run: ./scripts/lib/publish-release.sh inspect >> "$GITHUB_OUTPUT"
+      - name: Download verified release assets
+        if: steps.inspect.outputs.needs_artifacts == 'true'
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          pattern: release-assets-*
+          path: release-assets
+          merge-multiple: true
+      - name: Reconcile verified release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ needs.validate-release.outputs.version }}
+          BUILD_NUMBER: ${{ needs.validate-release.outputs.build_number }}
+          EXPECTED_SHA: ${{ needs.validate-release.outputs.expected_sha }}
+          RELEASE_DIR: release-assets
+        shell: bash
+        run: ./scripts/lib/publish-release.sh

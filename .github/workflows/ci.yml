@@ -37,8 +37,18 @@ jobs:
           swift test --package-path EasyContextCore
           --skip CommandsTests/test_builtin_muxy_routesCommandToPaneCreatedForNewTab
 
+  test-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Test offline release publication state machine
+        run: ./scripts/test-publish.sh
+
   package:
-    needs: test-core
+    needs: [test-core, test-publish]
     runs-on: macos-26
     timeout-minutes: 35
     strategy:
@@ -66,10 +76,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          version="$(./scripts/version.sh --version)"
+          version="$(./scripts/release.sh show --version)"
           echo "value=$version" >> "$GITHUB_OUTPUT"
           echo "VERSION=$version" >> "$GITHUB_ENV"
-          echo "BUILD_NUMBER=$(./scripts/version.sh --build)" >> "$GITHUB_ENV"
+          echo "BUILD_NUMBER=$(./scripts/release.sh show --build)" >> "$GITHUB_ENV"
       - name: Build ${{ matrix.target_arch }} installer package
         shell: bash
         run: |

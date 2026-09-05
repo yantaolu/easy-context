@@ -40,37 +40,102 @@
 
 `project.yml` 的 `MARKETING_VERSION`（严格 `X.Y.Z`）和 `CURRENT_PROJECT_VERSION`（正整数构建号）是唯一的构建版本来源。宿主、Finder 扩展、本地安装包和 CI 使用同一对值；客户端显示安装包内实际的版本，不读取仓库文件。配置文件中的 `"version": 3` 是配置格式版本，与产品版本无关。
 
-版本规则：修复使用 patch（例如 `1.0.2 → 1.0.3`），兼容的新功能使用 minor（例如 `1.0.2 → 1.1.0`），不兼容变化使用 major。每次准备新版本时构建号递增一次；构建或重跑 CI 不会自行改变版本。
+版本规则：修复使用 patch，兼容的新功能使用 minor，不兼容变化使用 major。build 是持续递增的候选构建编号，**产品版本升级也不重置，且不是编译次数**：只有 `prepare` 和 `next-build` 会增加它，预览、正式构建和重跑 CI 都不会自动增号。已为某个版本执行过 `prepare`，就不必再次准备同一版本；后续修改需要新的安装测试候选时，使用 `next-build`。
 
-维护者发布流程（以下 `1.1.0` 仅为示例）：
+日常只使用 `scripts/release.sh` 入口。原 `version.sh`、`prepare-release.sh` 已合并移除；`build-pkg.sh` 为本地与 CI 共用的底层构建实现，`version-lib.sh` 为内部校验函数，`scripts/lib/publish-release.sh` 仅供发布工作流调用。
 
-```bash
-# 1. 查看当前版本，预览下一版本；预览不写文件
-./scripts/version.sh
-./scripts/prepare-release.sh --dry-run 1.1.0
+下表中的 `1.1.1` 是示例版本；准备新版本时，必须高于当前产品版本和本地已有稳定标签。
 
-# 2. 更新 project.yml 中的版本和构建号；不会提交、打标签或推送
-./scripts/prepare-release.sh 1.1.0
-git diff -- project.yml
+| 命令 | 作用 | 产品版本 | build | 构建、联网及 Git 影响 |
+|---|---|---|---|---|
+| `./scripts/release.sh show` | 显示版本和 build | 不变 | 不变 | 只读本地版本文件 |
+| `./scripts/release.sh show --version` | 只输出产品版本 | 不变 | 不变 | 只读本地版本文件 |
+| `./scripts/release.sh show --build` | 只输出 build | 不变 | 不变 | 只读本地版本文件 |
+| `./scripts/release.sh prepare 1.1.1 --dry-run` | 校验并显示下一版计划 | 不变 | 不变 | 读取本地标签；不构建、不联网 |
+| `./scripts/release.sh prepare 1.1.1` | 准备新产品版本 | 改为指定的新版本 | 加 1 | 修改 `project.yml`，读取本地标签；不构建、不联网 |
+| `./scripts/release.sh next-build --dry-run` | 显示下一候选 build | 不变 | 不变 | 只读本地版本文件；不构建、不联网 |
+| `./scripts/release.sh next-build` | 准备同版本的新候选 | 不变 | 加 1 | 修改 `project.yml`；不构建、不联网 |
+| `./scripts/release.sh preview` | 构建本机架构预览包 | 不变 | 不变 | 先清空 `dist`，再生成工程、编译并打包；构建工具可能联网解析依赖，不推送、不安装 |
+| `./scripts/release.sh preview --arch universal` | 显式选择预览架构；也可填 `arm64` 或 `x86_64` | 不变 | 不变 | 与默认预览相同，仅改变目标架构 |
+| `./scripts/release.sh check v1.1.1` | 完整发布前检查 | 不变 | 不变 | fetch 远端 master/标签并查询 GitHub CI；不构建、不创建标签 |
+| `./scripts/release.sh check-tag v1.1.1` | 仅检查严格标签格式与源码版本一致 | 不变 | 不变 | 只读本地文件；允许历史版本重跑，不替代 `check` |
 
-# 3. 验证脚本与核心逻辑，再按需要构建并测试安装包
-./scripts/test-version.sh
-swift test --package-path EasyContextCore \
-  --skip CommandsTests/test_builtin_muxy_routesCommandToPaneCreatedForNewTab
-TARGET_ARCH=arm64 ./scripts/build-pkg.sh
+这些命令均不会自动提交、推送或安装。`prepare`、`next-build` 与打包共用仓库锁，在读取待修改或构建的版本前取得锁；同一工作目录已有任务时，新任务会直接拒绝，不增号、不清理对方的输出。请等上一任务完成后重试，构建过程中也不要手动修改版本文件或切换源码；锁不能约束编辑器和外部工具。
 
-# 4. 审查并提交本次功能与版本改动，合入 master，等待分支 CI 成功
-# 请按实际改动选择 git add 的文件，不要遗漏待发布的功能代码。
+**构建前会清空 `dist`，不归档、不保留旧包。** 预览和底层正式打包均如此，包括其中的旧预览目录、隐藏文件和手动放入的文件；需要保留的内容请提前移到 `dist` 外。若后续构建失败，旧产物也不会恢复。本地连续构建 arm64、x86_64 时只保留最后一次结果；需要同时保留两个独立包，请先将第一份包及校验文件复制到 `dist` 外，再构建第二份。GitHub 双架构 jobs 使用独立工作目录，不会互相清理。
 
-# 5. 在已合入 master 的目标提交上校验、打标签、推送
-./scripts/version.sh --check-tag v1.1.0
-git tag -a v1.1.0 -m "Release v1.1.0"
-git push origin v1.1.0
-```
+维护者按以下顺序发布；所有命令在仓库根目录执行。
 
-GitHub Actions 会校验标签版本与工程一致、标签提交可从 `origin/master` 到达，运行测试，分别构建 `arm64` / `x86_64` `.pkg`，生成 SHA-256 校验文件，再创建同名 Release 并标为 Latest。只有两个架构都成功，才公开发布。Release Notes 继续由 GitHub 生成，不引入 changelog 工具或额外语言依赖。
+1. **准备环境与版本。** 本机需要 macOS、完整版 Xcode（含 Swift 和命令行工具）、[XcodeGen](https://github.com/yonaskolb/XcodeGen)、Git、jq、curl；构建工具须在 PATH 中可用。XcodeGen 可用 `brew install xcodegen` 安装。完整 `check` 还需要访问 GitHub；使用公开 API，无需登录 gh。开始新一版前同步远端标签并查看版本：
 
-已发布版本不得挪动标签或替换产物；修复后准备下一个版本。准备脚本检查本地已有标签，操作前应确保本地标签与远端同步。发布失败时先查看 Actions 日志，不要通过强推标签绕过校验。
+   ```bash
+   git fetch origin master --tags
+   ./scripts/release.sh show
+   ./scripts/release.sh prepare 1.1.1 --dry-run
+   ./scripts/release.sh prepare 1.1.1
+   git diff -- project.yml
+   ```
+
+   如果 `show` 已是计划发布的 `1.1.1`，跳过两条 `prepare` 命令，保留当前候选继续测试。不要为了重新编译而重复增号。
+
+2. **测试、预览并手动安装验收。** 先运行与 CI 一致的检查，再构建预览；`preview` 最后输出的路径就是本次安装包。按[安装说明](#安装)手动打开该包，确认设置中的版本/build、Finder 扩展及本次修改的功能。构建成功不等于完成安装验收。
+
+   ```bash
+   ./scripts/test-version.sh
+   ./scripts/test-publish.sh
+   swift test --package-path EasyContextCore \
+     --skip CommandsTests/test_builtin_muxy_routesCommandToPaneCreatedForNewTab
+   ./scripts/release.sh preview
+   ```
+
+   验收后又改了代码、需要区分下一次覆盖安装候选时，依次运行 `./scripts/release.sh next-build --dry-run`、`./scripts/release.sh next-build`，然后重做本步。架构选择和预览包与正式包的关系见[从源码构建](#从源码构建)。
+
+3. **精确暂存、审查并提交。** `git diff` 检查工作区，`git diff --cached` 检查已暂存内容。下面使用交互暂存逐块选择版本和代码改动；新增文件不会出现在 `git add -p` 中，应按 `git status --short` 显示的实际完整路径单独暂存。提交前确保暂存区只包含本次发布内容，且没有遗漏刚验收的未暂存修改。
+
+   ```bash
+   git status --short
+   git diff
+   git add -p -- project.yml EasyContext EasyContextFinder EasyContextCore scripts .github/workflows packaging README.md
+   git diff --cached --check
+   git diff --cached
+   git status --short
+   git commit -m "Prepare release 1.1.1"
+   ```
+
+4. **合入 master，等待对应提交的 CI。** 若上一步就在本地 `master`，确认分支后执行 `git push origin master`。若在功能分支，通过 PR 合并，再在工作区干净时同步本地 master：
+
+   ```bash
+   git switch master
+   git pull --ff-only origin master
+   git rev-parse HEAD
+   ```
+
+   在 Actions 中确认这个完整 SHA 对应的 **master push CI** 成功；PR 检查成功不能替代合并后该提交的 CI。推送 master 只运行 CI，不创建 GitHub Release。
+
+5. **检查通过后立即创建附注标签并推送。** 以下命令用 `&&` 连接，前一步失败就不会继续。在检查与打标签之间不要切换提交、修改源码或增号；如有变化，重新测试、提交并等待对应 CI。
+
+   ```bash
+   ./scripts/release.sh check v1.1.1 &&
+     git tag -a v1.1.1 -m "Release v1.1.1" &&
+     git push origin refs/tags/v1.1.1
+   ```
+
+   `check` 要求工作区、暂存区和未跟踪文件均干净，版本文件已提交；它同步远端 master/标签，检查 HEAD 可从 `origin/master` 到达、标签无冲突，并验证同一 SHA 最近的 master push CI。网络失败、限流或 CI 未成功都会停止。**推送版本标签才触发 Release 工作流**。
+
+6. **检查公开附件并完成正式包验收。** Release 成功后应有四个附件：`EasyContext-1.1.1-macOS-arm64.pkg`、同名 `.pkg.sha256`，以及 `x86_64` 对应的包和校验文件。将四个附件下载到同一目录，在该下载目录中执行：
+
+   ```bash
+   shasum -a 256 -c EasyContext-1.1.1-macOS-arm64.pkg.sha256
+   shasum -a 256 -c EasyContext-1.1.1-macOS-x86_64.pkg.sha256
+   ```
+
+   两项均应显示 `OK`。随后手动安装与本机芯片匹配的正式包，确认版本/build、Finder 菜单和更新检查；条件允许时在另一架构的 Mac 上也验收。不要把本地预览包当作已发布附件。
+
+GitHub Actions 会校验标签版本与工程一致、标签提交可从 `origin/master` 到达，运行测试，分别构建 `arm64` / `x86_64` `.pkg` 和 SHA-256 校验文件。只有两个架构和全部附件校验都成功，才公开发布。发布阶段跨标签互斥并启用多任务排队，公开前再次核对远端标签提交；设置 Latest 前要求当前版本确实出现在公开稳定列表中，再按数字版本比较，较旧版本不会抢占 Latest。列表异常或遗漏当前版本会停止，不会误报成功。Release Notes 继续由 GitHub 生成，不引入额外发版框架或语言运行环境。
+
+**发布失败与恢复：** 工作流创建的草稿在正文中记录隐藏的来源标记（仓库、版本标签、提交、build、附件哈希和大小）。在 Actions 中重跑失败的 jobs、复用原始构建 artifacts，可验证并跳过已上传的正确附件，仅续传缺失项；附件或来源冲突会明确停止，不覆盖或删除。重新运行全部 jobs 可能生成字节不同的 pkg，不能当作原草稿的续传产物；此时不要通过修改标记、替换附件或强推标签绕过校验。构建 artifacts 仅保留 7 天，过期或冲突需人工核查。
+
+同一来源的已公开 Release 重跑时，先识别发布状态，跳过 Actions 构建附件下载，直接验证远端原有附件而不替换，再继续完成此前失败的 Latest 设置；因此这条恢复路径不依赖 7 天的构建附件保留期。不存在的 Release 或草稿仍必须下载原始构建附件，下载失败不会绕过校验。识别状态和实际执行时都会重新验证，期间状态变化会停止或按重新验证的状态处理。历史没有来源标记的 Release、人工创建的未知草稿不会自动接管。已发布版本不得挪动标签或替换产物；内容修复应准备下一个版本。互斥只约束本工作流，维护者仍应避免同时手工编辑发布状态；排队、人工取消或平台失败后请检查 Actions 状态，必要时重跑。
 
 Release 提供的 `.pkg` 未签名，其中 App 为 ad-hoc 签名且**未公证**；这不是 App Store 或 Developer ID 签名发布，下载者仍可能看到 macOS 安全提示。
 
@@ -135,23 +200,18 @@ xcodebuild -project EasyContext.xcodeproj -scheme EasyContext -configuration Deb
   -derivedDataPath build CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=YES \
   CODE_SIGNING_ALLOWED=YES ENABLE_DEBUG_DYLIB=NO build
 
-# 纯逻辑层单元测试
-swift test --package-path EasyContextCore
-
-# 打包成 .pkg，版本自动读取 project.yml
-./scripts/build-pkg.sh
-# 分架构产物：设置 TARGET_ARCH=arm64 或 TARGET_ARCH=x86_64
-TARGET_ARCH=arm64 ./scripts/build-pkg.sh
-# 产物：dist/EasyContext-<工程版本>-macOS-arm64.pkg
-# TARGET_ARCH=x86_64 时产物为 EasyContext-<工程版本>-macOS-x86_64.pkg
-# 省略 TARGET_ARCH 仍可在本地构建 universal 包
-
-# 同一产品版本下，本地改代码后需要重新安装测试时，明确递增构建号
-./scripts/prepare-release.sh --build-only
-TARGET_ARCH=arm64 ./scripts/build-pkg.sh
+# 与 CI 一致，跳过会操作真实 Muxy 终端的集成测试
+swift test --package-path EasyContextCore \
+  --skip CommandsTests/test_builtin_muxy_routesCommandToPaneCreatedForNewTab
 ```
 
-不再使用 `VERSION=... BUILD_NUMBER=...` 覆盖出另一套版本；如果传入值与工程不同，构建会拒绝。`--build-only` 只用于本地测试或正式发布前的构建准备，不会让客户端按 build number 提醒更新，也不能用于替换已发布的同版本 Release。新版本安装测试前，请先准备高于已安装版本的版本号或构建号，避免 macOS Installer 保留已有新版本。
+需要安装测试时使用 `./scripts/release.sh preview`，默认本机架构；`--arch` 可选 `arm64`、`x86_64` 或 `universal`。它只构建，安装需手动执行；源码 ZIP 不含 `.git` 也可预览。版本命令的差异、候选迭代与完整发版步骤统一见[发布版本](#发布版本)。
+
+每次打包先取得共享锁，再读取和校验版本；全部参数、版本和架构校验通过后，清空项目 `dist` 的内容，再开始构建，不建立归档。清理在已确认的目标目录内使用相对路径执行，避免通过被替换的 `dist` 路径删除目录外的文件。预览包和校验文件写入 `dist/preview/` 下带版本、build、架构及独立构建目录的路径，文件名含 `preview`；正常成功后只保留本次构建的产物。它构建当前工作区（包括未暂存内容），不是暂存区；有暂存内容时会提醒。预览与正式包使用相同 Release 编译配置、Bundle ID 和配置目录，不能并存，安装预览会替换已安装应用。流水线从标签提交重新构建，不承诺与本机预览逐字节相同。
+
+每次预览使用独立的 DerivedData，结束后清理本次编译中间文件，仅保留包和校验文件；因此重复预览不复用上一次的增量构建结果，耗时可能增加。同一工作目录已有版本调整或打包任务时，新任务会直接拒绝，不清空对方的输出；`dist` 根是符号链接或非目录时也会拒绝。若任务异常终止留下 `.build-pkg.lock`，应先确认没有版本调整或构建仍在运行，再人工处理锁，不能盲目删除。
+
+底层 `TARGET_ARCH=arm64 ./scripts/build-pkg.sh` 保留正式文件名 `dist/EasyContext-<版本>-macOS-arm64.pkg`（另支持 `x86_64`、默认 `universal`），同样先清空 `dist`；打包过程中若出现外部创建的同名目标，仍会拒绝覆盖。`VERSION` / `BUILD_NUMBER` 环境变量若与工程不同，构建会拒绝。`next-build` 不会让客户端按 build number 提醒更新，也不能用于替换已发布的同版本 Release。新版本安装测试前，请准备高于已安装版本的版本号或构建号，避免 macOS Installer 保留已有新版本。
 
 安装包保留 macOS 原有的版本检查，安装后还会验证宿主与扩展的实际版本、构建号及可执行文件 SHA-256。若系统跳过 payload 或文件不匹配，会明确报错，不再仅以「App 文件存在」判断成功；此检查不等于开发者签名认证，也不保证自动回滚。遇到错误请查看 Installer 日志，并使用正确的新版本重新安装。安装后的辅助步骤在非当前启动卷上只校验目标卷，不启动 App 或刷新当前会话的 Finder。
 

@@ -8,6 +8,44 @@ ec_version_die() {
   return 1
 }
 
+# Called only by mutating commands. Merely sourcing this library stays read-only
+# and works on both macOS and Linux (including CI check-tag).
+ec_directory_identity() {
+  if [[ "$(uname -s)" == Darwin ]]; then
+    stat -f '%d:%i' "$1"
+  else
+    stat -c '%d:%i' "$1"
+  fi
+}
+
+ec_acquire_repo_lock() {
+  local repo_root
+  repo_root="$(cd "$1" && pwd -P)" || return 1
+  EC_REPO_LOCK="$repo_root/.build-pkg.lock"
+  EC_REPO_LOCK_HELD=false
+  if ! mkdir "$EC_REPO_LOCK"; then
+    ec_version_die "another version or build operation holds $EC_REPO_LOCK; no version change or dist cleanup was started"
+    return 1
+  fi
+  EC_REPO_LOCK_HELD=true
+  EC_REPO_LOCK_ID="$(ec_directory_identity "$EC_REPO_LOCK")" || {
+    rmdir "$EC_REPO_LOCK"
+    EC_REPO_LOCK_HELD=false
+    return 1
+  }
+}
+
+ec_release_repo_lock() {
+  if [[ "${EC_REPO_LOCK_HELD:-false}" == true ]]; then
+    # Never remove a lock directory that has been replaced by another owner.
+    if [[ -d "$EC_REPO_LOCK" && ! -L "$EC_REPO_LOCK" ]] \
+        && [[ "$(ec_directory_identity "$EC_REPO_LOCK")" == "$EC_REPO_LOCK_ID" ]]; then
+      rmdir "$EC_REPO_LOCK" || true
+    fi
+    EC_REPO_LOCK_HELD=false
+  fi
+}
+
 EC_INT64_MAX="9223372036854775807"
 
 ec_is_int64_component() {
@@ -186,12 +224,16 @@ ec_compare_versions() {
 # is performed.
 ec_highest_stable_tag_version() {
   local repo_root="$1"
-  local tag version comparison
+  local tag version comparison tags
   local highest=""
   local tag_pattern='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
 
   if ! git -C "$repo_root" rev-parse --git-dir >/dev/null 2>&1; then
     ec_version_die "release repository is not a Git work tree: $repo_root"
+    return 1
+  fi
+  if ! tags="$(git -C "$repo_root" tag --list 'v*')"; then
+    ec_version_die "could not enumerate stable release tags"
     return 1
   fi
   while IFS= read -r tag; do
@@ -206,6 +248,6 @@ ec_highest_stable_tag_version() {
     if [[ "$comparison" == "1" ]]; then
       highest="$version"
     fi
-  done <<< "$(git -C "$repo_root" tag --list 'v*')"
+  done <<< "$tags"
   printf '%s\n' "$highest"
 }
