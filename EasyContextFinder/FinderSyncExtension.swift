@@ -482,10 +482,33 @@ class FinderSyncExtension: FIFinderSync {
             }
             return
         }
+        if bundleId == "io.appmakes.otty" {
+            for target in targets {
+                var comps = URLComponents(); comps.scheme = "easycontext"; comps.host = "open-otty"
+                comps.queryItems = [URLQueryItem(name: "dir", value: target.path), URLQueryItem(name: "t", value: configStore.ensureIPCToken())]
+                if let request = comps.url { NSWorkspace.shared.open(request) }
+            }
+            return
+        }
         // 沙盒下不能 spawn /usr/bin/open，改用 LaunchServices。
         NSWorkspace.shared.open(targets, withApplicationAt: url,
                                 configuration: NSWorkspace.OpenConfiguration(),
-                                completionHandler: nil)
+                                completionHandler: { [weak self] _, error in
+            guard let error else { return }
+            let failure = error as NSError
+            NSLog("EasyContext directory open failed: %@ (%ld): %@",
+                  failure.domain, failure.code, failure.localizedDescription)
+            // 扩展不能显示恢复 UI；由宿主解释文件访问权限（与终端自动化权限不同）。
+            var request = URLComponents()
+            request.scheme = "easycontext"
+            request.host = "open-error"
+            request.queryItems = [
+                URLQueryItem(name: "t", value: self?.configStore.ensureIPCToken()),
+                URLQueryItem(name: "domain", value: failure.domain),
+                URLQueryItem(name: "code", value: String(failure.code)),
+            ]
+            if let request = request.url { NSWorkspace.shared.open(request) }
+        })
     }
 
     // 在默认终端运行命令：构造 easycontext:// URL 交给宿主执行（沙盒不能自己 spawn）。

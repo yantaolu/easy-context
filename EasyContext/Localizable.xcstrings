@@ -1,6 +1,36 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Could Not Open Folder": {
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "无法打开文件夹" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "無法開啟資料夾" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "フォルダを開けませんでした" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Ordner konnte nicht geöffnet werden" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Impossible d’ouvrir le dossier" } },
+        "es": { "stringUnit": { "state": "translated", "value": "No se pudo abrir la carpeta" } }
+      }
+    },
+    "macOS denied folder access. Check Easy Context in System Settings → Privacy & Security → Files and Folders (Removable Volumes), or Full Disk Access. After updating an ad-hoc signed app, an enabled permission may no longer match its signature: remove the old Full Disk Access entry and add the currently installed EasyContext.app again, then restart Easy Context and its Finder extension. Terminal Automation permission does not grant folder access.": {
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "macOS 拒绝访问文件夹。请检查「系统设置 → 隐私与安全性 → 文件与文件夹（可移动宗卷）」或「完全磁盘访问」中的 Easy Context 权限。使用 ad-hoc 签名的应用更新后，即使权限开关已开启，旧授权仍可能因签名变化而失效：请移除完全磁盘访问中的旧条目，重新添加当前安装的 EasyContext.app，再重启 Easy Context 及其访达扩展。终端自动化授权不等于文件夹访问授权。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "macOS 拒絕存取資料夾。請檢查「系統設定 → 隱私權與安全性 → 檔案與檔案夾（可卸除卷宗）」或「完整磁碟存取權限」中的 Easy Context 權限。ad-hoc 簽署的應用程式更新後，舊授權可能因簽章改變而失效，即使開關已開啟。請移除舊的完整磁碟存取項目，重新加入目前安裝的 EasyContext.app，再重新啟動應用程式及 Finder 延伸功能。終端機自動化授權不會授予資料夾存取權。" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "macOS がフォルダへのアクセスを拒否しました。「システム設定 → プライバシーとセキュリティ → ファイルとフォルダ（リムーバブルボリューム）」または「フルディスクアクセス」で Easy Context を確認してください。ad-hoc 署名のアプリを更新すると、スイッチがオンでも旧署名の許可が無効になる場合があります。古いフルディスクアクセス項目を削除し、現在の EasyContext.app を追加して、アプリと Finder 機能拡張を再起動してください。ターミナルのオートメーション許可はフォルダへのアクセス許可ではありません。" } },
+        "de": { "stringUnit": { "state": "translated", "value": "macOS hat den Ordnerzugriff verweigert. Prüfen Sie Easy Context unter Systemeinstellungen → Datenschutz & Sicherheit → Dateien und Ordner (Wechselmedien) oder Festplattenvollzugriff. Nach einem Update mit Ad-hoc-Signatur kann eine aktivierte Berechtigung zur alten Signatur gehören. Entfernen Sie den alten Eintrag für Festplattenvollzugriff, fügen Sie die aktuell installierte EasyContext.app hinzu und starten Sie App und Finder-Erweiterung neu. Die Terminal-Automatisierung gewährt keinen Ordnerzugriff." } },
+        "fr": { "stringUnit": { "state": "translated", "value": "macOS a refusé l’accès au dossier. Vérifiez Easy Context dans Réglages Système → Confidentialité et sécurité → Fichiers et dossiers (volumes amovibles) ou Accès complet au disque. Après la mise à jour d’une app signée ad hoc, une autorisation activée peut correspondre à l’ancienne signature. Supprimez l’ancienne entrée d’accès complet au disque, ajoutez la version installée d’EasyContext.app, puis redémarrez l’app et son extension Finder. L’autorisation d’automatisation du terminal ne donne pas accès aux dossiers." } },
+        "es": { "stringUnit": { "state": "translated", "value": "macOS denegó el acceso a la carpeta. Compruebe Easy Context en Ajustes del Sistema → Privacidad y seguridad → Archivos y carpetas (volúmenes extraíbles) o Acceso total al disco. Tras actualizar una app con firma ad hoc, un permiso activado puede corresponder a la firma anterior. Elimine la entrada antigua de acceso total al disco, añada la EasyContext.app instalada y reinicie la app y su extensión de Finder. La automatización del terminal no concede acceso a carpetas." } }
+      }
+    },
+    "The application could not open the folder. See the EasyContext directory open failed entry in Console for the system error.": {
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "应用无法打开文件夹。请在「控制台」中搜索 EasyContext directory open failed，查看系统错误详情。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "應用程式無法開啟資料夾。請在「主控台」搜尋 EasyContext directory open failed，查看系統錯誤。" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "アプリがフォルダを開けませんでした。「コンソール」で EasyContext directory open failed を検索し、システムエラーを確認してください。" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Die App konnte den Ordner nicht öffnen. Suchen Sie in Konsole nach EasyContext directory open failed, um den Systemfehler anzuzeigen." } },
+        "fr": { "stringUnit": { "state": "translated", "value": "L’app n’a pas pu ouvrir le dossier. Recherchez EasyContext directory open failed dans Console pour consulter l’erreur système." } },
+        "es": { "stringUnit": { "state": "translated", "value": "La app no pudo abrir la carpeta. Busque EasyContext directory open failed en Consola para ver el error del sistema." } }
+      }
+    },
     "Update Available": {
       "localizations": {
         "zh-Hans": {
