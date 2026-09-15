@@ -427,7 +427,14 @@ if [[ "$RELEASE_FOUND" == false ]]; then
     --generate-notes \
     --title "$TAG" \
     --notes-file "$BODY_FILE"
-  load_release
+  # GitHub may return an untagged draft URL before the Releases list exposes
+  # the requested tag. Retry briefly to avoid treating eventual consistency
+  # as a failed publication.
+  for attempt in {1..10}; do
+    load_release
+    [[ "$RELEASE_FOUND" == true ]] && break
+    sleep 2
+  done
   [[ "$RELEASE_FOUND" == true && "$(jq -r '.draft' "$RELEASE_FILE")" == "true" ]] \
     || die "newly created Release $TAG was not returned as a draft"
 else
