@@ -24,6 +24,8 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Fetch master for ancestry validation
+        run: git fetch --no-tags origin master:refs/remotes/origin/master
       - id: version
         name: Validate tag and master ancestry
         shell: bash
