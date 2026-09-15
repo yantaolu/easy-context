@@ -45,7 +45,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Test offline release publication state machine
-        run: ./scripts/test-publish.sh
+        run: bash -x ./scripts/test-publish.sh
 
   package:
     needs: [test-core, test-publish]
