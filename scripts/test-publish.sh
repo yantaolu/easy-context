@@ -321,6 +321,7 @@ pass 'new release is created, verified, published, and selected as Latest'
 
 restore_public_baseline() {
   cp "$PUBLIC_BASELINE" "$STATE"
+  : > "$LOG"
   rm -rf "$TEST_ROOT/remote-assets"
   cp -R "$PUBLIC_REMOTE" "$TEST_ROOT/remote-assets"
 }
