@@ -15,7 +15,7 @@ die() {
   exit 1
 }
 
-for command_name in gh git jq shasum awk sed wc; do
+for command_name in gh git jq awk sed wc; do
   command -v "$command_name" >/dev/null 2>&1 || die "required command is missing: $command_name"
 done
 
@@ -159,7 +159,7 @@ required_assets=(
 REQUIRED_NAMES_JSON="$(printf '%s\n' "${required_assets[@]}" | jq -R . | jq -sc .)"
 
 sha256_file() {
-  shasum -a 256 "$1" | awk '{print $1}'
+  if command -v shasum >/dev/null 2>&1; then shasum -a 256 "$1" | awk '{print $1}'; else sha256sum "$1" | awk '{print $1}'; fi
 }
 
 file_size() {
@@ -199,7 +199,7 @@ prepare_local_assets() {
       || die "checksum file must contain exactly one line: $checksum"
     [[ "$actual_checksum_line" == "$expected_checksum_line" ]] \
       || die "checksum file must contain exactly the canonical hash and package name: $checksum"
-    (cd "$RELEASE_DIR" && shasum -a 256 -c "$checksum" >/dev/null) \
+    (cd "$RELEASE_DIR" && if command -v shasum >/dev/null 2>&1; then shasum -a 256 -c "$checksum" >/dev/null; else sha256sum -c "$checksum" >/dev/null; fi) \
       || die "checksum file does not verify package: $checksum"
   done
 

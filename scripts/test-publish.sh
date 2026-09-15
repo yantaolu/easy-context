@@ -125,7 +125,7 @@ case "$subcommand" in
       exit 1
     fi
     [[ "$(jq --arg tag "$tag" --arg name "$name" '[.releases[] | select(.tag_name == $tag) | .assets[] | select(.name == $name)] | length' "$state")" == 0 ]] || exit 1
-    digest="sha256:$(shasum -a 256 "$file" | awk '{print $1}')"
+    if command -v shasum >/dev/null 2>&1; then digest="sha256:$(shasum -a 256 "$file" | awk '{print $1}')"; else digest="sha256:$(sha256sum "$file" | awk '{print $1}')"; fi
     size="$(wc -c < "$file" | tr -d '[:space:]')"
     mkdir -p "$remote_dir/$tag"
     cp "$file" "$remote_dir/$tag/$name"
@@ -215,7 +215,7 @@ write_assets() {
   for arch in arm64 x86_64; do
     pkg="$ASSET_DIR/EasyContext-${VERSION}-macOS-${arch}.pkg"
     printf 'fixture package: %s: %s\n' "$arch" "$flavor" > "$pkg"
-    (cd "$ASSET_DIR" && shasum -a 256 "$(basename "$pkg")" > "$(basename "$pkg").sha256")
+    (cd "$ASSET_DIR" && if command -v shasum >/dev/null 2>&1; then shasum -a 256 "$(basename "$pkg")"; else sha256sum "$(basename "$pkg")"; fi > "$(basename "$pkg").sha256")
   done
 }
 
