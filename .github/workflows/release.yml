@@ -79,7 +79,21 @@ jobs:
         with:
           persist-credentials: false
       - name: Test offline release publication state machine
-        run: bash -x ./scripts/test-publish.sh
+        shell: bash
+        run: |
+          set -o pipefail
+          bash --version | head -n 1
+          jq --version
+          awk --version 2>&1 | head -n 1 || true
+          sha256sum --version | head -n 1
+          bash -x ./scripts/test-publish.sh 2>&1 | tee "$RUNNER_TEMP/test-publish.trace"
+      - name: Upload publication test trace
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: release-test-publish-trace-${{ github.run_id }}
+          path: ${{ runner.temp }}/test-publish.trace
+          if-no-files-found: ignore
 
   build:
     needs: [validate-release, test-core, test-publish]
