@@ -225,7 +225,86 @@ run_optional "Registering Finder extension" /usr/bin/pluginkit -a "$APPEX_PATH"
 # 2) 启动宿主（生成 IPC token / 模板参考文件、注册 URL scheme）。
 run_optional "Launching EasyContext" /usr/bin/open "$APP_PATH"
 # 3) 重启访达，立即挂接新版扩展。
-run_optional "Refreshing Finder" /usr/bin/killall Finder
+# 注册扩展、启动宿主后，LaunchServices 会在十几秒内多次重建该 App 的登记，每次扩展
+# 登记都会换新 UUID。若访达在此期间重启，它会拿着过期 UUID 连接扩展、失败后放弃
+# （日志：Unable to acquire process assertion … killing plugin），右键菜单消失。
+# 因此先等登记连续数秒不变再重启访达，并确认扩展进程确实启动，否则再试一次。
+registration_signature() {
+  run_as_console_user /usr/bin/pluginkit -mAvvv -i "$EC_APPEX_ID" 2>/dev/null \
+    | ec_plugin_registration_signature "$APPEX_PATH"
+}
+
+wait_for_stable_registration() {
+  local previous=""
+  local current
+  local stable=0
+  local waited=0
+  while [ "$waited" -lt 30 ]; do
+    current="$(registration_signature)"
+    if [ -n "$current" ] && [ "$current" = "$previous" ]; then
+      stable=$((stable + 1))
+      if [ "$stable" -ge 3 ]; then
+        log "Finder extension registration is stable after ${waited}s."
+        return 0
+      fi
+    else
+      stable=0
+    fi
+    previous="$current"
+    /bin/sleep 1
+    waited=$((waited + 1))
+  done
+  warn "Finder extension registration did not settle within 30s; refreshing Finder anyway."
+  return 1
+}
+
+extension_pids() {
+  /usr/bin/pgrep -u "$CONSOLE_UID" -x EasyContextFinder 2>/dev/null | /usr/bin/tr '\n' ' '
+}
+
+# 重启前的扩展进程会随旧访达退出，不能算数；失败时扩展也会短暂启动后被杀。
+# 因此要求出现重启前没有的新进程，且 3 秒后仍在运行。
+new_extension_running() {
+  local before=" $1 "
+  local pid
+  for pid in $(extension_pids); do
+    case "$before" in *" $pid "*) ;; *) return 0 ;; esac
+  done
+  return 1
+}
+
+extension_started() {
+  local before="$1"
+  local waited=0
+  while [ "$waited" -lt 15 ]; do
+    if new_extension_running "$before"; then
+      /bin/sleep 3
+      new_extension_running "$before" && return 0
+    fi
+    /bin/sleep 1
+    waited=$((waited + 1))
+  done
+  return 1
+}
+
+if [ "$HAVE_LIB" = true ]; then
+  for attempt in 1 2; do
+    wait_for_stable_registration || true
+    pids_before="$(extension_pids)"
+    run_optional "Refreshing Finder (attempt $attempt)" /usr/bin/killall Finder
+    if extension_started "$pids_before"; then
+      log "Finder extension is running."
+      break
+    fi
+    if [ "$attempt" -eq 2 ]; then
+      warn "Finder extension did not start; restart Finder or log out and back in to load it."
+    else
+      warn "Finder extension did not start; retrying once."
+    fi
+  done
+else
+  run_optional "Refreshing Finder" /usr/bin/killall Finder
+fi
 
 log "Postinstall actions complete."
 exit 0

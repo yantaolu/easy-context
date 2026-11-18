@@ -340,6 +340,22 @@ PLUGIN_LISTING="$(printf '%s\n' \
 assert_equal "/Users/me/My Builds/EasyContext.app/Contents/PlugIns/EasyContextFinder.appex" \
   "$(printf '%s\n' "$PLUGIN_LISTING" | ec_other_plugin_paths /Applications/EasyContext.app/Contents/PlugIns/EasyContextFinder.appex)" \
   "only extension registrations outside the installed app are unregistered"
+REGISTRATION_LISTING="$(printf '%s\n' \
+  '-    com.luyantao.easycontext.finder(1.0)' \
+  '	            Path = /Users/me/My Builds/EasyContext.app/Contents/PlugIns/EasyContextFinder.appex' \
+  '	            UUID = 11111111-1111-1111-1111-111111111111' \
+  '	       Timestamp = 2026-07-05 12:00:00 +0000' \
+  '+    com.luyantao.easycontext.finder(1.1.3)' \
+  '	            Path = /Applications/EasyContext.app/Contents/PlugIns/EasyContextFinder.appex' \
+  '	            UUID = D4624E1A-BC8B-42B9-A7C5-E6D3A730F0AC' \
+  '	       Timestamp = 2026-11-18 05:03:02 +0000' \
+  '	             SDK = com.apple.FinderSync')"
+assert_equal "D4624E1A-BC8B-42B9-A7C5-E6D3A730F0AC|2026-11-18 05:03:02 +0000" \
+  "$(printf '%s\n' "$REGISTRATION_LISTING" | ec_plugin_registration_signature /Applications/EasyContext.app/Contents/PlugIns/EasyContextFinder.appex)" \
+  "registration signature reads the installed extension's UUID and timestamp"
+assert_equal "" \
+  "$(printf '%s\n' "$REGISTRATION_LISTING" | ec_plugin_registration_signature /Applications/Other.app/Contents/PlugIns/X.appex)" \
+  "registration signature is empty when the extension is not registered"
 
 LS_DUMP="$(printf '%s\n' \
   '--------------------------------------------------------------------------------' \
