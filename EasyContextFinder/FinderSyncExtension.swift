@@ -491,23 +491,24 @@ class FinderSyncExtension: FIFinderSync {
             return
         }
         // 沙盒下不能 spawn /usr/bin/open，改用 LaunchServices。
+        // 不让 LaunchServices 自己弹错误框：失败统一交宿主处理，避免出现两个弹窗。
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.promptsUserIfNeeded = false
         NSWorkspace.shared.open(targets, withApplicationAt: url,
-                                configuration: NSWorkspace.OpenConfiguration(),
+                                configuration: configuration,
                                 completionHandler: { [weak self] _, error in
-            guard let error else { return }
-            let failure = error as NSError
+            guard let error, let self else { return }
+            let nsError = error as NSError
             NSLog("EasyContext directory open failed: %@ (%ld): %@",
-                  failure.domain, failure.code, failure.localizedDescription)
-            // 扩展不能显示恢复 UI；由宿主解释文件访问权限（与终端自动化权限不同）。
-            var request = URLComponents()
-            request.scheme = IPCScheme.current
-            request.host = "open-error"
-            request.queryItems = [
-                URLQueryItem(name: "t", value: self?.configStore.ensureIPCToken()),
-                URLQueryItem(name: "domain", value: failure.domain),
-                URLQueryItem(name: "code", value: String(failure.code)),
-            ]
-            if let request = request.url { NSWorkspace.shared.open(request) }
+                  nsError.domain, nsError.code, nsError.localizedDescription)
+            // 扩展是后台进程，macOS 不会为它弹隐私授权询问（外置盘、桌面等未授权时直接拒绝）。
+            // 交给前台宿主：读取目录触发询问，获准后由宿主用同一个 App 打开这些目录。
+            let failure = FolderOpenFailure(appBundleId: bundleId,
+                                            directories: targets.map(\.path),
+                                            errorDomain: nsError.domain, errorCode: nsError.code)
+            if let request = failure.url(scheme: IPCScheme.current, token: self.configStore.ensureIPCToken()) {
+                NSWorkspace.shared.open(request)
+            }
         })
     }
 

@@ -369,9 +369,15 @@ assert_equal "/Users/me/old build/EasyContext.app" \
 mkdir -p "$TEST_ROOT/uninstall-home"
 HOME="$TEST_ROOT/uninstall-home" "$REPO_ROOT/packaging/uninstall.sh" --dry-run --yes \
   > "$TEST_ROOT/uninstall.log" 2>&1 || { cat "$TEST_ROOT/uninstall.log" >&2; fail "uninstall dry-run failed"; }
-grep -q 'tccutil reset All com.luyantao.easycontext.finder' "$TEST_ROOT/uninstall.log" \
+grep -q 'tccutil reset All com.luyantao.easycontext$' "$TEST_ROOT/uninstall.log" \
   && grep -q 'dry-run 结束' "$TEST_ROOT/uninstall.log" || fail "uninstall dry-run did not print the full plan"
 pass "uninstall dry-run prints the plan without making changes"
+# tccutil resolves ids as applications; a Finder extension id always fails (-10814).
+! grep -q 'tccutil reset All com.luyantao.easycontext.finder' "$TEST_ROOT/uninstall.log" \
+  || fail "uninstall must not reset privacy permissions by extension id"
+! grep -q 'tccutil reset All "\$EC_APPEX_ID"' "$REPO_ROOT/packaging/pkg-scripts/postinstall" \
+  || fail "postinstall must not reset privacy permissions by extension id"
+pass "privacy permissions are reset by the host application id only"
 assert_fails "uninstall rejects unknown arguments" "$REPO_ROOT/packaging/uninstall.sh" --bogus
 
 # Release governance uses real temporary Git history and deterministic, offline
