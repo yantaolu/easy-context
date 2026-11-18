@@ -45,6 +45,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             s.normalizeCommands(defaultName: String(localized: "Command"))
             if s != loaded { try? store.save(s) }
         }
+        // 访达在安装 / 更新后可能丢失扩展（右键菜单消失），宿主常驻期间自动把它加载回来。
+        ExtensionWatchdog.shared.start()
         // 冷启动若不是为处理 URL（用户双击打开）→ 显示设置窗。
         if !launchedForURL { showSettings() }
     }

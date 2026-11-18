@@ -104,14 +104,8 @@ final class SettingsStore: ObservableObject {
         killTimer.cancel()
         // 被超时终止 → 状态未知，乐观视为已启用（与 run 失败同口径，避免误吓用户）。
         if process.terminationReason == .uncaughtSignal { return true }
-        let out = (String(data: data, encoding: .utf8) ?? "")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        // 行首 '+' = 启用，'-' = 已注册未启用，空 = 未注册。
-        // 同一 bundleId 可能注册多行（如 build 目录与 /Applications 各一份，顺序不定），
-        // 任一行启用即视为启用——只看首行会误报「未启用」横幅。
-        return out.split(separator: "\n").contains {
-            $0.trimmingCharacters(in: .whitespaces).hasPrefix("+")
-        }
+        // 同一 bundleId 可能注册多行（顺序不定），任一行启用即视为启用（见 ExtensionHealth）。
+        return ExtensionHealth.isEnabled(pluginkitListing: String(data: data, encoding: .utf8) ?? "")
     }
 
     func openExtensionSettings() {
