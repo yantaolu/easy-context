@@ -231,7 +231,7 @@ swift test --package-path EasyContextCore \
   --skip CommandsTests/test_builtin_muxy_routesCommandToPaneCreatedForNewTab
 ```
 
-App 图标由 `scripts/render-app-icon.swift` 用 CoreGraphics 矢量绘制并生成全部尺寸：修改颜色或细节后运行 `swift scripts/render-app-icon.swift`，会直接覆盖 `EasyContext/Assets.xcassets/AppIcon.appiconset` 里的 PNG。
+App 图标的母版是 `design/AppIcon.png`（1024×1024、透明背景）。替换母版后运行 `scripts/make-app-icon.sh`，会重新生成 `EasyContext/Assets.xcassets/AppIcon.appiconset` 里的全部尺寸。
 
 需要安装测试时使用 `./scripts/release.sh preview`，默认本机架构；`--arch` 可选 `arm64`、`x86_64` 或 `universal`。它只构建，安装需手动执行；源码 ZIP 不含 `.git` 也可预览。版本命令的差异、候选迭代与完整发版步骤统一见[发布版本](#发布版本)。
 
