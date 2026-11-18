@@ -43,5 +43,25 @@ if [[ ! "$IDENTITY" =~ ^[0-9a-f]{40}$ ]]; then
   exit 1
 fi
 
+# 加入用户钥匙串搜索列表（保留原有条目）。GitHub 的 macOS runner 上，codesign 即使
+# 指定了 --keychain，也只能找到搜索列表中的身份，否则报「no identity found」。
+# 调用方用 `security delete-keychain` 删除钥匙串时，它会随之从搜索列表移除。
+EXISTING_KEYCHAINS=()
+while IFS= read -r line; do
+  line="${line#"${line%%[![:space:]]*}"}"
+  line="${line#\"}"; line="${line%\"}"
+  [[ -n "$line" && "$line" != "$KEYCHAIN" ]] && EXISTING_KEYCHAINS+=("$line")
+done < <(security list-keychains -d user)
+security list-keychains -d user -s "$KEYCHAIN" ${EXISTING_KEYCHAINS[@]+"${EXISTING_KEYCHAINS[@]}"} >&2
+
+# 用与 build-pkg.sh 完全相同的参数试签一个临时文件，在构建前就暴露钥匙串问题。
+cp /usr/bin/true "$WORK/signing-probe"
+if ! codesign --force --sign "$IDENTITY" --keychain "$KEYCHAIN" --timestamp=none "$WORK/signing-probe" >&2; then
+  echo "导入的身份无法用于 codesign，诊断信息：" >&2
+  security list-keychains -d user >&2 || true
+  security find-identity -p codesigning "$KEYCHAIN" >&2 || true
+  exit 1
+fi
+
 printf 'EC_SIGN_IDENTITY=%s\n' "$IDENTITY"
 printf 'EC_SIGN_KEYCHAIN=%s\n' "$KEYCHAIN"
