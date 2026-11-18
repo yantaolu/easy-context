@@ -6,7 +6,7 @@ import EasyContextCore
 enum CommandLauncher {
     @MainActor
     static func handleOttyOpen(_ url: URL) {
-        guard url.scheme == "easycontext",
+        guard url.scheme == IPCScheme.current,
               let c = URLComponents(url: url, resolvingAgainstBaseURL: false),
               let dir = c.queryItems?.first(where: {$0.name == "dir"})?.value,
               c.queryItems?.first(where: {$0.name == "t"})?.value == ConfigStore().readIPCToken(),
@@ -18,7 +18,7 @@ enum CommandLauncher {
     }
     @MainActor
     static func handleMuxyOpen(_ url: URL) {
-        guard url.scheme == "easycontext", url.host == "open-muxy",
+        guard url.scheme == IPCScheme.current, url.host == "open-muxy",
               let comps = URLComponents(url: url, resolvingAgainstBaseURL: false),
               let dir = comps.queryItems?.first(where: { $0.name == "dir" })?.value,
               case let expectedToken = ConfigStore().readIPCToken(),
@@ -40,7 +40,7 @@ enum CommandLauncher {
 
     @MainActor
     static func handle(_ url: URL) {
-        guard url.scheme == "easycontext", url.host == "run",
+        guard url.scheme == IPCScheme.current, url.host == "run",
               let comps = URLComponents(url: url, resolvingAgainstBaseURL: false)
         else { return }
         let q = comps.queryItems ?? []

@@ -1,8 +1,16 @@
 #!/bin/bash
-# 构建指定架构的 Release App，并打包成 ad-hoc 签名、未签名的 .pkg。
+# 构建指定架构的 Release App，并打包成未签名的 .pkg。
 #
 # 用法：TARGET_ARCH=universal ./scripts/build-pkg.sh
 # TARGET_ARCH 可选 universal（默认）、arm64 或 x86_64。
+#
+# App 签名：
+# - 设置 EC_SIGN_IDENTITY（证书 SHA-1 或名称）时，用该自签名证书重新签名宿主与扩展，
+#   使 designated requirement 跨版本稳定（macOS 隐私授权不再随升级失效）。
+#   EC_SIGN_KEYCHAIN 可指定只从某个钥匙串查找身份（CI 临时钥匙串）。
+#   packaging/signing-certificate.sha1 存在时，签名证书必须与其一致。
+# - 未设置时沿用 ad-hoc 签名（每次构建身份都会变）；EC_REQUIRE_SIGNING=1 时拒绝 ad-hoc。
+# - 证书由 scripts/create-signing-cert.sh 一次性生成。
 # 版本与构建号只从 project.yml 读取。为兼容旧调用方式，VERSION / BUILD_NUMBER
 # 环境变量可以传入，但必须与 project.yml 完全一致。
 set -euo pipefail
@@ -21,6 +29,10 @@ cd "$(dirname "$0")/.."
 source "scripts/version-lib.sh"
 
 IDENTIFIER="com.luyantao.easycontext"
+EXTENSION_IDENTIFIER="$IDENTIFIER.finder"
+SIGN_IDENTITY="${EC_SIGN_IDENTITY:-}"
+SIGN_KEYCHAIN="${EC_SIGN_KEYCHAIN:-}"
+REQUIRE_SIGNING="${EC_REQUIRE_SIGNING:-0}"
 TARGET_ARCH="${TARGET_ARCH:-universal}"
 
 case "$TARGET_ARCH" in
@@ -42,6 +54,29 @@ case "$TARGET_ARCH" in
 esac
 
 REPO_ROOT="$(pwd -P)"
+SIGNING_PIN_FILE="$REPO_ROOT/packaging/signing-certificate.sha1"
+EXPECTED_CERT_SHA1=""
+if [[ -f "$SIGNING_PIN_FILE" ]]; then
+  EXPECTED_CERT_SHA1="$(tr -d '[:space:]' < "$SIGNING_PIN_FILE" | tr 'A-F' 'a-f')"
+  [[ "$EXPECTED_CERT_SHA1" =~ ^[0-9a-f]{40}$ ]] || {
+    echo "签名证书指纹文件格式无效（应为 40 位十六进制 SHA-1）：$SIGNING_PIN_FILE" >&2
+    exit 1
+  }
+fi
+if [[ "$REQUIRE_SIGNING" == 1 ]]; then
+  [[ -n "$SIGN_IDENTITY" ]] || {
+    echo "EC_REQUIRE_SIGNING=1 但未设置 EC_SIGN_IDENTITY，拒绝构建 ad-hoc 发布包" >&2
+    exit 1
+  }
+  [[ -n "$EXPECTED_CERT_SHA1" ]] || {
+    echo "EC_REQUIRE_SIGNING=1 需要 $SIGNING_PIN_FILE 固定签名证书指纹" >&2
+    exit 1
+  }
+fi
+if [[ -n "$SIGN_KEYCHAIN" && ! -f "$SIGN_KEYCHAIN" ]]; then
+  echo "EC_SIGN_KEYCHAIN 指向的钥匙串不存在：$SIGN_KEYCHAIN" >&2
+  exit 1
+fi
 PKG_SCRIPTS="$REPO_ROOT/packaging/pkg-scripts"
 DIST_DIR="$REPO_ROOT/dist"
 DIST_CLEANUP_STARTED=false
@@ -155,7 +190,7 @@ echo "==> 生成 Xcode 工程"
 (cd "$REPO_ROOT" && xcodegen generate)
 assert_dist_unchanged
 
-echo "==> Release ${TARGET_ARCH} 构建（ad-hoc 签名）"
+echo "==> Release ${TARGET_ARCH} 构建（先 ad-hoc 签名，必要时随后用固定证书重签）"
 xcodebuild -project "$REPO_ROOT/EasyContext.xcodeproj" -scheme EasyContext -configuration Release \
   -derivedDataPath "$DERIVED_DATA_PATH" \
   MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
@@ -168,6 +203,52 @@ assert_dist_unchanged
 [[ -d "$APP" ]] || { echo "构建产物缺失：$APP" >&2; exit 1; }
 [[ -d "$APPEX" ]] || { echo "Finder 扩展产物缺失：$APPEX" >&2; exit 1; }
 
+sign_code() {
+  local target="$1"
+  shift
+  local args=(--force --sign "$SIGN_IDENTITY" --timestamp=none)
+  [[ -z "$SIGN_KEYCHAIN" ]] || args+=(--keychain "$SIGN_KEYCHAIN")
+  codesign "${args[@]}" "$@" "$target"
+}
+
+# 签名身份必须是「identifier + 证书指纹」而非 cdhash，否则隐私授权仍会随构建失效。
+assert_certificate_requirement() {
+  local bundle="$1"
+  local identifier="$2"
+  local requirement
+  local leaf
+  requirement="$(codesign -d -r- "$bundle" 2>&1)"
+  leaf="$(sed -n 's/.*certificate leaf = H"\([0-9A-Fa-f]\{40\}\)".*/\1/p' <<< "$requirement" \
+    | head -n 1 | tr 'A-F' 'a-f')"
+  [[ "$requirement" == *"identifier \"$identifier\""* && -n "$leaf" ]] || {
+    echo "$bundle 的签名身份不是预期的「identifier + 证书指纹」：" >&2
+    echo "$requirement" >&2
+    exit 1
+  }
+  if [[ -n "$EXPECTED_CERT_SHA1" && "$leaf" != "$EXPECTED_CERT_SHA1" ]]; then
+    echo "$bundle 使用的签名证书（${leaf}）与 packaging/signing-certificate.sha1（${EXPECTED_CERT_SHA1}）不一致。" >&2
+    echo "换证书会让所有用户的隐私授权失效；如确需更换，请同时更新指纹文件。" >&2
+    exit 1
+  fi
+}
+
+if [[ -n "$SIGN_IDENTITY" ]]; then
+  echo "==> 使用固定证书重新签名（由内向外）"
+  if [[ -d "$APP/Contents/Frameworks" ]]; then
+    while IFS= read -r -d '' nested; do
+      sign_code "$nested"
+    done < <(find "$APP/Contents/Frameworks" -mindepth 1 -maxdepth 1 \
+      \( -name '*.framework' -o -name '*.dylib' \) -print0)
+  fi
+  sign_code "$APPEX" --entitlements "$REPO_ROOT/EasyContextFinder/EasyContextFinder.entitlements"
+  sign_code "$APP"
+  assert_certificate_requirement "$APPEX" "$EXTENSION_IDENTIFIER"
+  assert_certificate_requirement "$APP" "$IDENTIFIER"
+else
+  echo "⚠️  未设置 EC_SIGN_IDENTITY：沿用 ad-hoc 签名。此包每次构建身份都会变，" >&2
+  echo "    安装后 macOS 隐私授权（外置磁盘、完全磁盘访问、自动化）可能需要重新授予。" >&2
+fi
+
 assert_plist_value() {
   local plist="$1"
   local key="$2"
@@ -175,7 +256,7 @@ assert_plist_value() {
   local actual
   actual="$(/usr/libexec/PlistBuddy -c "Print :$key" "$plist")"
   [[ "$actual" == "$expected" ]] || {
-    echo "$plist 的 $key 应为 $expected，实际为 $actual" >&2
+    echo "$plist 的 $key 应为 ${expected}，实际为 $actual" >&2
     exit 1
   }
 }
@@ -194,7 +275,7 @@ assert_target_architectures() {
   }
   for expected_architecture in "${EXPECTED_ARCHITECTURES[@]}"; do
     [[ " $architectures " == *" $expected_architecture "* ]] || {
-      echo "$binary 缺少 $expected_architecture 架构（实际：$architectures）" >&2
+      echo "$binary 缺少 $expected_architecture 架构（实际：${architectures}）" >&2
       exit 1
     }
   done
@@ -269,6 +350,8 @@ render_installer_script() {
 }
 render_installer_script "$PKG_SCRIPTS/preinstall" "$PKG_SCRIPTS_DIR/preinstall"
 render_installer_script "$PKG_SCRIPTS/postinstall" "$PKG_SCRIPTS_DIR/postinstall"
+# 共享判定函数（被 preinstall / postinstall source），无占位符，原样复制。
+install -m 0644 "$PKG_SCRIPTS/easycontext-installer-lib.sh" "$PKG_SCRIPTS_DIR/easycontext-installer-lib.sh"
 
 # 禁用 Bundle 重定位，始终安装至 /Applications/EasyContext.app。
 pkgbuild --analyze --root "$PKG_ROOT" "$COMPONENT_PLIST" >/dev/null
@@ -319,6 +402,13 @@ TEMP_PKG=""
 publish_without_overwrite "$TEMP_SHA256" "$OUTPUT_SHA256"
 TEMP_SHA256=""
 assert_dist_unchanged
+
+# xcodebuild 会把构建目录里的 App 登记到 LaunchServices。它与已安装版同 bundle id，
+# 会争抢 easycontext:// 请求和隐私授权，故打包后注销（best-effort，不影响产物）。
+LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
+if [[ -x "$LSREGISTER" ]]; then
+  "$LSREGISTER" -u "$APP" >/dev/null 2>&1 || true
+fi
 
 echo "==> 完成：$(pwd)/$OUTPUT_PKG"
 ls -lh "$OUTPUT_PKG"

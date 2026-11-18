@@ -10,7 +10,7 @@ enum NewFileLauncher {
 
     @MainActor
     static func handle(_ url: URL) {
-        guard url.scheme == "easycontext", url.host == "newfile",
+        guard url.scheme == IPCScheme.current, url.host == "newfile",
               let comps = URLComponents(url: url, resolvingAgainstBaseURL: false)
         else { return }
         guard !isPrompting else { return }

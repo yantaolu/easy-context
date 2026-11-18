@@ -281,6 +281,99 @@ printf '# altered\n' >> "$APPEX_PATH/Contents/MacOS/EasyContextFinder"
 assert_fails "postinstall rejects a skipped or altered extension executable" \
   "$RENDERED_POSTINSTALL" unused unused "$OFFLINE_VOLUME"
 
+# Installer helper library: decide when stale privacy permissions are reset and
+# which duplicate registrations are removed. Pure functions with fixed inputs;
+# nothing here calls tccutil, pluginkit, or lsregister.
+# shellcheck source=packaging/pkg-scripts/easycontext-installer-lib.sh
+. "$REPO_ROOT/packaging/pkg-scripts/easycontext-installer-lib.sh"
+ADHOC_REQUIREMENT='cdhash H"02402682d385e7fade2de5221c16f5a2bbb60dca"'
+OTHER_ADHOC_REQUIREMENT='cdhash H"0f41f16768b44c54d2af3f5a416d4151fbb4f4bb"'
+CERT_REQUIREMENT='identifier "com.luyantao.easycontext" and certificate leaf = H"13312b740b1c166e69a934d4aee0db945b9be7a5"'
+OTHER_CERT_REQUIREMENT='identifier "com.luyantao.easycontext" and certificate leaf = H"0000000000000000000000000000000000000000"'
+ec_requirement_changed "$ADHOC_REQUIREMENT" "$CERT_REQUIREMENT" || fail "ad-hoc to certificate upgrade must reset permissions"
+pass "ad-hoc to certificate upgrade resets stale permissions"
+ec_requirement_changed "$ADHOC_REQUIREMENT" "$OTHER_ADHOC_REQUIREMENT" || fail "ad-hoc rebuild must reset permissions"
+pass "ad-hoc to ad-hoc reinstall resets stale permissions"
+ec_requirement_changed "$CERT_REQUIREMENT" "$OTHER_CERT_REQUIREMENT" || fail "certificate change must reset permissions"
+pass "certificate change resets stale permissions"
+! ec_requirement_changed "$CERT_REQUIREMENT" "$CERT_REQUIREMENT" || fail "same certificate must keep permissions"
+pass "upgrade signed with the same certificate keeps permissions"
+! ec_requirement_changed "" "$CERT_REQUIREMENT" || fail "fresh install must not reset permissions"
+pass "fresh install does not reset permissions"
+
+SIGNED_VOLUME="$TEST_ROOT/signed-volume"
+SIGNED_APP="$SIGNED_VOLUME/Applications/EasyContext.app"
+mkdir -p "$SIGNED_APP/Contents/MacOS"
+cp /usr/bin/true "$SIGNED_APP/Contents/MacOS/EasyContext"
+cat > "$SIGNED_APP/Contents/Info.plist" <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>CFBundleIdentifier</key><string>com.luyantao.easycontext</string>
+<key>CFBundleExecutable</key><string>EasyContext</string>
+<key>CFBundlePackageType</key><string>APPL</string>
+</dict></plist>
+EOF
+/usr/bin/codesign --force --sign - "$SIGNED_APP" >/dev/null 2>&1 || fail "could not ad-hoc sign the requirement fixture"
+SIGNED_REQUIREMENT="$(ec_designated_requirement "$SIGNED_APP")"
+[[ "$SIGNED_REQUIREMENT" == 'cdhash H"'*'"' ]] || fail "unexpected ad-hoc requirement: $SIGNED_REQUIREMENT"
+pass "reads the designated requirement of an ad-hoc signed bundle"
+assert_equal "" "$(ec_designated_requirement "$TEST_ROOT/missing.app")" "a missing bundle has no requirement"
+
+PREINSTALL_TEMP="$TEST_ROOT/installer-temp"
+mkdir -p "$PREINSTALL_TEMP"
+INSTALLER_TEMP="$PREINSTALL_TEMP" "$REPO_ROOT/packaging/pkg-scripts/preinstall" unused unused "$SIGNED_VOLUME" \
+  > "$TEST_ROOT/preinstall.log" 2>&1 || fail "preinstall failed on an offline fixture"
+assert_equal "$SIGNED_REQUIREMENT" "$(< "$PREINSTALL_TEMP/easycontext-old-app.requirement")" \
+  "preinstall records the previous application signing identity"
+assert_equal "" "$(< "$PREINSTALL_TEMP/easycontext-old-appex.requirement")" \
+  "preinstall records a missing previous extension as empty"
+grep -q 'skipping app termination' "$TEST_ROOT/preinstall.log" || fail "preinstall touched processes for an offline volume"
+pass "preinstall does not terminate running apps for an offline target volume"
+
+PLUGIN_LISTING="$(printf '%s\n' \
+  '+    com.luyantao.easycontext.finder(1.1.0)' \
+  '	            Path = /Applications/EasyContext.app/Contents/PlugIns/EasyContextFinder.appex' \
+  '	            UUID = 999C9529-80A0-40DC-B532-7A1CFB29D8DF' \
+  '-    com.luyantao.easycontext.finder(1.0)' \
+  '	            Path = /Users/me/My Builds/EasyContext.app/Contents/PlugIns/EasyContextFinder.appex')"
+assert_equal "/Users/me/My Builds/EasyContext.app/Contents/PlugIns/EasyContextFinder.appex" \
+  "$(printf '%s\n' "$PLUGIN_LISTING" | ec_other_plugin_paths /Applications/EasyContext.app/Contents/PlugIns/EasyContextFinder.appex)" \
+  "only extension registrations outside the installed app are unregistered"
+
+LS_DUMP="$(printf '%s\n' \
+  '--------------------------------------------------------------------------------' \
+  'bundle id:                  EasyContext (0x40c)' \
+  'path:                       /Applications/EasyContext.app (0x1314)' \
+  'identifier:                 com.luyantao.easycontext' \
+  '--------------------------------------------------------------------------------' \
+  'path:                       /Users/me/old build/EasyContext.app (0x178c)' \
+  'identifier:                 com.luyantao.easycontext' \
+  '--------------------------------------------------------------------------------' \
+  'path:                       /Applications/EasyContext.app/Contents/PlugIns/EasyContextFinder.appex (0x1318)' \
+  'identifier:                 com.luyantao.easycontext.finder' \
+  '--------------------------------------------------------------------------------' \
+  'path:                       /Users/me/dev/EasyContext.app (0x17d0)' \
+  'identifier:                 com.luyantao.easycontext.debug' \
+  '--------------------------------------------------------------------------------' \
+  'identifier:                 com.luyantao.easycontext' \
+  '--------------------------------------------------------------------------------' \
+  'path:                       /Users/me/old build/EasyContext.app (0x178d)' \
+  'identifier:                 com.luyantao.easycontext')"
+assert_equal "/Users/me/old build/EasyContext.app" \
+  "$(printf '%s\n' "$LS_DUMP" | ec_other_registered_app_paths com.luyantao.easycontext /Applications/EasyContext.app)" \
+  "only other copies with the release bundle id are unregistered, once each"
+
+# Uninstaller: --dry-run must only print the plan. HOME points at an empty
+# fixture so no real configuration is inspected or touched.
+mkdir -p "$TEST_ROOT/uninstall-home"
+HOME="$TEST_ROOT/uninstall-home" "$REPO_ROOT/packaging/uninstall.sh" --dry-run --yes \
+  > "$TEST_ROOT/uninstall.log" 2>&1 || { cat "$TEST_ROOT/uninstall.log" >&2; fail "uninstall dry-run failed"; }
+grep -q 'tccutil reset All com.luyantao.easycontext.finder' "$TEST_ROOT/uninstall.log" \
+  && grep -q 'dry-run 结束' "$TEST_ROOT/uninstall.log" || fail "uninstall dry-run did not print the full plan"
+pass "uninstall dry-run prints the plan without making changes"
+assert_fails "uninstall rejects unknown arguments" "$REPO_ROOT/packaging/uninstall.sh" --bogus
+
 # Release governance uses real temporary Git history and deterministic, offline
 # transport doubles. A fetch can only reach the temporary bare repository.
 FAKE_BIN="$TEST_ROOT/fake-bin"

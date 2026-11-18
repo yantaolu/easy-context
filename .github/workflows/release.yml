@@ -121,6 +121,15 @@ jobs:
           xcodebuild -version
           swift --version
           xcodegen --version
+      - name: Import code signing certificate
+        env:
+          EC_SIGNING_P12_BASE64: ${{ secrets.EC_SIGNING_P12_BASE64 }}
+          EC_SIGNING_P12_PASSWORD: ${{ secrets.EC_SIGNING_P12_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./scripts/lib/import-signing-cert.sh "$RUNNER_TEMP/ec-signing.keychain-db" >> "$GITHUB_ENV"
+          echo "EC_REQUIRE_SIGNING=1" >> "$GITHUB_ENV"
       - name: Build ${{ matrix.target_arch }} installer package
         shell: bash
         run: |
@@ -156,6 +165,12 @@ jobs:
             printf '::error title=build-pkg (%s) failed::%s\n' "$TARGET_ARCH" "$error_log"
             exit "$build_status"
           fi
+      - name: Remove signing keychain
+        if: always()
+        shell: bash
+        run: |
+          keychain="$RUNNER_TEMP/ec-signing.keychain-db"
+          [[ ! -e "$keychain" ]] || security delete-keychain "$keychain"
       - name: Verify ${{ matrix.target_arch }} checksum
         shell: bash
         run: |

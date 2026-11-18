@@ -214,7 +214,7 @@ prepare_local_assets() {
     > "$LOCAL_MARKER_FILE"
 
   cat > "$BODY_FILE" <<EOF
-⚠️ 此 Release 的 .pkg 未签名；其中的 App 使用 ad-hoc 签名且未经过 Apple 公证。首次安装或打开时 macOS 可能显示安全警告；请仅从本 Release 下载。
+⚠️ 此 Release 的 .pkg 未签名；其中的 App 使用项目固定的自签名证书签名，未经过 Apple 公证。首次安装或打开时 macOS 可能显示安全警告；请仅从本 Release 下载。升级后已授予的隐私权限（外置磁盘、自动化等）会继续有效。
 
 下载选择：Apple Silicon（M 系列）Mac 请下载 \`EasyContext-<版本>-macOS-arm64.pkg\`；Intel Mac 请下载 \`EasyContext-<版本>-macOS-x86_64.pkg\`。
 

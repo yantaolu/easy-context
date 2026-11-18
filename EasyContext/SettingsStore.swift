@@ -11,7 +11,9 @@ final class SettingsStore: ObservableObject {
     @Published var saveFailed: Bool = false       // persist() 写盘失败 → 顶部横幅提示
 
     private let store = ConfigStore()
-    private static let extensionBundleId = "com.luyantao.easycontext.finder"
+    // 扩展 id = 宿主 id + ".finder"（project.yml 约定），Debug 版因此查询的是 Debug 扩展。
+    private static let extensionBundleId =
+        (Bundle.main.bundleIdentifier ?? "com.luyantao.easycontext") + ".finder"
     private var activeObserver: NSObjectProtocol?
     private var terminateObserver: NSObjectProtocol?
     private var lastToken: ConfigStore.FileToken?       // 上次读/写时的 config.json 指纹（识别外部改动）

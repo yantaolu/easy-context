@@ -15,6 +15,36 @@ warn() {
   printf '%s WARNING: %s\n' "$LOG_PREFIX" "$*" >&2
 }
 
+# 0) 记录即将被覆盖的旧版签名身份，供 postinstall 判断旧隐私授权是否已失效。
+# INSTALLER_TEMP 是 Installer 为同一次安装的脚本提供的私有临时目录（root 所有）。
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+TARGET_VOLUME="${3:-/}"
+if [ "$TARGET_VOLUME" = "/" ]; then
+  OLD_APP_PATH="/Applications/EasyContext.app"
+else
+  OLD_APP_PATH="${TARGET_VOLUME%/}/Applications/EasyContext.app"
+fi
+OLD_APPEX_PATH="$OLD_APP_PATH/Contents/PlugIns/EasyContextFinder.appex"
+if [ -z "${INSTALLER_TEMP:-}" ] || [ ! -d "$INSTALLER_TEMP" ]; then
+  log "INSTALLER_TEMP unavailable; skipping signing identity snapshot."
+elif ! . "$SCRIPT_DIR/easycontext-installer-lib.sh"; then
+  warn "Installer helper library missing; skipping signing identity snapshot."
+elif [ -d "$OLD_APP_PATH" ]; then
+  ec_designated_requirement "$OLD_APP_PATH" > "$INSTALLER_TEMP/easycontext-old-app.requirement" \
+    || warn "Could not record the previous application signing identity."
+  ec_designated_requirement "$OLD_APPEX_PATH" > "$INSTALLER_TEMP/easycontext-old-appex.requirement" \
+    || warn "Could not record the previous Finder extension signing identity."
+  log "Recorded the previous signing identity."
+else
+  log "No previous installation found; nothing to record."
+fi
+
+# 非当前启动卷（离线目标卷）上没有对应的运行中进程，不关闭当前会话里的 App。
+if [ "$TARGET_VOLUME" != "/" ]; then
+  log "Offline target volume; skipping app termination."
+  exit 0
+fi
+
 CONSOLE_USER=""
 if ! CONSOLE_USER="$(/usr/bin/stat -f '%Su' /dev/console)"; then
   warn "Could not determine the console user; skipping polite app quit."
