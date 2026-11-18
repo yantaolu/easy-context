@@ -85,7 +85,7 @@ fi
 echo "将卸载 Easy Context："
 [ "$APP_PRESENT" = true ] && echo "  · 删除 ${APP_PATH}（需要管理员密码）"
 echo "  · 注销 Finder 扩展与 LaunchServices 登记"
-echo "  · 重置隐私授权：${APP_ID}、$APPEX_ID"
+echo "  · 重置隐私授权：${APP_ID}（含 Finder 扩展）"
 echo "  · 删除偏好设置与安装包回执"
 if [ "$CONFIG_MODE" = "purge" ]; then
   echo "  · 删除配置目录 $CONFIG_DIR"
@@ -114,10 +114,10 @@ echo "==> 注销登记"
 [ "$APP_PRESENT" = true ] && run "$LSREGISTER" -u "$APP_PATH"
 
 echo "==> 重置隐私授权"
-for bundle_id in "$APP_ID" "$APPEX_ID"; do
-  run /usr/bin/tccutil reset All "$bundle_id"             # 用户库：可移除宗卷、自动化等
-  run /usr/bin/sudo /usr/bin/tccutil reset All "$bundle_id" # 系统库：完全磁盘访问
-done
+# tccutil 只能按应用程序 id 重置（对 Finder 扩展 id 恒报 -10814），扩展的授权归属于宿主。
+# 须在删除 App 之前执行：App 不在了，tccutil 同样找不到该 id。
+run /usr/bin/tccutil reset All "$APP_ID"             # 用户库：可移除宗卷、自动化等
+run /usr/bin/sudo /usr/bin/tccutil reset All "$APP_ID" # 系统库：完全磁盘访问
 
 echo "==> 删除 App 与安装记录"
 [ "$APP_PRESENT" = true ] && run /usr/bin/sudo /bin/rm -rf "$APP_PATH"

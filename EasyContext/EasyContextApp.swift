@@ -75,30 +75,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             case "run": CommandLauncher.handle(url)
             case "open-muxy": CommandLauncher.handleMuxyOpen(url)
             case "open-otty": CommandLauncher.handleOttyOpen(url)
-            case "open-error": showOpenError(url)
+            case FolderOpenFailure.host: FolderOpenRecovery.handle(url)
             case "newfile": NewFileLauncher.handle(url)
             default: break
             }
         }
-    }
-
-    private func showOpenError(_ url: URL) {
-        guard url.scheme == IPCScheme.current,
-              let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems else { return }
-        let token = ConfigStore().readIPCToken()
-        guard !token.isEmpty, items.first(where: { $0.name == "t" })?.value == token else { return }
-        let domain = items.first(where: { $0.name == "domain" })?.value
-        let code = items.first(where: { $0.name == "code" })?.value
-        let denied = (domain == NSOSStatusErrorDomain && code == "-54")
-            || (domain == NSCocoaErrorDomain && code == "257")
-        let alert = NSAlert()
-        alert.messageText = String(localized: "Could Not Open Folder")
-        alert.informativeText = denied
-            ? String(localized: "macOS denied folder access. Check Easy Context in System Settings → Privacy & Security → Files and Folders (Removable Volumes), or Full Disk Access. After updating an ad-hoc signed app, an enabled permission may no longer match its signature: remove the old Full Disk Access entry and add the currently installed EasyContext.app again, then restart Easy Context and its Finder extension. Terminal Automation permission does not grant folder access.")
-            : String(localized: "The application could not open the folder. See the EasyContext directory open failed entry in Console for the system error.")
-        alert.addButton(withTitle: String(localized: "OK"))
-        NSApp.activate(ignoringOtherApps: true)
-        alert.runModal()
     }
 
     // MARK: - 设置窗

@@ -18,6 +18,7 @@ struct ContentView: View {
 
     @StateObject private var store = SettingsStore()
     @ObservedObject private var updateController: UpdateController
+    @ObservedObject private var volumeAccess = VolumeAccess.shared
     @State private var selection: RowSelection?
     @State private var showTemplateEditor = false
     @FocusState private var focusedCommand: String? // 命令输入框焦点键（"name-<id>"/"cmd-<id>"）
@@ -35,6 +36,7 @@ struct ContentView: View {
             if store.configCorrupt { corruptBanner }
             if store.saveFailed { saveFailedBanner }
             if !store.extensionEnabled { extensionBanner }
+            if volumeAccess.state != .notNeeded { volumeAccessBanner }
             HStack(spacing: 0) {
                 leftColumn
                 columnDivider
@@ -350,6 +352,33 @@ struct ContentView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .background(Color.orange.opacity(0.9))
+        .foregroundStyle(.white)
+    }
+
+    // 外置盘访问授权：后台的 Finder 扩展无法触发系统询问，由此处（前台）请求一次。
+    private var volumeAccessBanner: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "externaldrive")
+            if volumeAccess.state == .denied {
+                Text("Access to external drives is turned off, so folders on them can't be opened from the right-click menu.")
+                Spacer()
+                Button("Open System Settings") { volumeAccess.openPrivacySettings() }
+                Button {
+                    volumeAccess.requestAccess()
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                }
+                .help("Re-check")
+            } else {
+                Text("Allow Easy Context to access external drives so folders on them can be opened from the right-click menu.")
+                Spacer()
+                Button("Allow Access") { volumeAccess.requestAccess() }
+                    .disabled(volumeAccess.state == .requesting)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(Color.blue.opacity(0.85))
         .foregroundStyle(.white)
     }
 
