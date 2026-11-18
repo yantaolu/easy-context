@@ -231,6 +231,8 @@ swift test --package-path EasyContextCore \
   --skip CommandsTests/test_builtin_muxy_routesCommandToPaneCreatedForNewTab
 ```
 
+App 图标由 `scripts/render-app-icon.swift` 用 CoreGraphics 矢量绘制并生成全部尺寸：修改颜色或细节后运行 `swift scripts/render-app-icon.swift`，会直接覆盖 `EasyContext/Assets.xcassets/AppIcon.appiconset` 里的 PNG。
+
 需要安装测试时使用 `./scripts/release.sh preview`，默认本机架构；`--arch` 可选 `arm64`、`x86_64` 或 `universal`。它只构建，安装需手动执行；源码 ZIP 不含 `.git` 也可预览。版本命令的差异、候选迭代与完整发版步骤统一见[发布版本](#发布版本)。
 
 每次打包先取得共享锁，再读取和校验版本；全部参数、版本和架构校验通过后，清空项目 `dist` 的内容，再开始构建，不建立归档。清理在已确认的目标目录内使用相对路径执行，避免通过被替换的 `dist` 路径删除目录外的文件。预览包和校验文件写入 `dist/preview/` 下带版本、build、架构及独立构建目录的路径，文件名含 `preview`；正常成功后只保留本次构建的产物。它构建当前工作区（包括未暂存内容），不是暂存区；有暂存内容时会提醒。预览与正式包使用相同 Release 编译配置、Bundle ID 和配置目录，不能并存，安装预览会替换已安装应用。流水线从标签提交重新构建，不承诺与本机预览逐字节相同。

@@ -57,3 +57,22 @@ ec_other_registered_app_paths() {
       }
     }'
 }
+
+# stdin：`pluginkit -mAvvv -i <id>` 的输出；$1：appex 路径。
+# 打印该路径登记的「UUID|Timestamp」。LaunchServices 每重建一次登记，两者都会变；
+# 连续读取结果相同，说明登记已稳定，此时重启访达才能连上扩展。未登记时打印空串。
+ec_plugin_registration_signature() {
+  /usr/bin/awk -v want="$1" '
+    $1 == "Path" && $2 == "=" {
+      path = $0
+      sub(/^[^=]*= /, "", path)
+      current = (path == want)
+      next
+    }
+    current && $1 == "UUID" && $2 == "=" { uuid = $3 }
+    current && $1 == "Timestamp" && $2 == "=" {
+      stamp = $0
+      sub(/^[^=]*= /, "", stamp)
+    }
+    END { if (uuid != "") print uuid "|" stamp }'
+}
