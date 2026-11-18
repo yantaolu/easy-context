@@ -263,6 +263,7 @@ App 图标由 `scripts/render-app-icon.swift` 用 CoreGraphics 矢量绘制并�
 - **打开 App 用 `NSWorkspace.open`**（沙盒禁止 spawn 进程，不能用 `Process`/`open`）；**新建文件用子菜单**选模板、点选后交宿主弹命名面板创建（扩展弹模态 UI 会抛异常）。
 - **监控所有挂载卷**（单个 `/` 不覆盖 `/Volumes/*` 外置盘），并监听挂载/卸载/改名动态刷新。
 - **Debug 构建须 `ENABLE_DEBUG_DYLIB=NO`**，否则 debug-dylib 桩会让扩展无法独立加载。
+- **访达可能丢失扩展**：安装或更新后，系统服务会在几十秒到几分钟内多次重建 App 的登记，访达若恰在此时断开扩展，可能不再拉起它，右键菜单消失。安装器在重启访达前会等登记稳定；之后由宿主的 `ExtensionWatchdog` 兜底——访达在运行、扩展已启用但进程不在时，把扩展停用再启用让访达重新加载（无需重启访达）。判定与限流规则在 `ExtensionHealth`；用户主动停用扩展时不会干预。修复记录可在「控制台」按子系统 `com.luyantao.easycontext`、类别 `watchdog` 查看。
 
 ## 已知限制
 
