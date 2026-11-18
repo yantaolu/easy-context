@@ -119,6 +119,15 @@ class FinderSyncExtension: FIFinderSync {
         return dirs
     }
 
+    /// 自己所在的 App 是否就是 LaunchServices 认定的默认 Easy Context。每次弹菜单现查：
+    /// 用户移动 App 或卸掉旧副本后，无需重启扩展即可生效。
+    private func isOfficialCopy() -> Bool {
+        guard let id = Bundle.main.bundleIdentifier,
+              let hostID = ExtensionCopy.hostBundleIdentifier(extensionBundleIdentifier: id) else { return true }
+        let official = NSWorkspace.shared.urlForApplication(withBundleIdentifier: hostID)
+        return ExtensionCopy.isOfficial(extensionAt: Bundle.main.bundleURL, officialApp: official)
+    }
+
     // MARK: - 菜单构建
     //
     // 扩展按共享配置 config.json 决定显示哪些项 / 哪些 App / 图标风格。
@@ -126,6 +135,8 @@ class FinderSyncExtension: FIFinderSync {
     override func menu(for menuKind: FIMenuKind) -> NSMenu? {
         guard menuKind == .contextualMenuForItems
                 || menuKind == .contextualMenuForContainer else { return nil }
+        // 系统里残留的其它 EasyContext.app 副本若也被访达加载，菜单会重复；只让正式那份出菜单。
+        guard isOfficialCopy() else { return nil }
         let targets = resolveTargets(for: menuKind)
         guard !targets.isEmpty else { return nil }
         cacheLock.lock(); menuTargetURLs = targets; cacheLock.unlock()
