@@ -472,7 +472,7 @@ class FinderSyncExtension: FIFinderSync {
         if bundleId == KnownApps.muxyBundleId {
             for target in targets {
                 var comps = URLComponents()
-                comps.scheme = "easycontext"
+                comps.scheme = IPCScheme.current
                 comps.host = "open-muxy"
                 comps.queryItems = [
                     URLQueryItem(name: "dir", value: target.path),
@@ -484,7 +484,7 @@ class FinderSyncExtension: FIFinderSync {
         }
         if bundleId == "io.appmakes.otty" {
             for target in targets {
-                var comps = URLComponents(); comps.scheme = "easycontext"; comps.host = "open-otty"
+                var comps = URLComponents(); comps.scheme = IPCScheme.current; comps.host = "open-otty"
                 comps.queryItems = [URLQueryItem(name: "dir", value: target.path), URLQueryItem(name: "t", value: configStore.ensureIPCToken())]
                 if let request = comps.url { NSWorkspace.shared.open(request) }
             }
@@ -500,7 +500,7 @@ class FinderSyncExtension: FIFinderSync {
                   failure.domain, failure.code, failure.localizedDescription)
             // 扩展不能显示恢复 UI；由宿主解释文件访问权限（与终端自动化权限不同）。
             var request = URLComponents()
-            request.scheme = "easycontext"
+            request.scheme = IPCScheme.current
             request.host = "open-error"
             request.queryItems = [
                 URLQueryItem(name: "t", value: self?.configStore.ensureIPCToken()),
@@ -521,7 +521,7 @@ class FinderSyncExtension: FIFinderSync {
         guard item.tag >= 0, item.tag < cmds.count, !term.isEmpty,
               let dir = targetDirectories().first else { return }
         var comps = URLComponents()
-        comps.scheme = "easycontext"
+        comps.scheme = IPCScheme.current
         comps.host = "run"
         comps.queryItems = [
             // id 是执行协议的键（改名不影响执行）；cmd=name 仅为升级期间
@@ -543,7 +543,7 @@ class FinderSyncExtension: FIFinderSync {
               item.tag >= 0, item.tag < FileTemplate.allCases.count,
               let dir = targetDirectories().first else { return }
         var comps = URLComponents()
-        comps.scheme = "easycontext"
+        comps.scheme = IPCScheme.current
         comps.host = "newfile"
         comps.queryItems = [
             URLQueryItem(name: "dir", value: dir.path),

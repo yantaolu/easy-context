@@ -13,3 +13,7 @@ dist/
 .build-pkg.lock
 build-release/
 .codegraph/
+
+# 签名私钥绝不入库（证书指纹 packaging/signing-certificate.sha1 应提交）
+*.p12
+*.p12.password

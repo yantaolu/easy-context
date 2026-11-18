@@ -140,6 +140,80 @@ run_optional() {
   fi
 }
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+HAVE_LIB=false
+if . "$SCRIPT_DIR/easycontext-installer-lib.sh"; then
+  HAVE_LIB=true
+else
+  warn "Installer helper library missing; skipping permission reset and stale registration cleanup."
+fi
+
+# 0a) 签名身份变化 → 清掉已失效的隐私授权。旧授权的开关仍显示开启、实际却不再匹配，
+# 访问会被静默拒绝（典型表现：外置磁盘提示没有权限）；重置后 macOS 会重新弹框询问。
+# 身份未变（同一证书签名的升级）不重置，保留用户已给的授权。
+# 用户库（可移除宗卷、自动化等）以登录用户身份重置；系统库（完全磁盘访问）以 root 重置。
+reset_stale_permissions() {
+  local bundle_id="$1"
+  local bundle_path="$2"
+  local record="$3"
+  local old_requirement
+  local new_requirement
+  [ -f "$record" ] || return 0
+  old_requirement="$(/bin/cat "$record")"
+  /bin/rm -f "$record"
+  new_requirement="$(ec_designated_requirement "$bundle_path")"
+  if ! ec_requirement_changed "$old_requirement" "$new_requirement"; then
+    log "Signing identity of $bundle_id is unchanged; keeping privacy permissions."
+    return 0
+  fi
+  log "Signing identity of $bundle_id changed; previous privacy permissions no longer apply."
+  run_optional "Resetting user privacy permissions for $bundle_id" /usr/bin/tccutil reset All "$bundle_id"
+  if /usr/bin/tccutil reset All "$bundle_id"; then
+    log "Completed: resetting system privacy permissions for $bundle_id."
+  else
+    warn "Failed: resetting system privacy permissions for $bundle_id; installed App remains available."
+  fi
+}
+
+if [ "$HAVE_LIB" = true ] && [ -n "${INSTALLER_TEMP:-}" ]; then
+  reset_stale_permissions "$EC_APP_ID" "$APP_PATH" "$INSTALLER_TEMP/easycontext-old-app.requirement"
+  reset_stale_permissions "$EC_APPEX_ID" "$APPEX_PATH" "$INSTALLER_TEMP/easycontext-old-appex.requirement"
+fi
+
+# 0b) 注销其它位置登记的同 bundle id 副本（旧开发构建、已删除的目录等）。它们会与
+# 已安装版争抢 easycontext:// 请求和隐私授权。只注销登记，绝不删除任何文件。
+unregister_stale_copies() {
+  local listing
+  local stale_path
+  if listing="$(run_as_console_user /usr/bin/pluginkit -mAvvv -i "$EC_APPEX_ID" 2>/dev/null)"; then
+    while IFS= read -r stale_path; do
+      [ -n "$stale_path" ] || continue
+      run_optional "Unregistering stale Finder extension at $stale_path" \
+        /usr/bin/pluginkit -r "$stale_path"
+    done <<EOF
+$(printf '%s\n' "$listing" | ec_other_plugin_paths "$APPEX_PATH")
+EOF
+  else
+    warn "Could not list Finder extension registrations."
+  fi
+
+  if listing="$(run_as_console_user "$EC_LSREGISTER" -dump 2>/dev/null)"; then
+    while IFS= read -r stale_path; do
+      [ -n "$stale_path" ] || continue
+      run_optional "Unregistering stale application copy at $stale_path" \
+        "$EC_LSREGISTER" -u "$stale_path"
+    done <<EOF
+$(printf '%s\n' "$listing" | ec_other_registered_app_paths "$EC_APP_ID" "$APP_PATH")
+EOF
+  else
+    warn "Could not read the LaunchServices database."
+  fi
+}
+
+if [ "$HAVE_LIB" = true ]; then
+  unregister_stale_copies
+fi
+
 # 1) 立即注册新 appex（不等系统慢扫）。
 run_optional "Registering Finder extension" /usr/bin/pluginkit -a "$APPEX_PATH"
 # 2) 启动宿主（生成 IPC token / 模板参考文件、注册 URL scheme）。

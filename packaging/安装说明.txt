@@ -25,12 +25,13 @@ Easy Context 给「访达（Finder）」的右键菜单增加：复制完整/相
    在访达里右键任意文件或文件夹，即可看到 Easy Context 的菜单项。
 
 ------------------------------------------------------------
-· 更新后提示“Easy Context 没有权限打开某文件夹”，但权限开关已开启：
-  ad-hoc 签名随构建改变，macOS 可能不再认可旧版本的文件访问授权。
+· 提示“Easy Context 没有权限打开某文件夹”，但权限开关已开启：
+  新版 App 使用固定证书签名，授权在后续升级中保持有效；但从更早的
+  ad-hoc 签名版本升级上来时，旧授权不再匹配，需要重新授权一次：
   在「隐私与安全性 → 完全磁盘访问」移除旧条目，再添加当前安装的
   /Applications/EasyContext.app，并重启应用及访达扩展。
   外置磁盘也请检查「文件与文件夹 → 可移动宗卷」。自动化授权不能替代此权限。
-  每次安装新构建后可能需要重复授权；稳定开发者证书签名才能提供跨版本身份。
+  也可在终端执行 tccutil reset All com.luyantao.easycontext 后重新授权。
 · 无需再执行 xattr 清理命令：pkg 装出来的 App 不带隔离标记（quarantine）。
 · 命令行安装（进阶）：sudo installer -pkg EasyContext-<版本>-macOS-arm64.pkg -target /
   Intel 用户请将文件名中的 arm64 替换为 x86_64。
@@ -45,4 +46,8 @@ Easy Context 给「访达（Finder）」的右键菜单增加：复制完整/相
 · 更新：点击设置窗口底部版本号旁的刷新图标，以弹窗查看检查结果。
   有新版时可点击「前往 GitHub 下载」；不自动检查、下载或安装。
 · 配置文件：~/.easy-context/config.json（高级用户可手改）。
-· 卸载：把「应用程序」里的 EasyContext 拖到废纸篓即可。
+· 卸载：在终端运行
+    /Applications/EasyContext.app/Contents/Resources/uninstall.sh
+  会清理 App、扩展登记、隐私授权和偏好设置，并询问是否删除配置；
+  加 --dry-run 可先查看将执行的操作。直接拖到废纸篓也能卸载，但会留下这些记录。
+· 升级时安装程序会自动清理失效的隐私授权和旧副本的系统登记，不会改动你的配置。

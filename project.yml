@@ -6,6 +6,11 @@
 # temporary-exception.files.absolute-path.read-only 放行；仅共享的
 # ~/.easy-context/ 目录通过 home-relative-path.read-write 允许读写。
 # 若将来为公证/上架收紧沙盒，需改用 App Group 容器并相应改 ConfigStore 的路径来源。
+#
+# 身份隔离（勿删）：Debug 构建使用独立的 bundle id、URL scheme 与显示名。macOS 隐私授权
+# （TCC）按 bundle id 只保存一条记录、按签名身份校验；若开发版与安装版同名，两者会互相
+# 覆盖授权，并争抢 easycontext:// URL，表现为「用着用着外置盘没有权限」。
+# 发布版签名见 scripts/build-pkg.sh（EC_SIGN_IDENTITY，自签名固定证书）。
 name: EasyContext
 options:
   bundleIdPrefix: com.luyantao.easycontext
@@ -25,7 +30,14 @@ settings:
     CURRENT_PROJECT_VERSION: 8
     PRODUCT_NAME: "$(TARGET_NAME)"
     SWIFT_VERSION: "5.0"
+    EC_BUNDLE_ID_BASE: com.luyantao.easycontext
+    EC_URL_SCHEME: easycontext
+    EC_DISPLAY_NAME: Easy Context
   configs:
+    Debug:
+      EC_BUNDLE_ID_BASE: com.luyantao.easycontext.debug
+      EC_URL_SCHEME: easycontext-debug
+      EC_DISPLAY_NAME: Easy Context Debug
     Release:
       # 发布产物不注入 Xcode 默认的调试 entitlement；Debug 保持默认行为，便于开发调试。
       CODE_SIGN_INJECT_BASE_ENTITLEMENTS: "NO"
@@ -38,6 +50,9 @@ targets:
     platform: macOS
     sources:
       - EasyContext
+      # 卸载脚本随 App 分发：/Applications/EasyContext.app/Contents/Resources/uninstall.sh
+      - path: packaging/uninstall.sh
+        buildPhase: resources
     dependencies:
       - package: EasyContextCore
         product: EasyContextCore
@@ -45,12 +60,12 @@ targets:
         embed: true
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.luyantao.easycontext
+        PRODUCT_BUNDLE_IDENTIFIER: "$(EC_BUNDLE_ID_BASE)"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     info:
       path: EasyContext/Info.plist
       properties:
-        CFBundleDisplayName: Easy Context
+        CFBundleDisplayName: "$(EC_DISPLAY_NAME)"
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         CFBundleLocalizations:
@@ -64,8 +79,10 @@ targets:
         LSMinimumSystemVersion: "13.0"
         LSUIElement: true
         CFBundleURLTypes:
-          - CFBundleURLName: com.luyantao.easycontext
-            CFBundleURLSchemes: [easycontext]
+          - CFBundleURLName: "$(PRODUCT_BUNDLE_IDENTIFIER)"
+            CFBundleURLSchemes: ["$(EC_URL_SCHEME)"]
+        # 宿主与扩展从各自 Info.plist 读取 IPC URL scheme（见 EasyContextCore/IPCScheme）。
+        ECURLScheme: "$(EC_URL_SCHEME)"
         NSAppleEventsUsageDescription: "Used to run commands (such as claude / codex) in the terminal you choose."
   EasyContextFinder:
     type: app-extension
@@ -77,13 +94,14 @@ targets:
         product: EasyContextCore
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.luyantao.easycontext.finder
+        PRODUCT_BUNDLE_IDENTIFIER: "$(EC_BUNDLE_ID_BASE).finder"
         CODE_SIGN_ENTITLEMENTS: EasyContextFinder/EasyContextFinder.entitlements
     info:
       path: EasyContextFinder/Info.plist
       properties:
         # 系统设置 → 扩展列表里显示的名字，与宿主品牌一致
-        CFBundleDisplayName: Easy Context
+        CFBundleDisplayName: "$(EC_DISPLAY_NAME)"
+        ECURLScheme: "$(EC_URL_SCHEME)"
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         CFBundleLocalizations:

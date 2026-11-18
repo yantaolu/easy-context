@@ -2,7 +2,7 @@
 
 给 macOS **访达（Finder）右键菜单**加上日常高频操作：复制路径、用终端 / 编辑器打开当前目录、新建文件等。灵感来自 EasyNewFile，但更现代、更可配置、支持各类主流终端与 AI 编辑器。
 
-> 纯原生 Swift / SwiftUI + FinderSync 扩展。本地自用，ad-hoc 签名即可运行。
+> 纯原生 Swift / SwiftUI + FinderSync 扩展。Release 使用项目固定的自签名证书签名（未公证）。
 
 ## 截图
 
@@ -26,10 +26,14 @@
 
 ## 安装
 
-从 [GitHub Releases](https://github.com/yantaolu/easy-context/releases) 下载与 Mac 芯片对应的安装包：Apple Silicon 选择 `EasyContext-<版本>-macOS-arm64.pkg`，Intel 选择 `EasyContext-<版本>-macOS-x86_64.pkg`。`.pkg` 本身未签名；其中的 App 使用 ad-hoc 签名、**未做 Apple 公证**，首次打开安装包需手动允许一次（详见 [`packaging/安装说明.txt`](packaging/安装说明.txt)）。
+从 [GitHub Releases](https://github.com/yantaolu/easy-context/releases) 下载与 Mac 芯片对应的安装包：Apple Silicon 选择 `EasyContext-<版本>-macOS-arm64.pkg`，Intel 选择 `EasyContext-<版本>-macOS-x86_64.pkg`。`.pkg` 本身未签名；其中的 App 使用项目固定的自签名证书签名、**未做 Apple 公证**，首次打开安装包需手动允许一次（详见 [`packaging/安装说明.txt`](packaging/安装说明.txt)）。
 
 1. **右键**点与你的 Mac 芯片对应的 `.pkg` →「打开」→ 弹窗再点「打开」（不签名安装包直接双击会被拦，用右键打开这一次即可）。
 2. 按安装向导点「继续 / 安装」，输入密码授权装到「应用程序」。装完 App 会自动启动；重装 / 更新时安装程序会**自动关闭旧版本**，无需手动退出、也不会再报「正在使用中」。
+   安装程序还会自动清理历史残留：
+   - 新旧版本签名身份不同（例如从 ad-hoc 签名版升级到证书签名版）时，重置已失效的隐私授权，之后 macOS 会重新询问一次。同一证书签名的版本之间升级时，授权保持不变。
+   - 注销其它位置登记的同名副本（旧开发构建、已删除的目录），只注销登记，不删除任何文件。
+   - 不会改动 `~/.easy-context/` 里的配置。
 3. 启用扩展：打开 EasyContext，点顶部横幅「去启用」，或
    **系统设置 → 通用 → 登录项与扩展 → 访达扩展 → 勾选 EasyContextFinder**。
 4. 在访达里右键任意文件 / 文件夹即可使用。
@@ -137,7 +141,17 @@ GitHub Actions 会校验标签版本与工程一致、标签提交可从 `origin
 
 同一来源的已公开 Release 重跑时，先识别发布状态，跳过 Actions 构建附件下载，直接验证远端原有附件而不替换，再继续完成此前失败的 Latest 设置；因此这条恢复路径不依赖 7 天的构建附件保留期。不存在的 Release 或草稿仍必须下载原始构建附件，下载失败不会绕过校验。识别状态和实际执行时都会重新验证，期间状态变化会停止或按重新验证的状态处理。历史没有来源标记的 Release、人工创建的未知草稿不会自动接管。已发布版本不得挪动标签或替换产物；内容修复应准备下一个版本。互斥只约束本工作流，维护者仍应避免同时手工编辑发布状态；排队、人工取消或平台失败后请检查 Actions 状态，必要时重跑。
 
-Release 提供的 `.pkg` 未签名，其中 App 为 ad-hoc 签名且**未公证**；这不是 App Store 或 Developer ID 签名发布，下载者仍可能看到 macOS 安全提示。
+Release 提供的 `.pkg` 未签名，其中 App 使用项目固定的自签名证书签名且**未公证**；这不是 App Store 或 Developer ID 签名发布，下载者仍可能看到 macOS 安全提示。
+
+### 代码签名证书
+
+macOS 隐私授权（可移除宗卷、完全磁盘访问、自动化）按签名的 designated requirement 识别 App。ad-hoc 签名的要求是 cdhash，每次构建都会变，升级后授权会失效、外置盘提示「没有权限」。因此 Release 用一张固定的自签名证书签名，要求变为 `identifier "…" and certificate leaf = H"…"`，跨版本稳定。
+
+- **一次性生成**：`./scripts/create-signing-cert.sh [输出目录] [--import]`（默认 `~/EasyContext-signing`）。它生成 `.p12` 与随机密码，并把证书 SHA-1 写入 `packaging/signing-certificate.sha1`（公开信息，需提交）。`--import` 同时导入登录钥匙串，供本地打包。
+- **GitHub Secrets**：`EC_SIGNING_P12_BASE64`（`base64 -i easycontext-signing.p12`）与 `EC_SIGNING_P12_PASSWORD`。发布工作流把证书导入临时钥匙串、以 `EC_REQUIRE_SIGNING=1` 构建，缺证书或指纹不符都会失败，结束后删除钥匙串。PR / master 的 CI 打包没有 secret，仍是 ad-hoc。
+- **本地签名打包**：`EC_SIGN_IDENTITY=<SHA-1> ./scripts/release.sh preview`；不设置时沿用 ad-hoc 并打印警告。可用 `EC_SIGN_KEYCHAIN` 指定钥匙串。
+- ⚠️ **私钥离线备份、绝不入库**（`.gitignore` 已排除 `*.p12`）。丢失只能换证书，所有用户需重新授权一次；泄露则他人可签出继承用户授权的程序。换证书时必须同步更新指纹文件。
+- 从 ad-hoc 版本升级到首个证书签名版本时，需要重新授权一次；之后的升级不再需要。
 
 ### 客户端检查更新
 
@@ -189,12 +203,24 @@ Release 提供的 `.pkg` 未签名，其中 App 为 ad-hoc 签名且**未公证*
 - **Otty** 使用 App 内置的官方 CLI（按 Otty 1.4.1 API）：已有窗口时原子地新建一个 tab，再以 `--cwd` / `--command` 启动命令；没有窗口时创建窗口。它不会向当前正在交互的终端 pane 输入文本。请使用提供 `otty-cli`、`window show current`、`tab new` 和 `open` 的 Otty 1.4.1 或兼容版本。
 - **Muxy** 使用官方 CLI：先在 Muxy 菜单执行 **Muxy → Install CLI**。Easy Context 会先用 `muxy <目录>` 打开或选中项目；首次打开时复用 Muxy 自动创建的初始终端 tab，项目已打开时只新建一个命令 tab，然后发送命令并回车。Muxy 冷启动时会等待其本地控制服务就绪。
 
+## 卸载
+
+```bash
+/Applications/EasyContext.app/Contents/Resources/uninstall.sh            # 交互式，询问是否删除配置
+/Applications/EasyContext.app/Contents/Resources/uninstall.sh --dry-run  # 只列出将执行的操作
+```
+
+以普通用户运行，需要管理员权限的步骤会调用 `sudo`。它会退出 App、注销扩展与 LaunchServices 登记、重置隐私授权、删除 App、偏好设置和安装包回执，并重启访达。配置目录 `~/.easy-context/` 默认询问，`--purge` 直接删除，`--keep-config` 保留。扩展的沙盒容器受系统保护，可能无法删除，不影响使用。
+
 ## 从源码构建
 
 依赖：完整版 **Xcode**、[**XcodeGen**](https://github.com/yonaskolb/XcodeGen)（`brew install xcodegen`）。
 
 ```bash
 # 生成工程并构建（Debug）
+# Debug 使用独立身份：bundle id com.luyantao.easycontext.debug(.finder)、
+# URL scheme easycontext-debug、显示名「Easy Context Debug」，不会与已安装的 Release
+# 争抢隐私授权或 easycontext:// 请求（两者共用 ~/.easy-context 配置）。
 xcodegen generate
 xcodebuild -project EasyContext.xcodeproj -scheme EasyContext -configuration Debug \
   -derivedDataPath build CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=YES \
@@ -238,7 +264,7 @@ swift test --package-path EasyContextCore \
 
 ## 已知限制
 
-- **分发**：从 GitHub Releases 按芯片架构下载 `arm64` 或 `x86_64` `.pkg`（`scripts/build-pkg.sh` 构建）——安装出来的 App 不带 quarantine、无需手动清理；安装器会自动关闭正在运行的旧 App、启动宿主并重启 Finder，以立即挂接新版扩展。扩展注册或刷新等辅助步骤失败时会记录警告，但不会回滚已经安装的 App。`.pkg` 未签名，其中的 App 为 ad-hoc 签名、**未公证**，首次打开仍需右键→打开放行一次；要做到「双击即装、全程零提示」，需 **Apple Developer ID 证书 + 公证（notarization）**（付费账号，详见 `scripts/build-pkg.sh` 顶部注释）。
+- **分发**：从 GitHub Releases 按芯片架构下载 `arm64` 或 `x86_64` `.pkg`（`scripts/build-pkg.sh` 构建）——安装出来的 App 不带 quarantine、无需手动清理；安装器会自动关闭正在运行的旧 App、启动宿主并重启 Finder，以立即挂接新版扩展。扩展注册或刷新等辅助步骤失败时会记录警告，但不会回滚已经安装的 App。`.pkg` 未签名，其中的 App 为自签名证书签名、**未公证**，首次打开仍需右键→打开放行一次；要做到「双击即装、全程零提示」，需 **Apple Developer ID 证书 + 公证（notarization）**（付费账号，详见 `scripts/build-pkg.sh` 顶部注释）。
 - 部分小众 AI 编辑器（PearAI / Void 等）暂无可靠 bundle id，未进内置清单，可用设置界面的 `+` 自行添加。
 - **在终端运行命令 / 新建文件**由宿主 App 处理（后台代理，无 Dock 图标；双击 App 才显示配置窗）：首次用 AppleScript 型终端（Terminal / iTerm / Ghostty / cmux）运行命令时，会弹一次性「控制终端」的自动化授权；Otty 的官方 CLI 路径不需要该自动化授权。
 - Warp、Hyper、Tabby、Rio、Wave、Termius 暂无内置启动模板：可在菜单里**打开目录**，但不能作为**执行终端**运行命令，除非在设置的「Templates…」编辑器（或 `terminalTemplates`）里添加模板。

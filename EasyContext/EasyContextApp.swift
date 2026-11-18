@@ -83,7 +83,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func showOpenError(_ url: URL) {
-        guard url.scheme == "easycontext",
+        guard url.scheme == IPCScheme.current,
               let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems else { return }
         let token = ConfigStore().readIPCToken()
         guard !token.isEmpty, items.first(where: { $0.name == "t" })?.value == token else { return }
